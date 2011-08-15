@@ -235,6 +235,7 @@ void display()
   //glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_SHORT, triangle_elements);
 
   glDisableVertexAttribArray(attribute_coord3d);
+  glDisableVertexAttribArray(attribute_v_color);
   glutSwapBuffers();
 }
 

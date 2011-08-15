@@ -11,9 +11,12 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "res_texture.c"
+
 GLuint program;
-GLint attribute_coord3d, attribute_v_color;
-GLint uniform_mvp;
+GLuint texture_id;
+GLint attribute_coord3d, attribute_texcoord;
+GLint uniform_mvp, uniform_mytexture;
 
 /**
  * Store all the file's contents in memory, useful to pass shaders
@@ -122,19 +125,12 @@ int init_resources()
     fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
     return 0;
   }
-  attribute_name = "v_color";
-  attribute_v_color = glGetAttribLocation(program, attribute_name);
-  if (attribute_v_color == -1) {
+  attribute_name = "texcoord";
+  attribute_texcoord = glGetAttribLocation(program, attribute_name);
+  if (attribute_texcoord == -1) {
     fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
     return 0;
   }
-  /* const char* uniform_name; */
-  /* uniform_name = "fade"; */
-  /* uniform_fade = glGetUniformLocation(program, uniform_name); */
-  /* if (uniform_fade == -1) { */
-  /*   fprintf(stderr, "Could not bind uniform %s\n", uniform_name); */
-  /*   return 0; */
-  /* } */
   const char* uniform_name;
   uniform_name = "mvp";
   uniform_mvp = glGetUniformLocation(program, uniform_name);
@@ -142,12 +138,36 @@ int init_resources()
     fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
     return 0;
   }
+  uniform_name = "mytexture";
+  uniform_mytexture = glGetUniformLocation(program, uniform_name);
+  if (uniform_mytexture == -1) {
+    fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
+    return 0;
+  }
+
+
+  glActiveTexture(GL_TEXTURE0);
+  glGenTextures(1, &texture_id);
+  glBindTexture(GL_TEXTURE_2D, texture_id);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexImage2D(GL_TEXTURE_2D, // target
+	       0,  // level, 0 = base, no minimap,
+	       GL_RGB, // internalformat
+	       res_texture.width,  // width
+	       res_texture.height,  // height
+	       0,  // border, always 0 in OpenGL ES
+	       GL_RGB,  // format
+	       GL_UNSIGNED_BYTE, // type
+	       res_texture.pixel_data);
+
   return 1;
 }
 
 void display()
 {
   glUseProgram(program);
+  glUniform1i(uniform_mytexture, /*GL_TEXTURE*/0);
+
   glClearColor(1.0, 1.0, 1.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
@@ -174,26 +194,21 @@ void display()
     cube_vertices      // pointer to the C array
   );
 
-  glEnableVertexAttribArray(attribute_v_color);
-  GLfloat cube_colors[] = {
-    // front colors
-    1.0, 0.0, 0.0,
-    0.0, 1.0, 0.0,
-    0.0, 0.0, 1.0,
-    1.0, 1.0, 1.0,
-    // back colors
-    1.0, 0.0, 0.0,
-    0.0, 1.0, 0.0,
-    0.0, 0.0, 1.0,
-    1.0, 1.0, 1.0,
+  glEnableVertexAttribArray(attribute_texcoord);
+  GLfloat cube_texcoords[] = {
+    // front
+    0.0, 0.0,
+    1.0, 0.0,
+    1.0, 1.0,
+    0.0, 1.0,
   };
   glVertexAttribPointer(
-    attribute_v_color, // attribute
-    3,                 // number of elements per vertex, here (R,G,B)
-    GL_FLOAT,          // the type of each element
-    GL_FALSE,          // take our values as-is
-    0,                 // no extra data between each position
-    cube_colors        // pointer to the C array
+    attribute_texcoord, // attribute
+    2,                  // number of elements per vertex, here (x,y)
+    GL_FLOAT,           // the type of each element
+    GL_FALSE,           // take our values as-is
+    0,                  // no extra data between each position
+    cube_texcoords      // pointer to the C array
   );
 
   GLushort cube_elements[] = {
@@ -218,17 +233,14 @@ void display()
   };
 
   /* Push each element in buffer_vertices to the vertex shader */
-  //glDrawArrays(GL_TRIANGLE_STRIP, 0, 5);
-  glDrawElements(GL_TRIANGLES, sizeof(cube_elements)/sizeof(GLushort), GL_UNSIGNED_SHORT, &cube_elements);
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, &cube_elements);
 
   glDisableVertexAttribArray(attribute_coord3d);
+  glDisableVertexAttribArray(attribute_texcoord);
   glutSwapBuffers();
 }
 
 void idle() {
-  //float cur_fade = sinf(glutGet(GLUT_ELAPSED_TIME) / 1000.0 * (2*3.14) / 5) / 2 + 0.5; // 0->1->0 every 5 seconds
-  //glUniform1f(uniform_fade, cur_fade);
-
   float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 45;
   glm::vec3 axis_y(0, 1, 0);
   glm::mat4 anim = glm::rotate(glm::mat4(1.0f), angle, axis_y);
@@ -238,7 +250,6 @@ void idle() {
   glm::mat4 projection = glm::perspective(45.0f, 1.0f*640/480, 0.1f, 10.0f);
 
   glm::mat4 mvp = projection * view * model * anim;
-
   glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
   glutPostRedisplay();
 }
@@ -266,7 +277,6 @@ int main(int argc, char* argv[]) {
     glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
     glEnable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
-    //glDepthFunc(GL_LESS);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glutMainLoop();
   }

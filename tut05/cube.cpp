@@ -222,6 +222,7 @@ void display()
   glDrawElements(GL_TRIANGLES, sizeof(cube_elements)/sizeof(GLushort), GL_UNSIGNED_SHORT, &cube_elements);
 
   glDisableVertexAttribArray(attribute_coord3d);
+  glDisableVertexAttribArray(attribute_v_color);
   glutSwapBuffers();
 }
 

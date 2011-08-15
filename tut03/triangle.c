@@ -212,6 +212,7 @@ void display()
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 3);
 
   glDisableVertexAttribArray(attribute_coord2d);
+  glDisableVertexAttribArray(attribute_v_color);
   glutSwapBuffers();
 }
 
