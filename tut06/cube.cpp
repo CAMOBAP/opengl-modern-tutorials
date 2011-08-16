@@ -178,11 +178,31 @@ void display()
      1.0, -1.0,  1.0,
      1.0,  1.0,  1.0,
     -1.0,  1.0,  1.0,
-    // back
-    -1.0, -1.0, -1.0,
-     1.0, -1.0, -1.0,
+    // top
+    -1.0,  1.0,  1.0,
+     1.0,  1.0,  1.0,
      1.0,  1.0, -1.0,
     -1.0,  1.0, -1.0,
+    // back
+     1.0, -1.0, -1.0,
+    -1.0, -1.0, -1.0,
+    -1.0,  1.0, -1.0,
+     1.0,  1.0, -1.0,
+    // bottom
+    -1.0, -1.0, -1.0,
+     1.0, -1.0, -1.0,
+     1.0, -1.0,  1.0,
+    -1.0, -1.0,  1.0,
+    // left
+    -1.0, -1.0, -1.0,
+    -1.0, -1.0,  1.0,
+    -1.0,  1.0,  1.0,
+    -1.0,  1.0, -1.0,
+    // right
+     1.0, -1.0,  1.0,
+     1.0, -1.0, -1.0,
+     1.0,  1.0, -1.0,
+     1.0,  1.0,  1.0,
   };
   // Describe our vertices array to OpenGL (it can't guess its format automatically)
   glVertexAttribPointer(
@@ -195,13 +215,15 @@ void display()
   );
 
   glEnableVertexAttribArray(attribute_texcoord);
-  GLfloat cube_texcoords[] = {
+  GLfloat cube_texcoords[2*4*6] = {
     // front
     0.0, 0.0,
     1.0, 0.0,
     1.0, 1.0,
     0.0, 1.0,
   };
+  for (int i = 1; i < 6; i++)
+    memcpy(&cube_texcoords[i*4*2], &cube_texcoords[0], 2*4*sizeof(GLfloat));
   glVertexAttribPointer(
     attribute_texcoord, // attribute
     2,                  // number of elements per vertex, here (x,y)
@@ -213,27 +235,27 @@ void display()
 
   GLushort cube_elements[] = {
     // front
-    0, 1, 2,
-    2, 3, 0,
+     0,  1,  2,
+     2,  3,  0,
     // top
-    1, 5, 6,
-    6, 2, 1,
+     4,  5,  6,
+     6,  7,  4,
     // back
-    7, 6, 5,
-    5, 4, 7,
+     8,  9, 10,
+    10, 11,  8,
     // bottom
-    4, 0, 3,
-    3, 7, 4,
+    12, 13, 14,
+    14, 15, 12,
     // left
-    4, 5, 1,
-    1, 0, 4,
+    16, 17, 18,
+    18, 19, 16,
     // right
-    3, 2, 6,
-    6, 7, 3,
+    20, 21, 22,
+    22, 23, 20,
   };
 
   /* Push each element in buffer_vertices to the vertex shader */
-  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, &cube_elements);
+  glDrawElements(GL_TRIANGLES, sizeof(cube_elements)/sizeof(cube_elements[0]), GL_UNSIGNED_SHORT, &cube_elements);
 
   glDisableVertexAttribArray(attribute_coord3d);
   glDisableVertexAttribArray(attribute_texcoord);
@@ -241,9 +263,11 @@ void display()
 }
 
 void idle() {
-  float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 45;
-  glm::vec3 axis_y(0, 1, 0);
-  glm::mat4 anim = glm::rotate(glm::mat4(1.0f), angle, axis_y);
+  float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 15;  // base 15° per second
+  glm::mat4 anim = \
+    glm::rotate(glm::mat4(1.0f), angle*3.0f, glm::vec3(1, 0, 0)) *  // X axis
+    glm::rotate(glm::mat4(1.0f), angle*2.0f, glm::vec3(0, 1, 0)) *  // Y axis
+    glm::rotate(glm::mat4(1.0f), angle*4.0f, glm::vec3(0, 0, 1));   // Z axis
 
   glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -4.0));
   glm::mat4 view = glm::lookAt(glm::vec3(0.0, 2.0, 0.0), glm::vec3(0.0, 0.0, -4.0), glm::vec3(0.0, 1.0, 0.0));

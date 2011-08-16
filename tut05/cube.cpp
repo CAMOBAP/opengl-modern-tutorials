@@ -218,7 +218,6 @@ void display()
   };
 
   /* Push each element in buffer_vertices to the vertex shader */
-  //glDrawArrays(GL_TRIANGLE_STRIP, 0, 5);
   glDrawElements(GL_TRIANGLES, sizeof(cube_elements)/sizeof(GLushort), GL_UNSIGNED_SHORT, &cube_elements);
 
   glDisableVertexAttribArray(attribute_coord3d);
@@ -227,10 +226,7 @@ void display()
 }
 
 void idle() {
-  //float cur_fade = sinf(glutGet(GLUT_ELAPSED_TIME) / 1000.0 * (2*3.14) / 5) / 2 + 0.5; // 0->1->0 every 5 seconds
-  //glUniform1f(uniform_fade, cur_fade);
-
-  float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 45;
+  float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 45;  // 45° per second
   glm::vec3 axis_y(0, 1, 0);
   glm::mat4 anim = glm::rotate(glm::mat4(1.0f), angle, axis_y);
 
