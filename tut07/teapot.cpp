@@ -350,8 +350,8 @@ unsigned short teapot_patches[][4][4] = {
   { { 229, 232, 233, 212 }, { 257, 264, 265, 234 }, { 260, 266, 267, 238 }, { 263, 268, 269, 242, } },
   // no bottom!
 };
-#define RESU 40
-#define RESV 40
+#define RESU 20
+#define RESV 20
 #define BDEG 3
 struct vertex teapot_vertices[TEAPOT_NB_PATCHES * RESU*RESV];
 GLushort teapot_elements[TEAPOT_NB_PATCHES * (RESU-1)*(RESV-1) * 2*3];
@@ -383,8 +383,8 @@ void build_teapot() {
       for (int rv = 0; rv < RESV-1; rv++) {
 	// 1 square ABCD = 2 triangles ABC + CDA
 	// ABC
-	teapot_elements[n] = p*RESU*RESV +     ru*RESV +  rv   ; n++;
-	teapot_elements[n] = p*RESU*RESV +     ru*RESV + (rv+1); n++;
+	teapot_elements[n] = p*RESU*RESV +  ru   *RESV +  rv   ; n++;
+	teapot_elements[n] = p*RESU*RESV +  ru   *RESV + (rv+1); n++;
 	teapot_elements[n] = p*RESU*RESV + (ru+1)*RESV + (rv+1); n++;
 	// CDA
 	teapot_elements[n] = p*RESU*RESV + (ru+1)*RESV + (rv+1); n++;
