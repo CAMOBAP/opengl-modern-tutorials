@@ -14,7 +14,7 @@
 GLuint program;
 GLint attribute_coord3d;
 GLint uniform_mvp;
-struct vertex { GLfloat x,y,z; };
+struct vertex { GLfloat x, y, z; };
 struct vertex teapot_cp_vertices[] = {
   // 1
   {  1.4   ,   0.0   ,  2.4     },
@@ -313,7 +313,8 @@ struct vertex teapot_cp_vertices[] = {
   {  0.728 ,   1.3   ,  2.4     },
   {  1.3   ,   0.728 ,  2.4     },
 };
-unsigned short teapot_patches[28][4][4] = {
+#define TEAPOT_NB_PATCHES 28
+unsigned short teapot_patches[][4][4] = {
   // rim
   { {   1,   2,   3,   4 }, {   5,   6,   7,   8 }, {   9,  10,  11,  12 }, {  13,  14,  15,  16, } },
   { {   4,  17,  18,  19 }, {   8,  20,  21,  22 }, {  12,  23,  24,  25 }, {  16,  26,  27,  28, } },
@@ -349,85 +350,87 @@ unsigned short teapot_patches[28][4][4] = {
   { { 229, 232, 233, 212 }, { 257, 264, 265, 234 }, { 260, 266, 267, 238 }, { 263, 268, 269, 242, } },
   // no bottom!
 };
-struct vertex teapot_vertices[28*42*42];
-GLushort teapot_elements[28*(42-1)*(42-1)*2*3];
+#define RESU 40
+#define RESV 40
+#define BDEG 3
+struct vertex teapot_vertices[TEAPOT_NB_PATCHES * RESU*RESV];
+GLushort teapot_elements[TEAPOT_NB_PATCHES * (RESU-1)*(RESV-1) * 2*3];
 
-int factorial(int n) {
-  assert(n >= 0);
-  int result = 1;
-  for (int i = n; i > 1; i--)
-    result *= i;
-  return result;
+void build_control_points_k(int p, struct vertex control_points_k[BDEG+1][BDEG+1]);
+struct vertex compute_position(struct vertex control_points_k[BDEG+1][BDEG+1], float u, float v);
+float bernstein_polynomial(int i, int n, float u);
+float binomial_coefficient(int i, int n);
+int factorial(int n);
+
+void build_teapot() {
+  // Vertices
+  for (int p = 0; p < TEAPOT_NB_PATCHES; p++) {
+    struct vertex control_points_k[BDEG+1][BDEG+1];
+    build_control_points_k(p, control_points_k);
+    for (int ru = 0; ru <= RESU-1; ru++) {
+      float u = 1.0 * ru / (RESU-1);
+      for (int rv = 0; rv <= RESV-1; rv++) {
+	float v = 1.0 * rv / (RESV-1);
+	teapot_vertices[p*RESU*RESV + ru*RESV + rv] = compute_position(control_points_k, u, v);
+      }
+    }
+  }
+
+  // Elements
+  int n = 0;
+  for (int p = 0; p < TEAPOT_NB_PATCHES; p++)
+    for (int ru = 0; ru < RESU-1; ru++)
+      for (int rv = 0; rv < RESV-1; rv++) {
+	// 1 square ABCD = 2 triangles ABC + CDA
+	// ABC
+	teapot_elements[n] = p*RESU*RESV +     ru*RESV +  rv   ; n++;
+	teapot_elements[n] = p*RESU*RESV +     ru*RESV + (rv+1); n++;
+	teapot_elements[n] = p*RESU*RESV + (ru+1)*RESV + (rv+1); n++;
+	// CDA
+	teapot_elements[n] = p*RESU*RESV + (ru+1)*RESV + (rv+1); n++;
+	teapot_elements[n] = p*RESU*RESV + (ru+1)*RESV +  rv   ; n++;
+	teapot_elements[n] = p*RESU*RESV +  ru   *RESV +  rv   ; n++;
+      }
 }
 
-float binomial_coefficient(int i, int n) {
-  assert(i >= 0); assert(n >= 0);
-  return 1.0f * factorial(n) / (factorial(i) * factorial(n-i));
+void build_control_points_k(int p, struct vertex control_points_k[BDEG+1][BDEG+1]) {
+  for (int i = 0; i <= BDEG; i++) {
+    for (int j = 0; j <= BDEG; j++) {
+      control_points_k[i][j].x = teapot_cp_vertices[teapot_patches[p][i][j] - 1].x;
+      control_points_k[i][j].y = teapot_cp_vertices[teapot_patches[p][i][j] - 1].y;
+      control_points_k[i][j].z = teapot_cp_vertices[teapot_patches[p][i][j] - 1].z;
+    }
+  }
+}
+
+struct vertex compute_position(struct vertex control_points_k[BDEG+1][BDEG+1], float u, float v) {
+  struct vertex result = { 0.0, 0.0, 0.0 };
+  for (int i = 0; i <= BDEG; i++) {
+    float poly_i = bernstein_polynomial(i, BDEG, u);
+    for (int j = 0; j <= BDEG; j++) {
+      float poly_j = bernstein_polynomial(j, BDEG, v);
+      result.x += poly_i * poly_j * control_points_k[i][j].x;
+      result.y += poly_i * poly_j * control_points_k[i][j].y;
+      result.z += poly_i * poly_j * control_points_k[i][j].z;
+    }
+  }
+  return result;
 }
 
 float bernstein_polynomial(int i, int n, float u) {
   return binomial_coefficient(i, n) * powf(u, i) * powf(1-u, n-i);
 }
 
-struct vertex compute_position(struct vertex control_points_k[3+1][3+1], float u, float v) {
-  struct vertex result = { 0.0, 0.0, 0.0 };
-  for (int i = 0; i <= 3; i++) {
-    float poly_i = bernstein_polynomial(i, 3, u);
-    for (int j = 0; j <= 3; j++) {
-      float poly_j = bernstein_polynomial(j, 3, v);
-      result.x += poly_i * poly_j * control_points_k[i][j].x;
-      result.y += poly_i * poly_j * control_points_k[i][j].y;
-      result.z += poly_i * poly_j * control_points_k[i][j].z;
-    }
-  }
-  // printf("%f-%f-%f\n", result.x, result.y, result.z);
-  return result;
+float binomial_coefficient(int i, int n) {
+  assert(i >= 0); assert(n >= 0);
+  return 1.0f * factorial(n) / (factorial(i) * factorial(n-i));
 }
-
-void build_teapot() {
-  memset(teapot_vertices, 0, sizeof(teapot_vertices));
-  memset(teapot_elements, 0, sizeof(teapot_elements));
-  for (int p = 0; p < 28; p++) {
-    struct vertex control_points_k[3+1][3+1];
-    for (int i = 0; i <= 3; i++) {
-      for (int j = 0; j <= 3; j++) {
-	control_points_k[i][j].x = teapot_cp_vertices[teapot_patches[p][i][j] - 1].x;
-	control_points_k[i][j].y = teapot_cp_vertices[teapot_patches[p][i][j] - 1].y;
-	control_points_k[i][j].z = teapot_cp_vertices[teapot_patches[p][i][j] - 1].z;
-	// printf("CONTROL %d,%d - %f\t%f\t%f\n", i,j,
-	//        control_points_k[i][j].x,
-	//        control_points_k[i][j].y,
-	//        control_points_k[i][j].z);
-      }
-    }
-    for (int ru = 0; ru < 42; ru++) {
-      float u = ru/42.0;
-      for (int rv = 0; rv < 42; rv++) {
-	float v = rv/42.0;
-	teapot_vertices[p*42*42+ru*42+rv] = compute_position(control_points_k, u, v); 
-	// printf("(%d,%d,%d=%d)", p,ru,rv,p*42*42+ru*42+rv);
-	// printf("%f", teapot_vertices[p*42*42+ru*42+rv].x);
-	// printf("%f", teapot_vertices[p*42*42+ru*42+rv].y);
-	// printf("%f", teapot_vertices[p*42*42+ru*42+rv].z);
-	// printf("\n");
-      }
-    }
-  }
-
-  int n = 0;
-  for (int p = 0; p < 28; p++)
-    for (int ru = 0; ru < 42-1; ru++)
-      for (int rv = 0; rv < 42-1; rv++) {
-	// 1 square ABCD = 2 triangles ABC + CDA
-	// ABC
-	teapot_elements[n] = p*42*42 +     ru*42 +  rv   ; n++;
-	teapot_elements[n] = p*42*42 +     ru*42 + (rv+1); n++;
-	teapot_elements[n] = p*42*42 + (ru+1)*42 + (rv+1); n++;
-	// CDA
-	teapot_elements[n] = p*42*42 + (ru+1)*42 + (rv+1); n++;
-	teapot_elements[n] = p*42*42 + (ru+1)*42 +  rv   ; n++;
-	teapot_elements[n] = p*42*42 +  ru   *42 +  rv   ; n++;
-      }
+int factorial(int n) {
+  assert(n >= 0);
+  int result = 1;
+  for (int i = n; i > 1; i--)
+    result *= i;
+  return result;
 }
 
 /**
@@ -563,8 +566,8 @@ void display()
     3,                 // number of elements per vertex, here (x,y,z)
     GL_FLOAT,          // the type of each element
     GL_FALSE,          // take our values as-is
-    sizeof(teapot_vertices[0]), // no extra data between each position
-    &teapot_vertices[0]         // pointer to the C array
+    0,                 // no extra data between each position
+    teapot_vertices    // pointer to the C array
   );
 
   /* Push each element in buffer_vertices to the vertex shader */
@@ -575,14 +578,14 @@ void display()
   //   delta *= -1;
   // glDrawElements(GL_LINES, i, GL_UNSIGNED_SHORT, &teapot_elements);
 
-  glDrawElements(GL_TRIANGLES, 28*(42-1)*(42-1)*2*3, GL_UNSIGNED_SHORT, teapot_elements);
+  glDrawElements(GL_TRIANGLES, TEAPOT_NB_PATCHES*(RESU-1)*(RESV-1)*2*3, GL_UNSIGNED_SHORT, teapot_elements);
 
   glDisableVertexAttribArray(attribute_coord3d);
   glutSwapBuffers();
 }
 
 void idle() {
-  float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 15;  // 145° per second
+  float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 15;  // 15° per second
   glm::mat4 anim = 
     glm::rotate(glm::mat4(1.0f), 1*angle, glm::vec3(1, 0, 0)) *
     glm::rotate(glm::mat4(1.0f), 2*angle, glm::vec3(0, 1, 0)) *
