@@ -12,7 +12,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 GLuint program;
-GLint attribute_coord3d;
+GLint attribute_coord3d, attribute_v_color;
 GLint uniform_mvp;
 struct vertex { GLfloat x, y, z; };
 struct vertex teapot_cp_vertices[] = {
@@ -173,7 +173,7 @@ struct vertex teapot_cp_vertices[] = {
   // 141
   { -3.0   ,   0.3   ,  2.25    },
   { -2.7   ,   0.3   ,  2.025   },
-  { -3.0   ,   0.0   ,  1.8     },
+  { -3.0   ,   0.3   ,  1.8     },
   { -2.7   ,   0.3   ,  1.8     },
   { -2.7   ,   0.0   ,  1.575   },
   { -2.7   ,  -0.3   ,  1.575   },
@@ -314,7 +314,8 @@ struct vertex teapot_cp_vertices[] = {
   {  1.3   ,   0.728 ,  2.4     },
 };
 #define TEAPOT_NB_PATCHES 28
-unsigned short teapot_patches[][4][4] = {
+#define BDEG 3
+GLushort teapot_patches[][BDEG+1][BDEG+1] = {
   // rim
   { {   1,   2,   3,   4 }, {   5,   6,   7,   8 }, {   9,  10,  11,  12 }, {  13,  14,  15,  16, } },
   { {   4,  17,  18,  19 }, {   8,  20,  21,  22 }, {  12,  23,  24,  25 }, {  16,  26,  27,  28, } },
@@ -350,14 +351,17 @@ unsigned short teapot_patches[][4][4] = {
   { { 229, 232, 233, 212 }, { 257, 264, 265, 234 }, { 260, 266, 267, 238 }, { 263, 268, 269, 242, } },
   // no bottom!
 };
-#define RESU 20
-#define RESV 20
-#define BDEG 3
+#define RESU 10
+#define RESV 10
 struct vertex teapot_vertices[TEAPOT_NB_PATCHES * RESU*RESV];
 GLushort teapot_elements[TEAPOT_NB_PATCHES * (RESU-1)*(RESV-1) * 2*3];
+GLfloat teapot_colors[TEAPOT_NB_PATCHES * RESU*RESV * 3];
 
-void build_control_points_k(int p, struct vertex control_points_k[BDEG+1][BDEG+1]);
-struct vertex compute_position(struct vertex control_points_k[BDEG+1][BDEG+1], float u, float v);
+GLushort teapot_cp_elements[TEAPOT_NB_PATCHES][BDEG+1][BDEG+1];
+GLfloat teapot_cp_colors[269*3];
+
+void build_control_points_k(int p, struct vertex control_points_k[][BDEG+1]);
+struct vertex compute_position(struct vertex control_points_k[][BDEG+1], float u, float v);
 float bernstein_polynomial(int i, int n, float u);
 float binomial_coefficient(int i, int n);
 int factorial(int n);
@@ -372,6 +376,9 @@ void build_teapot() {
       for (int rv = 0; rv <= RESV-1; rv++) {
 	float v = 1.0 * rv / (RESV-1);
 	teapot_vertices[p*RESU*RESV + ru*RESV + rv] = compute_position(control_points_k, u, v);
+	teapot_colors[p*RESU*RESV*3 + ru*RESV*3 + rv*3 + 0] = 1.0 * p / TEAPOT_NB_PATCHES;
+	teapot_colors[p*RESU*RESV*3 + ru*RESV*3 + rv*3 + 1] = 1.0 * p / TEAPOT_NB_PATCHES;
+	teapot_colors[p*RESU*RESV*3 + ru*RESV*3 + rv*3 + 2] = 0.8;
       }
     }
   }
@@ -391,9 +398,16 @@ void build_teapot() {
 	teapot_elements[n] = p*RESU*RESV + (ru+1)*RESV +  rv   ; n++;
 	teapot_elements[n] = p*RESU*RESV +  ru   *RESV +  rv   ; n++;
       }
+
+  // Control points elements for debugging
+  memset(teapot_cp_colors, 0, sizeof(teapot_cp_colors)); // black
+  for (int p = 0; p < TEAPOT_NB_PATCHES; p++)
+    for (int i = 0; i < (BDEG+1); i++)
+      for (int j = 0; j < (BDEG+1); j++)
+	teapot_cp_elements[p][i][j] = teapot_patches[p][i][j] - 1;
 }
 
-void build_control_points_k(int p, struct vertex control_points_k[BDEG+1][BDEG+1]) {
+void build_control_points_k(int p, struct vertex control_points_k[][BDEG+1]) {
   for (int i = 0; i <= BDEG; i++) {
     for (int j = 0; j <= BDEG; j++) {
       control_points_k[i][j].x = teapot_cp_vertices[teapot_patches[p][i][j] - 1].x;
@@ -403,7 +417,7 @@ void build_control_points_k(int p, struct vertex control_points_k[BDEG+1][BDEG+1
   }
 }
 
-struct vertex compute_position(struct vertex control_points_k[BDEG+1][BDEG+1], float u, float v) {
+struct vertex compute_position(struct vertex control_points_k[][BDEG+1], float u, float v) {
   struct vertex result = { 0.0, 0.0, 0.0 };
   for (int i = 0; i <= BDEG; i++) {
     float poly_i = bernstein_polynomial(i, BDEG, u);
@@ -540,6 +554,12 @@ int init_resources()
     fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
     return 0;
   }
+  attribute_name = "v_color";
+  attribute_v_color = glGetAttribLocation(program, attribute_name);
+  if (attribute_v_color == -1) {
+    fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
+    return 0;
+  }
   const char* uniform_name;
   uniform_name = "mvp";
   uniform_mvp = glGetUniformLocation(program, uniform_name);
@@ -559,6 +579,7 @@ void display()
   glClearColor(1.0, 1.0, 1.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
+  // Draw Teapot
   glEnableVertexAttribArray(attribute_coord3d);
   // Describe our vertices array to OpenGL (it can't guess its format automatically)
   glVertexAttribPointer(
@@ -569,18 +590,45 @@ void display()
     0,                 // no extra data between each position
     teapot_vertices    // pointer to the C array
   );
+  glEnableVertexAttribArray(attribute_v_color);
+  // Describe our vertices array to OpenGL (it can't guess its format automatically)
+  glVertexAttribPointer(
+    attribute_v_color, // attribute
+    3,                 // number of elements per vertex, here (x,y,z)
+    GL_FLOAT,          // the type of each element
+    GL_FALSE,          // take our values as-is
+    0,                 // no extra data between each position
+    teapot_colors      // pointer to the C array
+  );
+  glDrawElements(GL_TRIANGLES, sizeof(teapot_elements)/sizeof(teapot_elements[0]), GL_UNSIGNED_SHORT, teapot_elements);
 
-  /* Push each element in buffer_vertices to the vertex shader */
-  // static float i = 0;
-  // static float delta = 0.1;
-  // i += delta;
-  // if (i > teapot_nb_elements || i < 0)
-  //   delta *= -1;
-  // glDrawElements(GL_LINES, i, GL_UNSIGNED_SHORT, &teapot_elements);
 
-  glDrawElements(GL_TRIANGLES, TEAPOT_NB_PATCHES*(RESU-1)*(RESV-1)*2*3, GL_UNSIGNED_SHORT, teapot_elements);
+  // Draw Control points
+  glVertexAttribPointer(
+    attribute_coord3d, // attribute
+    3,                 // number of elements per vertex, here (x,y,z)
+    GL_FLOAT,          // the type of each element
+    GL_FALSE,          // take our values as-is
+    0,                 // no extra data between each position
+    teapot_cp_vertices // pointer to the C array
+  );
+  glEnableVertexAttribArray(attribute_v_color);
+  // Describe our vertices array to OpenGL (it can't guess its format automatically)
+  glVertexAttribPointer(
+    attribute_v_color, // attribute
+    3,                 // number of elements per vertex, here (x,y,z)
+    GL_FLOAT,          // the type of each element
+    GL_FALSE,          // take our values as-is
+    0,                 // no extra data between each position
+    teapot_cp_colors   // pointer to the C array
+  );
+  for (int p = 0; p < TEAPOT_NB_PATCHES; p++)
+    for (int i = 0; i < (BDEG+1); i++)
+      glDrawElements(GL_LINE_LOOP, (BDEG+1), GL_UNSIGNED_SHORT, &(teapot_cp_elements[p][i]));
+
 
   glDisableVertexAttribArray(attribute_coord3d);
+  glDisableVertexAttribArray(attribute_v_color);
   glutSwapBuffers();
 }
 
