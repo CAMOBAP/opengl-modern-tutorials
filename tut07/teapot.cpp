@@ -1,0 +1,506 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+/* Use glew.h instead of gl.h to get all the GL prototypes declared */
+#include <GL/glew.h>
+/* Using the GLUT library for the base windowing setup */
+#include <GL/glut.h>
+/* GLM */
+// #define GLM_MESSAGES
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+GLuint program;
+GLint attribute_coord3d;
+GLint uniform_mvp;
+struct vertex { GLfloat x,y,z; };
+struct vertex teapot_cp_vertices[] = {
+  // 1
+  {  1.4   ,   0.0   ,  2.4     },
+  {  1.4   ,  -0.784 ,  2.4     },
+  {  0.784 ,  -1.4   ,  2.4     },
+  {  0.0   ,  -1.4   ,  2.4     },
+  {  1.3375,   0.0   ,  2.53125 },
+  {  1.3375,  -0.749 ,  2.53125 },
+  {  0.749 ,  -1.3375,  2.53125 },
+  {  0.0   ,  -1.3375,  2.53125 },
+  {  1.4375,    0.0  ,  2.53125 },
+  {  1.4375,  -0.805 ,  2.53125 },
+  // 11
+  {  0.805 ,  -1.4375,  2.53125 },
+  {  0.0   ,  -1.4375,  2.53125 },
+  {  1.5   ,   0.0   ,  2.4     },
+  {  1.5   ,  -0.84  ,  2.4     },
+  {  0.84  ,  -1.5   ,  2.4     },
+  {  0.0   ,  -1.5   ,  2.4     },
+  { -0.784 ,  -1.4   ,  2.4     },
+  { -1.4   ,  -0.784 ,  2.4     },
+  { -1.4   ,   0.0   ,  2.4     },
+  { -0.749 ,  -1.3375,  2.53125 },
+  // 21
+  { -1.3375,  -0.749 ,  2.53125 },
+  { -1.3375,   0.0   ,  2.53125 },
+  { -0.805 ,  -1.4375,  2.53125 },
+  { -1.4375,  -0.805 ,  2.53125 },
+  { -1.4375,   0.0   ,  2.53125 },
+  { -0.84  ,  -1.5   ,  2.4     },
+  { -1.5   ,  -0.84  ,  2.4     },
+  { -1.5   ,   0.0   ,  2.4     },
+  { -1.4   ,   0.784 ,  2.4     },
+  { -0.784 ,   1.4   ,  2.4     },
+  // 31
+  {  0.0   ,   1.4   ,  2.4     },
+  { -1.3375,   0.749 ,  2.53125 },
+  { -0.749 ,   1.3375,  2.53125 },
+  {  0.0   ,   1.3375,  2.53125 },
+  { -1.4375,   0.805 ,  2.53125 },
+  { -0.805 ,   1.4375,  2.53125 },
+  {  0.0   ,   1.4375,  2.53125 },
+  { -1.5   ,   0.84  ,  2.4     },
+  { -0.84  ,   1.5   ,  2.4     },
+  {  0.0   ,   1.5   ,  2.4     },
+  // 41
+  {  0.784 ,   1.4   ,  2.4     },
+  {  1.4   ,   0.784 ,  2.4     },
+  {  0.749 ,   1.3375,  2.53125 },
+  {  1.3375,   0.749 ,  2.53125 },
+  {  0.805 ,   1.4375,  2.53125 },
+  {  1.4375,   0.805 ,  2.53125 },
+  {  0.84  ,   1.5   ,  2.4     },
+  {  1.5   ,   0.84  ,  2.4     },
+  {  1.75  ,   0.0   ,  1.875   },
+  {  1.75  ,  -0.98  ,  1.875   },
+  // 51
+  {  0.98  ,  -1.75  ,  1.875   },
+  {  0.0   ,  -1.75  ,  1.875   },
+  {  2.0   ,   0.0   ,  1.35    },
+  {  2.0   ,  -1.12  ,  1.35    },
+  {  1.12  ,  -2.0   ,  1.35    },
+  {  0.0   ,  -2.0   ,  1.35    },
+  {  2.0   ,   0.0   ,  0.9     },
+  {  2.0   ,  -1.12  ,  0.9     },
+  {  1.12  ,  -2.0   ,  0.9     },
+  {  0.0   ,  -2.0   ,  0.9     },
+  // 61
+  { -0.98  ,  -1.75  ,  1.875   },
+  { -1.75  ,  -0.98  ,  1.875   },
+  { -1.75  ,   0.0   ,  1.875   },
+  { -1.12  ,  -2.0   ,  1.35    },
+  { -2.0   ,  -1.12  ,  1.35    },
+  { -2.0   ,   0.0   ,  1.35    },
+  { -1.12  ,  -2.0   ,  0.9     },
+  { -2.0   ,  -1.12  ,  0.9     },
+  { -2.0   ,   0.0   ,  0.9     },
+  { -1.75  ,   0.98  ,  1.875   },
+  // 71
+  { -0.98  ,   1.75  ,  1.875   },
+  {  0.0   ,   1.75  ,  1.875   },
+  { -2.0   ,   1.12  ,  1.35    },
+  { -1.12  ,   2.0   ,  1.35    },
+  {  0.0   ,   2.0   ,  1.35    },
+  { -2.0   ,   1.12  ,  0.9     },
+  { -1.12  ,   2.0   ,  0.9     },
+  {  0.0   ,   2.0   ,  0.9     },
+  {  0.98  ,   1.75  ,  1.875   },
+  {  1.75  ,   0.98  ,  1.875   },
+  // 81
+  {  1.12  ,   2.0   ,  1.35    },
+  {  2.0   ,   1.12  ,  1.35    },
+  {  1.12  ,   2.0   ,  0.9     },
+  {  2.0   ,   1.12  ,  0.9     },
+  {  2.0   ,   0.0   ,  0.45    },
+  {  2.0   ,  -1.12  ,  0.45    },
+  {  1.12  ,  -2.0   ,  0.45    },
+  {  0.0   ,  -2.0   ,  0.45    },
+  {  1.5   ,   0.0   ,  0.225   },
+  {  1.5   ,  -0.84  ,  0.225   },
+  // 91
+  {  0.84  ,  -1.5   ,  0.225   },
+  {  0.0   ,  -1.5   ,  0.225   },
+  {  1.5   ,   0.0   ,  0.15    },
+  {  1.5   ,  -0.84  ,  0.15    },
+  {  0.84  ,  -1.5   ,  0.15    },
+  {  0.0   ,  -1.5   ,  0.15    },
+  { -1.12  ,  -2.0   ,  0.45    },
+  { -2.0   ,  -1.12  ,  0.45    },
+  { -2.0   ,   0.0   ,  0.45    },
+  { -0.84  ,  -1.5   ,  0.225   },
+  // 101
+  { -1.5   ,  -0.84  ,  0.225   },
+  { -1.5   ,   0.0   ,  0.225   },
+  { -0.84  ,  -1.5   ,  0.15    },
+  { -1.5   ,  -0.84  ,  0.15    },
+  { -1.5   ,   0.0   ,  0.15    },
+  { -2.0   ,   1.12  ,  0.45    },
+  { -1.12  ,   2.0   ,  0.45    },
+  {  0.0   ,   2.0   ,  0.45    },
+  { -1.5   ,   0.84  ,  0.225   },
+  { -0.84  ,   1.5   ,  0.225   },
+  // 111
+  {  0.0   ,   1.5   ,  0.225   },
+  { -1.5   ,   0.84  ,  0.15    },
+  { -0.84  ,   1.5   ,  0.15    },
+  {  0.0   ,   1.5   ,  0.15    },
+  {  1.12  ,   2.0   ,  0.15    },
+  {  2.0   ,   1.12  ,  0.45    },
+  {  0.84  ,   1.5   ,  0.225   },
+  {  1.5   ,   0.84  ,  0.225   },
+  {  0.84  ,   1.5   ,  0.15    },
+  {  1.5   ,   0.84  ,  0.15    },
+  // 121
+  { -1.6   ,   0.0   ,  2.025   },
+  { -1.6   ,  -0.3   ,  2.025   },
+  { -1.5   ,  -0.3   ,  2.25    },
+  { -1.5   ,   0.0   ,  2.25    },
+  { -2.3   ,   0.0   ,  2.025   },
+  { -2.3   ,  -0.3   ,  2.025   },
+  { -2.5   ,  -0.3   ,  2.25    },
+  { -2.5   ,   0.0   ,  2.25    },
+  { -2.7   ,   0.0   ,  2.025   },
+  { -2.7   ,  -0.3   ,  2.025   },
+  // 131
+  { -3.0   ,  -0.3   ,  2.25    },
+  { -3.0   ,   0.0   ,  2.25    },
+  { -2.7   ,   0.0   ,  1.8     },
+  { -2.7   ,  -0.3   ,  1.8     },
+  { -3.0   ,  -0.3   ,  1.8     },
+  { -3.0   ,   0.0   ,  1.8     },
+  { -1.5   ,   0.3   ,  2.25    },
+  { -1.6   ,   0.3   ,  2.025   },
+  { -2.5   ,   0.3   ,  2.25    },
+  { -2.3   ,   0.3   ,  2.025   },
+  // 141
+  { -3.0   ,   0.3   ,  2.25    },
+  { -2.7   ,   0.3   ,  2.025   },
+  { -3.0   ,   0.0   ,  1.8     },
+  { -2.7   ,   0.3   ,  1.8     },
+  { -2.7   ,   0.0   ,  1.575   },
+  { -2.7   ,  -0.3   ,  1.575   },
+  { -3.0   ,  -0.3   ,  1.35    },
+  { -3.0   ,   0.0   ,  1.35    },
+  { -2.5   ,   0.0   ,  1.125   },
+  { -2.5   ,  -0.3   ,  1.125   },
+  // 151
+  { -2.65  ,  -0.3   ,  0.9375  },
+  { -2.65  ,   0.0   ,  0.9375  },
+  { -2.0   ,  -0.3   ,  0.9     },
+  { -1.9   ,  -0.3   ,  0.6     },
+  { -1.9   ,   0.0   ,  0.6     },
+  { -3.0   ,   0.3   ,  1.35    },
+  { -2.7   ,   0.3   ,  1.575   },
+  { -2.65  ,   0.3   ,  0.9375  },
+  { -2.5   ,   0.3   ,  1.1255  },
+  { -1.9   ,   0.3   ,  0.6     },
+  // 161
+  { -2.0   ,   0.3   ,  0.9     },
+};
+unsigned short teapot_patches[28][4][4] = {
+  // rim
+  { {   1,   2,   3,   4 }, {   5,   6,   7,   8 }, {   9,  10,  11,  12 }, {  13,  14,  15,  16, } },
+  { {   4,  17,  18,  19 }, {   8,  20,  21,  22 }, {  12,  23,  24,  25 }, {  16,  26,  27,  28, } },
+  { {  19,  29,  30,  31 }, {  22,  32,  33,  34 }, {  25,  35,  36,  37 }, {  28,  38,  39,  40, } },
+  { {  31,  41,  42,   1 }, {  34,  43,  44,   5 }, {  37,  45,  46,   9 }, {  40,  47,  48,  13, } },
+  // body
+  { {  13,  14,  15,  16 }, {  49,  50,  51,  52 }, {  53,  54,  55,  56 }, {  57,  58,  59,  60, } },
+  { {  16,  26,  27,  28 }, {  52,  61,  62,  63 }, {  56,  64,  65,  66 }, {  60,  67,  68,  69, } },
+  { {  28,  38,  39,  40 }, {  63,  70,  71,  72 }, {  66,  73,  74,  75 }, {  69,  76,  77,  78, } },
+  { {  40,  47,  48,  13 }, {  72,  79,  80,  49 }, {  75,  81,  82,  53 }, {  78,  83,  84,  57, } },
+  { {  57,  58,  59,  60 }, {  85,  86,  87,  88 }, {  89,  90,  91,  92 }, {  93,  94,  95,  96, } },
+  { {  60,  67,  68,  69 }, {  88,  97,  98,  99 }, {  92, 100, 101, 102 }, {  96, 103, 104, 105, } },
+  { {  69,  76,  77,  78 }, {  99, 106, 107, 108 }, { 102, 109, 110, 111 }, { 105, 112, 113, 114, } },
+  { {  78,  83,  84,  57 }, { 108, 115, 116,  85 }, { 111, 117, 118,  89 }, { 114, 119, 120,  93, } },
+  // handle
+  { { 121, 122, 123, 124 }, { 125, 126, 127, 128 }, { 129, 130, 131, 132 }, { 133, 134, 135, 136, } },
+  { { 124, 137, 138, 121 }, { 128, 139, 140, 125 }, { 132, 141, 142, 129 }, { 136, 143, 144, 133, } },
+  { { 133, 134, 135, 136 }, { 145, 146, 147, 148 }, { 149, 150, 151, 152 }, {  69, 153, 154, 155, } },
+  { { 136, 143, 144, 133 }, { 148, 156, 157, 145 }, { 152, 158, 159, 149 }, { 155, 160, 161,  69, } },
+  // spout
+  { { 162, 163, 164, 165 }, { 166, 167, 168, 169 }, { 170, 171, 172, 173 }, { 174, 175, 176, 177, } },
+  { { 165, 178, 179, 162 }, { 169, 180, 181, 166 }, { 173, 182, 183, 170 }, { 177, 184, 185, 174, } },
+  { { 174, 175, 176, 177 }, { 186, 187, 188, 189 }, { 190, 191, 192, 193 }, { 194, 195, 196, 197, } },
+  { { 177, 184, 185, 174 }, { 189, 198, 199, 186 }, { 193, 200, 201, 190 }, { 197, 202, 203, 194, } },
+  // lid
+  // no bottom!
+};
+struct vertex teapot_vertices[16*42*42];
+GLushort teapot_elements[16*(42-1)*(42-1)*2*3];
+
+int factorial(int n) {
+  assert(n >= 0);
+  int result = 1;
+  for (int i = n; i > 1; i--)
+    result *= i;
+  return result;
+}
+
+float binomial_coefficient(int i, int n) {
+  assert(i >= 0); assert(n >= 0);
+  return 1.0f * factorial(n) / (factorial(i) * factorial(n-i));
+}
+
+float bernstein_polynomial(int i, int n, float u) {
+  return binomial_coefficient(i, n) * powf(u, i) * powf(1-u, n-i);
+}
+
+struct vertex compute_position(struct vertex control_points_k[3+1][3+1], float u, float v) {
+  struct vertex result = { 0.0, 0.0, 0.0 };
+  for (int i = 0; i <= 3; i++) {
+    float poly_i = bernstein_polynomial(i, 3, u);
+    for (int j = 0; j <= 3; j++) {
+      float poly_j = bernstein_polynomial(j, 3, v);
+      result.x += poly_i * poly_j * control_points_k[i][j].x;
+      result.y += poly_i * poly_j * control_points_k[i][j].y;
+      result.z += poly_i * poly_j * control_points_k[i][j].z;
+    }
+  }
+  // printf("%f-%f-%f\n", result.x, result.y, result.z);
+  return result;
+}
+
+void build_teapot() {
+  memset(teapot_vertices, 0, sizeof(teapot_vertices));
+  memset(teapot_elements, 0, sizeof(teapot_elements));
+  for (int p = 0; p < 16; p++) {
+    struct vertex control_points_k[3+1][3+1];
+    for (int i = 0; i <= 3; i++) {
+      for (int j = 0; j <= 3; j++) {
+	control_points_k[i][j].x = teapot_cp_vertices[teapot_patches[p][i][j] - 1].x;
+	control_points_k[i][j].y = teapot_cp_vertices[teapot_patches[p][i][j] - 1].y;
+	control_points_k[i][j].z = teapot_cp_vertices[teapot_patches[p][i][j] - 1].z;
+	// printf("CONTROL %d,%d - %f\t%f\t%f\n", i,j,
+	//        control_points_k[i][j].x,
+	//        control_points_k[i][j].y,
+	//        control_points_k[i][j].z);
+      }
+    }
+    for (int ru = 0; ru < 42; ru++) {
+      float u = ru/42.0;
+      for (int rv = 0; rv < 42; rv++) {
+	float v = rv/42.0;
+	teapot_vertices[p*42*42+ru*42+rv] = compute_position(control_points_k, u, v); 
+	// printf("(%d,%d,%d=%d)", p,ru,rv,p*42*42+ru*42+rv);
+	// printf("%f", teapot_vertices[p*42*42+ru*42+rv].x);
+	// printf("%f", teapot_vertices[p*42*42+ru*42+rv].y);
+	// printf("%f", teapot_vertices[p*42*42+ru*42+rv].z);
+	// printf("\n");
+      }
+    }
+  }
+
+  int n = 0;
+  for (int p = 0; p < 16; p++)
+    for (int ru = 0; ru < 42-1; ru++)
+      for (int rv = 0; rv < 42-1; rv++) {
+	// 1 square ABCD = 2 triangles ABC + CDA
+	// ABC
+	teapot_elements[n] = p*42*42 +     ru*42 +  rv   ; n++;
+	teapot_elements[n] = p*42*42 +     ru*42 + (rv+1); n++;
+	teapot_elements[n] = p*42*42 + (ru+1)*42 + (rv+1); n++;
+	// CDA
+	teapot_elements[n] = p*42*42 + (ru+1)*42 + (rv+1); n++;
+	teapot_elements[n] = p*42*42 + (ru+1)*42 +  rv   ; n++;
+	teapot_elements[n] = p*42*42 +  ru   *42 +  rv   ; n++;
+      }
+}
+
+/**
+ * Store all the file's contents in memory, useful to pass shaders
+ * source code to OpenGL
+ */
+char* file_read(const char* filename)
+{
+  FILE* in = fopen(filename, "rb");
+  if (in == NULL) return NULL;
+
+  int res_size = BUFSIZ;
+  char* res = (char*)malloc(res_size);
+  int nb_read_total = 0;
+
+  while (!feof(in) && !ferror(in)) {
+    if (nb_read_total + BUFSIZ > res_size) {
+      if (res_size > 10*1024*1024) break;
+      res_size = res_size * 2;
+      res = (char*)realloc(res, res_size);
+    }
+    char* p_res = res + nb_read_total;
+    nb_read_total += fread(p_res, 1, BUFSIZ, in);
+  }
+  
+  fclose(in);
+  res = (char*)realloc(res, nb_read_total + 1);
+  res[nb_read_total] = '\0';
+  return res;
+}
+
+/**
+ * Display compilation errors from the OpenGL shader compiler
+ */
+void print_log(GLuint object)
+{
+  GLint log_length = 0;
+  if (glIsShader(object))
+    glGetShaderiv(object, GL_INFO_LOG_LENGTH, &log_length);
+  else if (glIsProgram(object))
+    glGetProgramiv(object, GL_INFO_LOG_LENGTH, &log_length);
+  else {
+    fprintf(stderr, "printlog: Not a shader or a program\n");
+    return;
+  }
+
+  char* log = (char*)malloc(log_length);
+
+  if (glIsShader(object))
+    glGetShaderInfoLog(object, log_length, NULL, log);
+  else if (glIsProgram(object))
+    glGetProgramInfoLog(object, log_length, NULL, log);
+
+  fprintf(stderr, "%s", log);
+  free(log);
+}
+
+/**
+ * Compile the shader from file 'filename', with error handling
+ */
+GLint create_shader(const char* filename, GLenum type)
+{
+  const GLchar* source = file_read(filename);
+  if (source == NULL) {
+    fprintf(stderr, "Error opening %s: ", filename); perror("");
+    return 0;
+  }
+  GLuint res = glCreateShader(type);
+  glShaderSource(res, 1, &source, NULL);
+  free((void*)source);
+
+  glCompileShader(res);
+  GLint compile_ok = GL_FALSE;
+  glGetShaderiv(res, GL_COMPILE_STATUS, &compile_ok);
+  if (compile_ok == GL_FALSE) {
+    fprintf(stderr, "%s:", filename);
+    print_log(res);
+    glDeleteShader(res);
+    return 0;
+  }
+
+  return res;
+}
+
+int init_resources()
+{
+  GLint link_ok = GL_FALSE;
+
+  GLuint vs, fs;
+  if ((vs = create_shader("teapot.v.glsl", GL_VERTEX_SHADER))   == 0) return 0;
+  if ((fs = create_shader("teapot.f.glsl", GL_FRAGMENT_SHADER)) == 0) return 0;
+
+  program = glCreateProgram();
+  glAttachShader(program, vs);
+  glAttachShader(program, fs);
+  glLinkProgram(program);
+  glGetProgramiv(program, GL_LINK_STATUS, &link_ok);
+  if (!link_ok) {
+    fprintf(stderr, "glLinkProgram:");
+    return 0;
+  }
+
+  const char* attribute_name;
+  attribute_name = "coord3d";
+  attribute_coord3d = glGetAttribLocation(program, attribute_name);
+  if (attribute_coord3d == -1) {
+    fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
+    return 0;
+  }
+  const char* uniform_name;
+  uniform_name = "mvp";
+  uniform_mvp = glGetUniformLocation(program, uniform_name);
+  if (uniform_mvp == -1) {
+    fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
+    return 0;
+  }
+
+  build_teapot();
+
+  return 1;
+}
+
+void display()
+{
+  glUseProgram(program);
+  glClearColor(1.0, 1.0, 1.0, 1.0);
+  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+  glEnableVertexAttribArray(attribute_coord3d);
+  // Describe our vertices array to OpenGL (it can't guess its format automatically)
+  glVertexAttribPointer(
+    attribute_coord3d, // attribute
+    3,                 // number of elements per vertex, here (x,y,z)
+    GL_FLOAT,          // the type of each element
+    GL_FALSE,          // take our values as-is
+    sizeof(teapot_vertices[0]), // no extra data between each position
+    &teapot_vertices[0]         // pointer to the C array
+  );
+
+  /* Push each element in buffer_vertices to the vertex shader */
+  // static float i = 0;
+  // static float delta = 0.1;
+  // i += delta;
+  // if (i > teapot_nb_elements || i < 0)
+  //   delta *= -1;
+  // glDrawElements(GL_LINES, i, GL_UNSIGNED_SHORT, &teapot_elements);
+
+  glDrawElements(GL_TRIANGLES, 16*(42-1)*(42-1)*2*3, GL_UNSIGNED_SHORT, teapot_elements);
+
+  glDisableVertexAttribArray(attribute_coord3d);
+  glutSwapBuffers();
+}
+
+void idle() {
+  float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 15;  // 145° per second
+  glm::mat4 anim = 
+    glm::rotate(glm::mat4(1.0f), 1*angle, glm::vec3(1, 0, 0)) *
+    glm::rotate(glm::mat4(1.0f), 2*angle, glm::vec3(0, 1, 0)) *
+    glm::rotate(glm::mat4(1.0f), 3*angle, glm::vec3(0, 0, 1)) *
+    glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -1.5));
+
+  glm::mat4 model = glm::mat4(1.0f);
+  glm::mat4 view = glm::lookAt(glm::vec3(8.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
+  glm::mat4 projection = glm::perspective(45.0f, 1.0f*640/480, 0.1f, 20.0f);
+
+  glm::mat4 mvp = projection * view * model * anim;
+
+  glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
+  glutPostRedisplay();
+}
+
+void free_resources()
+{
+  glDeleteProgram(program);
+}
+
+
+int main(int argc, char* argv[]) {
+  glutInit(&argc, argv);
+  glutInitWindowSize(640, 480);
+  glutCreateWindow("My Rotating Teapot");
+
+  GLenum glew_status = glewInit();
+  if (glew_status != GLEW_OK) {
+    fprintf(stderr, "Error: %s\n", glewGetErrorString(glew_status));
+    return 1;
+  }
+
+  if (init_resources()) {
+    glutDisplayFunc(display);
+    glutIdleFunc(idle);
+    glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
+    glEnable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
+    //glDepthFunc(GL_LESS);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glutMainLoop();
+  }
+
+  free_resources();
+  return 0;
+}

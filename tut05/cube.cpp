@@ -128,13 +128,6 @@ int init_resources()
     fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
     return 0;
   }
-  /* const char* uniform_name; */
-  /* uniform_name = "fade"; */
-  /* uniform_fade = glGetUniformLocation(program, uniform_name); */
-  /* if (uniform_fade == -1) { */
-  /*   fprintf(stderr, "Could not bind uniform %s\n", uniform_name); */
-  /*   return 0; */
-  /* } */
   const char* uniform_name;
   uniform_name = "mvp";
   uniform_mvp = glGetUniformLocation(program, uniform_name);

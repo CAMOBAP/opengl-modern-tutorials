@@ -1,0 +1,5 @@
+CC=g++
+CXXFLAGS=-ggdb
+LDLIBS=-lglut -lGLEW -lGL -lm -frtti
+all: teapot
+teapot: teapot.o
