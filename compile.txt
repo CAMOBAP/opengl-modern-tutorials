@@ -1,0 +1,16 @@
+Under Debian and Ubuntu GNU/Linux, you need to install the following
+packages:
+
+  apt-get install build-essential \
+    libgl1-mesa-dev libglew1.5-dev freeglut3-dev \
+    libglm-dev
+
+To compile an example, go to its directly and just type:
+
+  cd tut01/
+  make
+
+It will create an executable (such as 'triangle', 'cube' or 'teapot')
+that you can run:
+
+  ./triangle
