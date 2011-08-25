@@ -314,8 +314,8 @@ struct vertex teapot_cp_vertices[] = {
   {  1.3   ,   0.728 ,  2.4     },
 };
 #define TEAPOT_NB_PATCHES 28
-#define BDEG 3
-GLushort teapot_patches[][BDEG+1][BDEG+1] = {
+#define ORDER 3
+GLushort teapot_patches[][ORDER+1][ORDER+1] = {
   // rim
   { {   1,   2,   3,   4 }, {   5,   6,   7,   8 }, {   9,  10,  11,  12 }, {  13,  14,  15,  16, } },
   { {   4,  17,  18,  19 }, {   8,  20,  21,  22 }, {  12,  23,  24,  25 }, {  16,  26,  27,  28, } },
@@ -357,11 +357,11 @@ struct vertex teapot_vertices[TEAPOT_NB_PATCHES * RESU*RESV];
 GLushort teapot_elements[TEAPOT_NB_PATCHES * (RESU-1)*(RESV-1) * 2*3];
 GLfloat teapot_colors[TEAPOT_NB_PATCHES * RESU*RESV * 3];
 
-GLushort teapot_cp_elements[TEAPOT_NB_PATCHES][BDEG+1][BDEG+1];
+GLushort teapot_cp_elements[TEAPOT_NB_PATCHES][ORDER+1][ORDER+1];
 GLfloat teapot_cp_colors[269*3];
 
-void build_control_points_k(int p, struct vertex control_points_k[][BDEG+1]);
-struct vertex compute_position(struct vertex control_points_k[][BDEG+1], float u, float v);
+void build_control_points_k(int p, struct vertex control_points_k[][ORDER+1]);
+struct vertex compute_position(struct vertex control_points_k[][ORDER+1], float u, float v);
 float bernstein_polynomial(int i, int n, float u);
 float binomial_coefficient(int i, int n);
 int factorial(int n);
@@ -369,7 +369,7 @@ int factorial(int n);
 void build_teapot() {
   // Vertices
   for (int p = 0; p < TEAPOT_NB_PATCHES; p++) {
-    struct vertex control_points_k[BDEG+1][BDEG+1];
+    struct vertex control_points_k[ORDER+1][ORDER+1];
     build_control_points_k(p, control_points_k);
     for (int ru = 0; ru <= RESU-1; ru++) {
       float u = 1.0 * ru / (RESU-1);
@@ -402,14 +402,14 @@ void build_teapot() {
   // Control points elements for debugging
   memset(teapot_cp_colors, 0, sizeof(teapot_cp_colors)); // black
   for (int p = 0; p < TEAPOT_NB_PATCHES; p++)
-    for (int i = 0; i < (BDEG+1); i++)
-      for (int j = 0; j < (BDEG+1); j++)
+    for (int i = 0; i < (ORDER+1); i++)
+      for (int j = 0; j < (ORDER+1); j++)
 	teapot_cp_elements[p][i][j] = teapot_patches[p][i][j] - 1;
 }
 
-void build_control_points_k(int p, struct vertex control_points_k[][BDEG+1]) {
-  for (int i = 0; i <= BDEG; i++) {
-    for (int j = 0; j <= BDEG; j++) {
+void build_control_points_k(int p, struct vertex control_points_k[][ORDER+1]) {
+  for (int i = 0; i <= ORDER; i++) {
+    for (int j = 0; j <= ORDER; j++) {
       control_points_k[i][j].x = teapot_cp_vertices[teapot_patches[p][i][j] - 1].x;
       control_points_k[i][j].y = teapot_cp_vertices[teapot_patches[p][i][j] - 1].y;
       control_points_k[i][j].z = teapot_cp_vertices[teapot_patches[p][i][j] - 1].z;
@@ -417,12 +417,12 @@ void build_control_points_k(int p, struct vertex control_points_k[][BDEG+1]) {
   }
 }
 
-struct vertex compute_position(struct vertex control_points_k[][BDEG+1], float u, float v) {
+struct vertex compute_position(struct vertex control_points_k[][ORDER+1], float u, float v) {
   struct vertex result = { 0.0, 0.0, 0.0 };
-  for (int i = 0; i <= BDEG; i++) {
-    float poly_i = bernstein_polynomial(i, BDEG, u);
-    for (int j = 0; j <= BDEG; j++) {
-      float poly_j = bernstein_polynomial(j, BDEG, v);
+  for (int i = 0; i <= ORDER; i++) {
+    float poly_i = bernstein_polynomial(i, ORDER, u);
+    for (int j = 0; j <= ORDER; j++) {
+      float poly_j = bernstein_polynomial(j, ORDER, v);
       result.x += poly_i * poly_j * control_points_k[i][j].x;
       result.y += poly_i * poly_j * control_points_k[i][j].y;
       result.z += poly_i * poly_j * control_points_k[i][j].z;
@@ -623,8 +623,8 @@ void display()
     teapot_cp_colors   // pointer to the C array
   );
   for (int p = 0; p < TEAPOT_NB_PATCHES; p++)
-    for (int i = 0; i < (BDEG+1); i++)
-      glDrawElements(GL_LINE_LOOP, (BDEG+1), GL_UNSIGNED_SHORT, &(teapot_cp_elements[p][i]));
+    for (int i = 0; i < (ORDER+1); i++)
+      glDrawElements(GL_LINE_LOOP, (ORDER+1), GL_UNSIGNED_SHORT, &(teapot_cp_elements[p][i]));
 
 
   glDisableVertexAttribArray(attribute_coord3d);
