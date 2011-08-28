@@ -17,10 +17,11 @@
 
 GLuint program;
 GLint attribute_coord3d;
-GLint uniform_mvp;
-struct vertex { GLfloat x, y, z; };
+GLint attribute_v_normal;
+GLint uniform_mvp, uniform_m_inverse;
 using namespace std;
-vector<vertex> suzanne_vertices;
+vector<glm::vec3> suzanne_vertices;
+vector<glm::vec3> suzanne_normals;
 vector<GLushort> suzanne_elements;
 
 /**
@@ -105,7 +106,7 @@ GLint create_shader(const char* filename, GLenum type)
   return res;
 }
 
-void load_obj(const char* filename, vector<vertex> *vertices, vector<GLushort> *elements) {
+void load_obj(const char* filename, vector<glm::vec3> &vertices, vector<glm::vec3> &normals, vector<GLushort> &elements) {
   ifstream in(filename, ios::in);
   if (!in) { cerr << "Cannot open " << filename << endl; exit(1); }
 
@@ -113,16 +114,26 @@ void load_obj(const char* filename, vector<vertex> *vertices, vector<GLushort> *
   while (getline(in, line)) {
     if (line.substr(0,2) == "v ") {
       istringstream s(line.substr(2));
-      vertex v; s >> v.x; s >> v.y; s >> v.z;
-      vertices->push_back(v);
+      glm::vec3 v; s >> v.x; s >> v.y; s >> v.z;
+      vertices.push_back(v);
     }  else if (line.substr(0,2) == "f ") {
       istringstream s(line.substr(2));
       GLushort a,b,c;
       s >> a; s >> b; s >> c;
-      elements->push_back(a-1); elements->push_back(b-1); elements->push_back(c-1);
+      a--; b--; c--;
+      elements.push_back(a); elements.push_back(b); elements.push_back(c);
     }
     else if (line[0] == '#') { /* ignoring this line */ }
     else { /* ignoring this line */ }
+  }
+
+  normals.reserve(vertices.size());
+  for (int i = 0; i < elements.size(); i+=3) {
+    GLushort ia = elements[i];
+    GLushort ib = elements[i+1];
+    GLushort ic = elements[i+2];
+    glm::vec3 normal = glm::normalize(glm::cross(vertices[ic] - vertices[ia], vertices[ib] - vertices[ia]));
+    normals[ia] = normals[ib] = normals[ic] = normal;
   }
 }
 
@@ -130,7 +141,7 @@ int init_resources()
 {
   GLint link_ok = GL_FALSE;
 
-  load_obj("suzanne.obj", &suzanne_vertices, &suzanne_elements);
+  load_obj("suzanne.obj", suzanne_vertices, suzanne_normals, suzanne_elements);
 
   GLuint vs, fs;
   if ((vs = create_shader("suzanne.v.glsl", GL_VERTEX_SHADER))   == 0) return 0;
@@ -153,10 +164,22 @@ int init_resources()
     fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
     return 0;
   }
+  attribute_name = "v_normal";
+  attribute_v_normal = glGetAttribLocation(program, attribute_name);
+  if (attribute_v_normal == -1) {
+    fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
+    return 0;
+  }
   const char* uniform_name;
   uniform_name = "mvp";
   uniform_mvp = glGetUniformLocation(program, uniform_name);
   if (uniform_mvp == -1) {
+    fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
+    return 0;
+  }
+  uniform_name = "m_inverse";
+  uniform_m_inverse = glGetUniformLocation(program, uniform_name);
+  if (uniform_m_inverse == -1) {
     fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
     return 0;
   }
@@ -179,7 +202,18 @@ void display()
     GL_FLOAT,           // the type of each element
     GL_FALSE,           // take our values as-is
     sizeof(suzanne_vertices[0]),  // size of each vertex
-    &suzanne_vertices[0]          // pointer to the C array
+    suzanne_vertices.data()      // pointer to the C array
+  );
+
+  glEnableVertexAttribArray(attribute_v_normal);
+  // Describe our vertices array to OpenGL (it can't guess its format automatically)
+  glVertexAttribPointer(
+    attribute_v_normal,   // attribute
+    3,                  // number of elements per vertex, here (x,y,z)
+    GL_FLOAT,           // the type of each element
+    GL_FALSE,           // take our values as-is
+    sizeof(suzanne_normals[0]),  // size of each vertex
+    suzanne_normals.data()      // pointer to the C array
   );
 
   /* Push each element in buffer_vertices to the vertex shader */
@@ -200,6 +234,8 @@ void idle() {
 
   glm::mat4 mvp = projection * view * model * anim;
   glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
+  glm::mat4 m_inverse = glm::inverse(model * anim);
+  glUniformMatrix4fv(uniform_m_inverse, 1, GL_FALSE, glm::value_ptr(m_inverse));
   glutPostRedisplay();
 }
 
@@ -221,8 +257,6 @@ int main(int argc, char* argv[]) {
   }
 
   if (init_resources()) {
-    cout << suzanne_vertices.size() << endl;
-    cout << suzanne_elements.size() << endl;
     glutDisplayFunc(display);
     glutIdleFunc(idle);
     glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
