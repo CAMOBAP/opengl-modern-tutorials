@@ -6,7 +6,7 @@ varying vec3 f_color;
 
 vec3 light_direction_world = vec3(-1.0, 1.0, -1.0);
 vec3 light_diffuse = vec3(1.0, 1.0, 1.0);
-vec3 material_diffuse = vec3(0.8, 0.8, 1.0);
+vec3 material_diffuse = vec3(0.8, 0.8, 0.8);
 
 void main(void) {
   gl_Position = mvp * vec4(coord3d, 1.0);
