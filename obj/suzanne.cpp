@@ -202,7 +202,7 @@ void display()
     GL_FLOAT,           // the type of each element
     GL_FALSE,           // take our values as-is
     sizeof(suzanne_vertices[0]),  // size of each vertex
-    suzanne_vertices.data()      // pointer to the C array
+    suzanne_vertices.data()       // pointer to the C array
   );
 
   glEnableVertexAttribArray(attribute_v_normal);
@@ -213,11 +213,11 @@ void display()
     GL_FLOAT,           // the type of each element
     GL_FALSE,           // take our values as-is
     sizeof(suzanne_normals[0]),  // size of each vertex
-    suzanne_normals.data()      // pointer to the C array
+    suzanne_normals.data()       // pointer to the C array
   );
 
   /* Push each element in buffer_vertices to the vertex shader */
-  glDrawElements(GL_TRIANGLES, suzanne_elements.size(), GL_UNSIGNED_SHORT, &suzanne_elements[0]);
+  glDrawElements(GL_TRIANGLES, suzanne_elements.size(), GL_UNSIGNED_SHORT, suzanne_elements.data());
 
 
   glDisableVertexAttribArray(attribute_coord3d);
@@ -248,7 +248,7 @@ void free_resources()
 int main(int argc, char* argv[]) {
   glutInit(&argc, argv);
   glutInitWindowSize(640, 480);
-  glutCreateWindow("Flying Suzanne");
+  glutCreateWindow("Rotating Suzanne");
 
   GLenum glew_status = glewInit();
   if (glew_status != GLEW_OK) {
