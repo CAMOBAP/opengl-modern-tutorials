@@ -5,9 +5,15 @@
 #include <GL/glew.h>
 /* Using the GLUT library for the base windowing setup */
 #include <GL/glut.h>
+/* GLM */
+// #define GLM_MESSAGES
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 GLuint program;
 GLint attribute_coord3d, attribute_v_color;
+GLint uniform_m_transform;
 
 /**
  * Store all the file's contents in memory, useful to pass shaders
@@ -96,8 +102,8 @@ int init_resources()
   GLint link_ok = GL_FALSE;
 
   GLuint vs, fs;
-  if ((vs = create_shader("cube.v.glsl", GL_VERTEX_SHADER))   == 0) return 0;
-  if ((fs = create_shader("cube.f.glsl", GL_FRAGMENT_SHADER)) == 0) return 0;
+  if ((vs = create_shader("triangle.v.glsl", GL_VERTEX_SHADER))   == 0) return 0;
+  if ((fs = create_shader("triangle.f.glsl", GL_FRAGMENT_SHADER)) == 0) return 0;
 
   program = glCreateProgram();
   glAttachShader(program, vs);
@@ -122,6 +128,13 @@ int init_resources()
     fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
     return 0;
   }
+  const char* uniform_name;
+  uniform_name = "m_transform";
+  uniform_m_transform = glGetUniformLocation(program, uniform_name);
+  if (uniform_m_transform == -1) {
+    fprintf(stderr, "Could not bind uniform_fade %s\n", uniform_name);
+    return 0;
+  }
   return 1;
 }
 
@@ -129,86 +142,16 @@ void display()
 {
   glUseProgram(program);
   glClearColor(1.0, 1.0, 1.0, 1.0);
-  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-
-  glEnableVertexAttribArray(attribute_coord3d);
-  GLfloat cube_vertices[] = {
-    // front
-    -1.0, -1.0, -3.0,
-     1.0, -1.0, -3.0,
-     1.0,  1.0, -3.0,
-    -1.0,  1.0, -3.0,
-    // back
-    -1.0, -1.0, -5.0,
-     1.0, -1.0, -5.0,
-     1.0,  1.0, -5.0,
-    -1.0,  1.0, -5.0,
-  };
-  // Describe our vertices array to OpenGL (it can't guess its format automatically)
-  glVertexAttribPointer(
-    attribute_coord3d, // attribute
-    3,                 // number of elements per vertex, here (x,y,z)
-    GL_FLOAT,          // the type of each element
-    GL_FALSE,          // take our values as-is
-    0,                 // no extra data between each position
-    cube_vertices      // pointer to the C array
-  );
-
-  glEnableVertexAttribArray(attribute_v_color);
-  GLfloat cube_colors[] = {
-    // front colors
-    1.0, 0.0, 0.0,
-    0.0, 1.0, 0.0,
-    0.0, 0.0, 1.0,
-    1.0, 1.0, 1.0,
-    // back colors
-    1.0, 0.0, 0.0,
-    0.0, 1.0, 0.0,
-    0.0, 0.0, 1.0,
-    1.0, 1.0, 1.0,
-  };
-  glVertexAttribPointer(
-    attribute_v_color, // attribute
-    3,                 // number of elements per vertex, here (R,G,B)
-    GL_FLOAT,          // the type of each element
-    GL_FALSE,          // take our values as-is
-    0,                 // no extra data between each position
-    cube_colors        // pointer to the C array
-  );
-
-  GLushort cube_elements[] = {
-    // front
-    0, 1, 2,
-    //2, 3, 0,
-    // top
-    1, 5, 6,
-    6, 2, 1,
-    // back
-    7, 6, 5,
-    5, 4, 7,
-    // bottom
-    4, 0, 3,
-    3, 7, 4,
-    // left
-    4, 5, 1,
-    1, 0, 4,
-    // right
-    3, 2, 6,
-    6, 7, 3,
-  };
-
-  /* Push each element in buffer_vertices to the vertex shader */
-  glDrawElements(GL_TRIANGLES, sizeof(cube_elements)/sizeof(GLushort), GL_UNSIGNED_SHORT, cube_elements);
-
+  glClear(GL_COLOR_BUFFER_BIT);
   struct attributes {
-      GLfloat coord2d[3];
+      GLfloat coord3d[2];
       GLfloat v_color[3];
   };
   
   struct attributes triangle_attributes[] = {
-    {{ 0.0,  0.8, 0.0}, {1.0, 1.0, 0.0}},
-    {{-0.8, -0.8, 0.0}, {0.0, 0.0, 1.0}},
-    {{ 0.8, -0.8, 0.0}, {1.0, 0.0, 0.0}}
+      {{ 0.0,  0.8}, {1.0, 1.0, 0.0}},
+      {{-0.8, -0.8}, {0.0, 0.0, 1.0}},
+      {{ 0.8, -0.8}, {1.0, 0.0, 0.0}}
   };
   glEnableVertexAttribArray(attribute_coord3d);
   glEnableVertexAttribArray(attribute_v_color);
@@ -217,7 +160,7 @@ void display()
     3,                   // number of elements per vertex, here (x,y)
     GL_FLOAT,            // the type of each element
     GL_FALSE,            // take our values as-is
-    sizeof(struct attributes), // next coord2d appears every 5 floats
+    sizeof(struct attributes), // next coord3d appears every 5 floats
     triangle_attributes  // pointer to the C array
   );
   glVertexAttribPointer(
@@ -230,9 +173,7 @@ void display()
   );
 
   /* Push each element in buffer_vertices to the vertex shader */
-  //glDrawArrays(GL_TRIANGLE_STRIP, 0, 3);
-  GLushort triangle_elements[] = { 0, 1, 2 };
-  //glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_SHORT, triangle_elements);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 3);
 
   glDisableVertexAttribArray(attribute_coord3d);
   glDisableVertexAttribArray(attribute_v_color);
@@ -240,6 +181,13 @@ void display()
 }
 
 void idle() {
+  float move = sinf(glutGet(GLUT_ELAPSED_TIME) / 1000.0 * (2*3.14) / 5); // -1<->+1 every 5 seconds
+  float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 45;  // 45° per second
+  glm::vec3 axis_z(0, 0, 1);
+  glm::mat4 m_transform = glm::translate(glm::mat4(1.0f), glm::vec3(move, 0.0, 0.0))
+    * glm::rotate(glm::mat4(1.0f), angle, axis_z);
+
+  glUniformMatrix4fv(uniform_m_transform, 1, GL_FALSE, glm::value_ptr(m_transform));
   glutPostRedisplay();
 }
 
@@ -252,7 +200,7 @@ void free_resources()
 int main(int argc, char* argv[]) {
   glutInit(&argc, argv);
   glutInitWindowSize(640, 480);
-  glutCreateWindow("My First Cube");
+  glutCreateWindow("My Transformed Triangle");
 
   GLenum glew_status = glewInit();
   if (glew_status != GLEW_OK) {
@@ -266,7 +214,6 @@ int main(int argc, char* argv[]) {
     glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_DEPTH_TEST);
     glutMainLoop();
   }
 
