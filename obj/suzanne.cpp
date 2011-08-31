@@ -247,6 +247,7 @@ void free_resources()
 
 int main(int argc, char* argv[]) {
   glutInit(&argc, argv);
+  glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
   glutInitWindowSize(640, 480);
   glutCreateWindow("Rotating Suzanne");
 
@@ -259,7 +260,6 @@ int main(int argc, char* argv[]) {
   if (init_resources()) {
     glutDisplayFunc(display);
     glutIdleFunc(idle);
-    glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
     glEnable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
