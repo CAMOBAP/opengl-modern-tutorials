@@ -408,13 +408,9 @@ void build_teapot() {
 }
 
 void build_control_points_k(int p, struct vertex control_points_k[][ORDER+1]) {
-  for (int i = 0; i <= ORDER; i++) {
-    for (int j = 0; j <= ORDER; j++) {
-      control_points_k[i][j].x = teapot_cp_vertices[teapot_patches[p][i][j] - 1].x;
-      control_points_k[i][j].y = teapot_cp_vertices[teapot_patches[p][i][j] - 1].y;
-      control_points_k[i][j].z = teapot_cp_vertices[teapot_patches[p][i][j] - 1].z;
-    }
-  }
+  for (int i = 0; i <= ORDER; i++)
+    for (int j = 0; j <= ORDER; j++)
+      control_points_k[i][j] = teapot_cp_vertices[teapot_patches[p][i][j] - 1];
 }
 
 struct vertex compute_position(struct vertex control_points_k[][ORDER+1], float u, float v) {
