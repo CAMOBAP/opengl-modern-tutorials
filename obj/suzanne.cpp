@@ -134,8 +134,8 @@ void load_obj(const char* filename, vector<glm::vec4> &vertices, vector<glm::vec
     GLushort ib = elements[i+1];
     GLushort ic = elements[i+2];
     glm::vec3 normal = glm::normalize(glm::cross(
-      glm::vec3(vertices[ic]) - glm::vec3(vertices[ia]),
-      glm::vec3(vertices[ib]) - glm::vec3(vertices[ia])));
+      glm::vec3(vertices[ib]) - glm::vec3(vertices[ia]),
+      glm::vec3(vertices[ic]) - glm::vec3(vertices[ia])));
     normals[ia] = normals[ib] = normals[ic] = normal;
   }
 }
