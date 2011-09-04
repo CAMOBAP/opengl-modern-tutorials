@@ -18,7 +18,7 @@
 GLuint program;
 GLint attribute_coord3d;
 GLint attribute_v_normal;
-GLint uniform_m, uniform_v, uniform_p, uniform_m_inv;
+GLint uniform_m, uniform_v, uniform_p, uniform_m_inv_transp;
 using namespace std;
 vector<glm::vec3> suzanne_vertices;
 vector<glm::vec3> suzanne_normals;
@@ -189,9 +189,9 @@ int init_resources()
     fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
     return 0;
   }
-  uniform_name = "m_inv";
-  uniform_m_inv = glGetUniformLocation(program, uniform_name);
-  if (uniform_m_inv == -1) {
+  uniform_name = "m_inv_transp";
+  uniform_m_inv_transp = glGetUniformLocation(program, uniform_name);
+  if (uniform_m_inv_transp == -1) {
     fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
     return 0;
   }
@@ -253,8 +253,8 @@ void idle() {
   glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(model2world));
   glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(world2camera));
   glUniformMatrix4fv(uniform_p, 1, GL_FALSE, glm::value_ptr(camera2screen));
-  glm::mat4 m_inv = glm::inverse(model2world * anim);
-  glUniformMatrix4fv(uniform_m_inv, 1, GL_FALSE, glm::value_ptr(m_inv));
+  glm::mat4 m_inv_transp = glm::transpose(glm::inverse(model2world));
+  glUniformMatrix4fv(uniform_m_inv_transp, 1, GL_FALSE, glm::value_ptr(m_inv_transp));
   glutPostRedisplay();
 }
 
