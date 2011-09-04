@@ -18,7 +18,7 @@
 GLuint program;
 GLint attribute_coord3d;
 GLint attribute_v_normal;
-GLint uniform_mvp, uniform_m_inverse;
+GLint uniform_m, uniform_v, uniform_p, uniform_m_inv;
 using namespace std;
 vector<glm::vec3> suzanne_vertices;
 vector<glm::vec3> suzanne_normals;
@@ -171,15 +171,27 @@ int init_resources()
     return 0;
   }
   const char* uniform_name;
-  uniform_name = "mvp";
-  uniform_mvp = glGetUniformLocation(program, uniform_name);
-  if (uniform_mvp == -1) {
+  uniform_name = "m";
+  uniform_m = glGetUniformLocation(program, uniform_name);
+  if (uniform_m == -1) {
     fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
     return 0;
   }
-  uniform_name = "m_inverse";
-  uniform_m_inverse = glGetUniformLocation(program, uniform_name);
-  if (uniform_m_inverse == -1) {
+  uniform_name = "v";
+  uniform_v = glGetUniformLocation(program, uniform_name);
+  if (uniform_v == -1) {
+    fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
+    return 0;
+  }
+  uniform_name = "p";
+  uniform_p = glGetUniformLocation(program, uniform_name);
+  if (uniform_p == -1) {
+    fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
+    return 0;
+  }
+  uniform_name = "m_inv";
+  uniform_m_inv = glGetUniformLocation(program, uniform_name);
+  if (uniform_m_inv == -1) {
     fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
     return 0;
   }
@@ -228,14 +240,21 @@ void idle() {
   float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 30;  // base 30° per second
   glm::mat4 anim = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0, 0, 1));
 
-  glm::mat4 model = glm::mat4(1);
-  glm::mat4 view = glm::lookAt(glm::vec3(0.0, -4.0, 0.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
-  glm::mat4 projection = glm::perspective(45.0f, 1.0f*640/480, 0.1f, 20.0f);
+  // Model
+  glm::mat4 model2world   = glm::mat4(1) * anim;
+  // View
+  glm::mat4 world2camera  = glm::lookAt(
+    glm::vec3(0.0, -4.0, 0.0),   // eye
+    glm::vec3(0.0,  0.0, 0.0),   // direction
+    glm::vec3(0.0,  0.0, 1.0));  // up
+  // Projection
+  glm::mat4 camera2screen = glm::perspective(45.0f, 1.0f*640/480, 0.1f, 100.0f);
 
-  glm::mat4 mvp = projection * view * model * anim;
-  glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
-  glm::mat4 m_inverse = glm::inverse(model * anim);
-  glUniformMatrix4fv(uniform_m_inverse, 1, GL_FALSE, glm::value_ptr(m_inverse));
+  glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(model2world));
+  glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(world2camera));
+  glUniformMatrix4fv(uniform_p, 1, GL_FALSE, glm::value_ptr(camera2screen));
+  glm::mat4 m_inv = glm::inverse(model2world * anim);
+  glUniformMatrix4fv(uniform_m_inv, 1, GL_FALSE, glm::value_ptr(m_inv));
   glutPostRedisplay();
 }
 
