@@ -1,18 +1,33 @@
 #version 110
-attribute vec3 coord3d;
+attribute vec4 v_coord;
 attribute vec3 v_normal;
 uniform mat4 m, v, p;
-uniform mat4 m_inv_transp;
-varying vec3 f_color;
+uniform mat3 m_3x3_inv_transp;
+varying vec4 color;
 
-vec3 light_direction_world = vec3(-1.0, 1.0, -1.0);
-vec3 light_diffuse = vec3(1.0, 1.0, 1.0);
-vec3 material_diffuse = vec3(1.0, 0.8, 0.8);
+struct lightSource {
+  vec4 position;
+  vec4 diffuse;
+};
+lightSource light0 = lightSource(
+    vec4(-1.0, 1.0, -1.0, 0.0),
+    vec4(1.0, 1.0, 1.0, 1.0)
+);
+
+struct material {
+  vec4 diffuse;
+};
+material mymaterial = material(vec4(1.0, 0.8, 0.8, 1.0));
 
 void main(void) {
   mat4 mvp = p*v*m;
-  gl_Position = mvp * vec4(coord3d, 1.0);
-  vec3 v_normal_world = (m_inv_transp * vec4(v_normal, 0.0)).xyz;
-  vec3 diffuse_reflection = light_diffuse * material_diffuse * max(0.0, dot(v_normal_world, light_direction_world));
-  f_color = diffuse_reflection;
+  vec3 normalDirection = normalize(m_3x3_inv_transp * v_normal);
+  vec3 lightDirection = normalize(vec3(light0.position));
+
+  vec3 diffuseReflection
+    = vec3(light0.diffuse) * vec3(mymaterial.diffuse)
+    * max(0.0, dot(normalDirection, lightDirection));
+
+  color = vec4(diffuseReflection, 1.0);
+  gl_Position = mvp * v_coord;
 }

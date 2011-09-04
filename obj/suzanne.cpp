@@ -16,11 +16,12 @@
 #include <glm/gtc/type_ptr.hpp>
 
 GLuint program;
-GLint attribute_coord3d;
+GLint attribute_v_coord;
 GLint attribute_v_normal;
-GLint uniform_m, uniform_v, uniform_p, uniform_m_inv_transp;
+GLint uniform_m, uniform_v, uniform_p;
+GLint uniform_m_3x3_inv_transp;
 using namespace std;
-vector<glm::vec3> suzanne_vertices;
+vector<glm::vec4> suzanne_vertices;
 vector<glm::vec3> suzanne_normals;
 vector<GLushort> suzanne_elements;
 
@@ -106,7 +107,7 @@ GLint create_shader(const char* filename, GLenum type)
   return res;
 }
 
-void load_obj(const char* filename, vector<glm::vec3> &vertices, vector<glm::vec3> &normals, vector<GLushort> &elements) {
+void load_obj(const char* filename, vector<glm::vec4> &vertices, vector<glm::vec3> &normals, vector<GLushort> &elements) {
   ifstream in(filename, ios::in);
   if (!in) { cerr << "Cannot open " << filename << endl; exit(1); }
 
@@ -114,7 +115,7 @@ void load_obj(const char* filename, vector<glm::vec3> &vertices, vector<glm::vec
   while (getline(in, line)) {
     if (line.substr(0,2) == "v ") {
       istringstream s(line.substr(2));
-      glm::vec3 v; s >> v.x; s >> v.y; s >> v.z;
+      glm::vec4 v; s >> v.x; s >> v.y; s >> v.z; v.w = 1.0;
       vertices.push_back(v);
     }  else if (line.substr(0,2) == "f ") {
       istringstream s(line.substr(2));
@@ -132,7 +133,9 @@ void load_obj(const char* filename, vector<glm::vec3> &vertices, vector<glm::vec
     GLushort ia = elements[i];
     GLushort ib = elements[i+1];
     GLushort ic = elements[i+2];
-    glm::vec3 normal = glm::normalize(glm::cross(vertices[ic] - vertices[ia], vertices[ib] - vertices[ia]));
+    glm::vec3 normal = glm::normalize(glm::cross(
+      glm::vec3(vertices[ic]) - glm::vec3(vertices[ia]),
+      glm::vec3(vertices[ib]) - glm::vec3(vertices[ia])));
     normals[ia] = normals[ib] = normals[ic] = normal;
   }
 }
@@ -158,9 +161,9 @@ int init_resources()
   }
 
   const char* attribute_name;
-  attribute_name = "coord3d";
-  attribute_coord3d = glGetAttribLocation(program, attribute_name);
-  if (attribute_coord3d == -1) {
+  attribute_name = "v_coord";
+  attribute_v_coord = glGetAttribLocation(program, attribute_name);
+  if (attribute_v_coord == -1) {
     fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
     return 0;
   }
@@ -189,9 +192,9 @@ int init_resources()
     fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
     return 0;
   }
-  uniform_name = "m_inv_transp";
-  uniform_m_inv_transp = glGetUniformLocation(program, uniform_name);
-  if (uniform_m_inv_transp == -1) {
+  uniform_name = "m_3x3_inv_transp";
+  uniform_m_3x3_inv_transp = glGetUniformLocation(program, uniform_name);
+  if (uniform_m_3x3_inv_transp == -1) {
     fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
     return 0;
   }
@@ -206,13 +209,13 @@ void display()
   glClearColor(0.45, 0.45, 0.45, 1.0);
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
-  glEnableVertexAttribArray(attribute_coord3d);
+  glEnableVertexAttribArray(attribute_v_coord);
   // Describe our vertices array to OpenGL (it can't guess its format automatically)
   glVertexAttribPointer(
-    attribute_coord3d,  // attribute
-    3,                  // number of elements per vertex, here (x,y,z)
-    GL_FLOAT,           // the type of each element
-    GL_FALSE,           // take our values as-is
+    attribute_v_coord,  // attribute
+    3,                // number of elements per vertex, here (x,y,z)
+    GL_FLOAT,         // the type of each element
+    GL_FALSE,         // take our values as-is
     sizeof(suzanne_vertices[0]),  // size of each vertex
     suzanne_vertices.data()       // pointer to the C array
   );
@@ -220,7 +223,7 @@ void display()
   glEnableVertexAttribArray(attribute_v_normal);
   // Describe our vertices array to OpenGL (it can't guess its format automatically)
   glVertexAttribPointer(
-    attribute_v_normal,   // attribute
+    attribute_v_normal, // attribute
     3,                  // number of elements per vertex, here (x,y,z)
     GL_FLOAT,           // the type of each element
     GL_FALSE,           // take our values as-is
@@ -232,7 +235,7 @@ void display()
   glDrawElements(GL_TRIANGLES, suzanne_elements.size(), GL_UNSIGNED_SHORT, suzanne_elements.data());
 
 
-  glDisableVertexAttribArray(attribute_coord3d);
+  glDisableVertexAttribArray(attribute_v_coord);
   glutSwapBuffers();
 }
 
@@ -253,8 +256,8 @@ void idle() {
   glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(model2world));
   glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(world2camera));
   glUniformMatrix4fv(uniform_p, 1, GL_FALSE, glm::value_ptr(camera2screen));
-  glm::mat4 m_inv_transp = glm::transpose(glm::inverse(model2world));
-  glUniformMatrix4fv(uniform_m_inv_transp, 1, GL_FALSE, glm::value_ptr(m_inv_transp));
+  glm::mat3 m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(model2world)));
+  glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
   glutPostRedisplay();
 }
 
