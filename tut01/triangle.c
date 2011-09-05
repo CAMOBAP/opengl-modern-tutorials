@@ -98,6 +98,7 @@ void free_resources()
 
 int main(int argc, char* argv[]) {
   glutInit(&argc, argv);
+  glutInitDisplayMode(GLUT_RGBA|GLUT_DOUBLE|GLUT_DEPTH);
   glutInitWindowSize(640, 480);
   glutCreateWindow("My First Triangle");
 
@@ -109,7 +110,6 @@ int main(int argc, char* argv[]) {
 
   if (init_resources()) {
     glutDisplayFunc(display);
-    glutInitDisplayMode(GLUT_RGBA|GLUT_DOUBLE|GLUT_DEPTH);
     glutMainLoop();
   }
 
