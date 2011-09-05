@@ -1,3 +1,7 @@
+/**
+ * This file is in the public domain.
+ * Contributors: Sylvain Beucler
+ */
 #include <stdio.h>
 #include <stdlib.h>
 /* Use glew.h instead of gl.h to get all the GL prototypes declared */

@@ -1,3 +1,7 @@
+/**
+ * This file is in the public domain.
+ * Contributors: Martin Kraus, Sylvain Beucler
+ */
 #version 110
 attribute vec4 v_coord;
 attribute vec3 v_normal;

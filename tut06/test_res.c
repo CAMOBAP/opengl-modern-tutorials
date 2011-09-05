@@ -1,3 +1,7 @@
+/**
+ * This file is in the public domain.
+ * Contributors: Sylvain Beucler
+ */
 #include "SDL.h"
 #include "res_texture.c"
 int main(int argc, char* argv[]) {
