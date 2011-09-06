@@ -8,7 +8,8 @@ attribute vec3 v_normal;
 uniform mat4 m, v, p;
 uniform mat3 m_3x3_inv_transp;
 uniform mat4 v_inv;
-varying vec4 color;
+varying vec4 frontColor; // color for front face
+varying vec4 backColor; // color for back face
 
 struct lightSource
 {
@@ -36,11 +37,17 @@ struct material
   vec4 specular;
   float shininess;
 };
-material mymaterial = material(
+material frontMaterial = material(
   vec4(0.2, 0.2, 0.2, 1.0),
-  vec4(1.0, 0.8, 0.8, 1.0),
+  vec4(1.0, 0.0, 0.0, 1.0),
   vec4(1.0, 1.0, 1.0, 1.0),
-  5.0
+  100.0
+);
+material backMaterial = material(
+  vec4(0.2, 0.2, 0.2, 1.0),
+  vec4(0.0, 0.0, 1.0, 1.0),
+  vec4(1.0, 1.0, 1.0, 1.0),
+  100.0
 );
 
 void main(void)
@@ -82,10 +89,12 @@ void main(void)
 	}
     }
 
-  vec3 ambientLightning = vec3(scene_ambient) * vec3(mymaterial.ambient);
+  // Computation of lighting for front faces
+
+  vec3 ambientLightning = vec3(scene_ambient) * vec3(frontMaterial.ambient);
 
   vec3 diffuseReflection = attenuation
-    * vec3(light0.diffuse) * vec3(mymaterial.diffuse)
+    * vec3(light0.diffuse) * vec3(frontMaterial.diffuse)
     * max(0.0, dot(normalDirection, lightDirection));
 
   vec3 specularReflection;
@@ -95,11 +104,34 @@ void main(void)
     }
   else // light source on the right side
     {
-      specularReflection = attenuation * vec3(light0.specular) * vec3(mymaterial.specular)
+      specularReflection = attenuation * vec3(light0.specular) * vec3(frontMaterial.specular)
 	* pow(max(0.0, dot(reflect(-lightDirection, normalDirection), viewDirection)),
-	      mymaterial.shininess);
+	      frontMaterial.shininess);
     }
 
-  color = vec4(ambientLightning + diffuseReflection + specularReflection, 1.0);
+  frontColor = vec4(ambientLightning + diffuseReflection + specularReflection, 1.0);
+
+  // Computation of lighting for back faces (uses negative normalDirection and back material colors)
+
+  vec3 backAmbientLighting = vec3(scene_ambient) * vec3(backMaterial.ambient);
+
+  vec3 backDiffuseReflection = attenuation
+    * vec3(light0.diffuse) * vec3(backMaterial.diffuse)
+    * max(0.0, dot(-normalDirection, lightDirection));
+
+  vec3 backSpecularReflection;
+  if (dot(-normalDirection, lightDirection) < 0.0) // light source on the wrong side?
+    {
+      backSpecularReflection = vec3(0.0, 0.0, 0.0); // no specular reflection
+    }
+  else // light source on the right side
+    {
+      backSpecularReflection = attenuation * vec3(light0.specular) * vec3(backMaterial.specular)
+	* pow(max(0.0, dot(reflect(-lightDirection, -normalDirection), viewDirection)),
+	      backMaterial.shininess);
+    }
+
+  backColor = vec4(backAmbientLighting + backDiffuseReflection + backSpecularReflection, 1.0);
+
   gl_Position = mvp * v_coord;
 }
