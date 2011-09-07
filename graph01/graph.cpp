@@ -20,11 +20,12 @@ float offset_x = 0.0;
 float scale_x = 1.0;
 int mode = 0;
 
-struct attributes {
-  GLfloat coord2d[2];
+struct point {
+  GLfloat x;
+  GLfloat y;
 };
 
-attributes *graph;
+point *graph;
 GLuint vbo;
 
 /**
@@ -185,14 +186,13 @@ int init_resources()
   glBufferData(GL_ARRAY_BUFFER, 2000 * sizeof *graph, 0, GL_STATIC_DRAW);
 
   // Get a pointer to the buffer
-  graph = (attributes *)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+  graph = (point *)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
 
   // Fill it in just like an array
   for(int i = 0; i < 2000; i++) {
     float x = (i - 1000.0) / 100.0;
-    float y = sin(x * 10.0) / (1.0 + x * x);
-    graph[i].coord2d[0] = x;
-    graph[i].coord2d[1] = y;
+    graph[i].x = x;
+    graph[i].y = sin(x * 10.0) / (1.0 + x * x);
   }
 
   // Unmap the buffer

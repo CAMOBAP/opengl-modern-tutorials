@@ -4,7 +4,7 @@ uniform bool sprite;
 
 void main(void) {
   if(sprite)
-    gl_FragColor = texture2D(mytexture, gl_PointCoord);
+    gl_FragColor = texture2D(mytexture, gl_PointCoord) * f_color;
   else
     gl_FragColor = f_color;
 }
