@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-/* Use glew.h instead of gl.h to get all the GL prototypes declared */
-#include <GL/glew.h>
+#define GL_GLEXT_PROTOTYPES
+#include <GL/gl.h>
+#include <GL/glext.h>
 /* Using the GLUT library for the base windowing setup */
 #include <GL/glut.h>
 
@@ -293,12 +294,6 @@ int main(int argc, char* argv[]) {
   glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
   glutInitWindowSize(640, 480);
   glutCreateWindow("My Graph");
-
-  GLenum glew_status = glewInit();
-  if (glew_status != GLEW_OK) {
-    fprintf(stderr, "Error: %s\n", glewGetErrorString(glew_status));
-    return 1;
-  }
 
   if (init_resources()) {
     glutDisplayFunc(display);

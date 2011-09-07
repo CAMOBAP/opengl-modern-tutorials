@@ -1,2 +1,2 @@
-LDLIBS=-lGL -lGLEW -lglut
+LDLIBS=-lGL -lglut
 all: graph
