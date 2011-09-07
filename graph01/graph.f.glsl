@@ -1,3 +1,5 @@
+#version 120
+
 uniform sampler2D mytexture;
 varying vec4 f_color;
 uniform bool sprite;

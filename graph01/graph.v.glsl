@@ -1,5 +1,7 @@
+#version 120
+
 attribute vec2 coord2d;
-varying vec3 f_color;
+varying vec4 f_color;
 uniform float offset_x;
 uniform float scale_x;
 
