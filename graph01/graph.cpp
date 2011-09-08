@@ -26,7 +26,6 @@ struct point {
   GLfloat y;
 };
 
-point *graph;
 GLuint vbo;
 
 /**
@@ -184,10 +183,9 @@ int init_resources()
   glEnableClientState(GL_VERTEX_ARRAY);
   glGenBuffers(1, &vbo);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, 2000 * sizeof *graph, 0, GL_STATIC_DRAW);
 
-  // Get a pointer to the buffer
-  graph = (point *)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+  // Create our own temporary buffer
+  point graph[2000];
 
   // Fill it in just like an array
   for(int i = 0; i < 2000; i++) {
@@ -196,8 +194,8 @@ int init_resources()
     graph[i].y = sin(x * 10.0) / (1.0 + x * x);
   }
 
-  // Unmap the buffer
-  glUnmapBuffer(GL_ARRAY_BUFFER);
+  // Tell OpenGL to copy our array to the buffer object
+  glBufferData(GL_ARRAY_BUFFER, sizeof graph, graph, GL_STATIC_DRAW);
 
   return 1;
 }
