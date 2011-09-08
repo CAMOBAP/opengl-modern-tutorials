@@ -17,8 +17,8 @@ GLint uniform_mytexture;
 float offset_x = 0.0;
 float scale_x = 20.48;
 
-bool interpolate = true;
-bool wrap = false;
+bool interpolate = false;
+bool clamp = false;
 bool showpoints = false;
 
 GLuint vbo;
@@ -200,7 +200,7 @@ void display()
   glClear(GL_COLOR_BUFFER_BIT);
 
   /* Set texture wrapping mode */
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap ? GL_REPEAT : GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 
   /* Set texture interpolation mode */
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, interpolate ? GL_LINEAR : GL_NEAREST);
@@ -242,7 +242,7 @@ void special(int key, int x, int y)
 			interpolate = !interpolate;
 			break;
 		case GLUT_KEY_F2:
-			wrap = !wrap;
+			clamp = !clamp;
 			break;
 		case GLUT_KEY_F3:
 			showpoints = !showpoints;
@@ -255,9 +255,11 @@ void special(int key, int x, int y)
 			break;
 		case GLUT_KEY_UP:
 			scale_x *= 1.5;
+			offset_x *= 1.5;
 			break;
 		case GLUT_KEY_DOWN:
 			scale_x /= 1.5;
+			offset_x /= 1.5;
 			break;
 		case GLUT_KEY_HOME:
 			offset_x = 0.0;
