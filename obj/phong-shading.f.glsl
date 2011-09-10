@@ -17,20 +17,20 @@ struct lightSource
   float spotCutoff, spotExponent;
   vec3 spotDirection;
 };
-const int numberOfLights = 3;
+const int numberOfLights = 2;
 lightSource[numberOfLights] lights;
 lightSource light0 = lightSource(
   vec4(0.0, -2.0, 1.0, 1.0),
-  vec4(1.0, 1.0, 1.0, 1.0),
-  vec4(1.0, 1.0, 1.0, 1.0),
+  vec4(1.0,  1.0, 1.0, 1.0),
+  vec4(1.0,  1.0, 1.0, 1.0),
   0.0, 1.0, 0.0,
   180.0, 0.0,
   vec3(-1.0, 1.0, -0.5)
 );
 lightSource light1 = lightSource(
-    vec4(0.0, 0.0, -2.0, 1.0),
-    vec4(1.0, 0.0, 0.0, 1.0),
-    vec4(0.1, 0.1, 0.1, 1.0),
+    vec4(0.0,  0.0, -2.0, 1.0),
+    vec4(2.0,  0.0,  0.0, 1.0),
+    vec4(0.1,  0.1,  0.1, 1.0),
     0.0, 1.0, 0.0,
     80.0, 10.0,
     vec3(0.0, 0.0, 1.0)

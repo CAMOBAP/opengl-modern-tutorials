@@ -19,6 +19,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+int screen_width=800, screen_height=600;
 GLuint program;
 GLint attribute_v_coord;
 GLint attribute_v_normal;
@@ -28,6 +29,14 @@ using namespace std;
 vector<glm::vec4> suzanne_vertices;
 vector<glm::vec3> suzanne_normals;
 vector<GLushort> suzanne_elements;
+
+enum MODES { MODE_OBJECT, MODE_CAMERA, MODE_LIGHT, MODE_LAST } view_mode;
+int rotZ_direction = 0, rotX_direction = 0, transY_direction = 0;
+struct transform {
+  float rotZ, rotX, transY;
+  glm::mat4 matrix;
+} transforms[MODE_LAST];
+int last_ticks = 0;
 
 /**
  * Store all the file's contents in memory, useful to pass shaders
@@ -144,15 +153,15 @@ void load_obj(const char* filename, vector<glm::vec4> &vertices, vector<glm::vec
   }
 }
 
-int init_resources()
+int init_resources(char* model_filename, char* vshader_filename, char* fshader_filename)
 {
   GLint link_ok = GL_FALSE;
 
-  load_obj("suzanne.obj", suzanne_vertices, suzanne_normals, suzanne_elements);
+  load_obj(model_filename, suzanne_vertices, suzanne_normals, suzanne_elements);
 
   GLuint vs, fs;
-  if ((vs = create_shader("phong-shading.v.glsl", GL_VERTEX_SHADER))   == 0) return 0;
-  if ((fs = create_shader("phong-shading.f.glsl", GL_FRAGMENT_SHADER)) == 0) return 0;
+  if ((vs = create_shader(vshader_filename, GL_VERTEX_SHADER))   == 0) return 0;
+  if ((fs = create_shader(fshader_filename, GL_FRAGMENT_SHADER)) == 0) return 0;
 
   program = glCreateProgram();
   glAttachShader(program, vs);
@@ -223,9 +232,9 @@ void display()
   // Describe our vertices array to OpenGL (it can't guess its format automatically)
   glVertexAttribPointer(
     attribute_v_coord,  // attribute
-    3,                // number of elements per vertex, here (x,y,z)
-    GL_FLOAT,         // the type of each element
-    GL_FALSE,         // take our values as-is
+    4,                  // number of elements per vertex, here (x,y,z,w)
+    GL_FLOAT,           // the type of each element
+    GL_FALSE,           // take our values as-is
     sizeof(suzanne_vertices[0]),  // size of each vertex
     suzanne_vertices.data()       // pointer to the C array
   );
@@ -245,23 +254,77 @@ void display()
   glDrawElements(GL_TRIANGLES, suzanne_elements.size(), GL_UNSIGNED_SHORT, suzanne_elements.data());
 
 
+  glm::vec4 square_vertices[] = {
+    glm::vec4(-2.0, -2.0, 0.0, 1.0),
+    glm::vec4( 2.0, -2.0, 0.0, 1.0),
+    glm::vec4(-2.0,  2.0, 0.0, 1.0),
+    glm::vec4(-2.0,  2.0, 0.0, 1.0),
+    glm::vec4( 2.0, -2.0, 0.0, 1.0),
+    glm::vec4( 2.0,  2.0, 0.0, 1.0)
+  };
+  glm::vec3 square_normals[] = {
+    glm::vec3(0.0, 0.0, 1.0),
+    glm::vec3(0.0, 0.0, 1.0),
+    glm::vec3(0.0, 0.0, 1.0),
+    glm::vec3(0.0, 0.0, 1.0),
+    glm::vec3(0.0, 0.0, 1.0),
+    glm::vec3(0.0, 0.0, 1.0)
+  };
+  glVertexAttribPointer(
+    attribute_v_coord,  // attribute
+    4,                  // number of elements per vertex, here (x,y,z,w)
+    GL_FLOAT,           // the type of each element
+    GL_FALSE,           // take our values as-is
+    sizeof(square_vertices[0]),  // size of each vertex
+    square_vertices              // pointer to the C array
+  );
+  glVertexAttribPointer(
+    attribute_v_normal, // attribute
+    3,                  // number of elements per vertex, here (x,y,z)
+    GL_FLOAT,           // the type of each element
+    GL_FALSE,           // take our values as-is
+    sizeof(square_normals[0]),  // size of each vertex
+    square_normals              // pointer to the C array
+  );
+  glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0)));
+  glm::mat3 m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(1.0)));
+  glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
+  glDrawArrays(GL_TRIANGLES, 0, 6);
+
   glDisableVertexAttribArray(attribute_v_coord);
+  glDisableVertexAttribArray(attribute_v_normal);
   glutSwapBuffers();
 }
 
 void idle() {
-  float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 30;  // base 30° per second
-  glm::mat4 anim = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0, 0, 1));
+  int delta_t = glutGet(GLUT_ELAPSED_TIME) - last_ticks;
+  last_ticks = glutGet(GLUT_ELAPSED_TIME);
+  float delta_rotZ = rotZ_direction * delta_t / 1000.0 * 90;  // 90° per second
+  float delta_rotX = rotX_direction * delta_t / 1000.0 * 90;  // 90° per second;
+  float delta_transY = transY_direction * delta_t / 1000.0 * 2;  // 2 units per second;
+  transforms[view_mode].rotZ += delta_rotZ;
+  transforms[view_mode].rotX += delta_rotX;
+  transforms[view_mode].transY += delta_transY;
+
+  for (int i = 0; i < MODE_LAST; i++) {
+    transforms[i].matrix =
+      glm::translate(glm::mat4(1.0f), glm::vec3(0.0, transforms[i].transY, 0.0))
+      * glm::rotate(glm::mat4(1.0f), transforms[i].rotX, glm::vec3(1.0, 0.0, 0.0))
+      * glm::rotate(glm::mat4(1.0f), transforms[i].rotZ, glm::vec3(0.0, 0.0, 1.0));
+  }
 
   // Model
-  glm::mat4 model2world   = glm::mat4(1) * anim;
+  glm::mat4 model2world   = transforms[MODE_OBJECT].matrix;
   // View
-  glm::mat4 world2camera  = glm::lookAt(
+  glm::mat4 world2camera = glm::lookAt(
     glm::vec3(0.0, -4.0, 0.0),   // eye
     glm::vec3(0.0,  0.0, 0.0),   // direction
-    glm::vec3(0.0,  0.0, 1.0));  // up
+    glm::vec3(0.0,  0.0, 1.0))  // up
+    * glm::rotate(glm::mat4(1.0f), transforms[MODE_CAMERA].rotX, glm::vec3(1.0, 0.0, 0.0))
+    * glm::rotate(glm::mat4(1.0f), transforms[MODE_CAMERA].rotZ, glm::vec3(0.0, 0.0, 1.0));
+
   // Projection
-  glm::mat4 camera2screen = glm::perspective(45.0f, 1.0f*640/480, 0.1f, 100.0f);
+  glm::mat4 camera2screen = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 100.0f);
 
   glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(model2world));
   glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(world2camera));
@@ -274,6 +337,65 @@ void idle() {
   glutPostRedisplay();
 }
 
+void onSpecial(int key, int x, int y) {
+  switch (key) {
+  case GLUT_KEY_F1:
+    view_mode = MODE_OBJECT;
+    break;
+  case GLUT_KEY_F2:
+    view_mode = MODE_CAMERA;
+    break;
+  case GLUT_KEY_F3:
+    view_mode = MODE_LIGHT;
+    break;
+  case GLUT_KEY_LEFT:
+    rotZ_direction = -1;
+    break;
+  case GLUT_KEY_RIGHT:
+    rotZ_direction = 1;
+    break;
+  case GLUT_KEY_UP:
+    rotX_direction = -1;
+    break;
+  case GLUT_KEY_DOWN:
+    rotX_direction = 1;
+    break;
+  case GLUT_KEY_PAGE_UP:
+    transY_direction = 1;
+    break;
+  case GLUT_KEY_PAGE_DOWN:
+    transY_direction = -1;
+    break;
+  case GLUT_KEY_HOME:
+    for (int i = 0; i < MODE_LAST; i++)
+      transforms[i].rotZ = transforms[i].rotX = transforms[i].transY = 0;
+    break;
+  }
+}
+
+void onSpecialUp(int key, int x, int y) {
+  switch (key) {
+  case GLUT_KEY_LEFT:
+  case GLUT_KEY_RIGHT:
+    rotZ_direction = 0;
+    break;
+  case GLUT_KEY_UP:
+  case GLUT_KEY_DOWN:
+    rotX_direction = 0;
+    break;
+  case GLUT_KEY_PAGE_UP:
+  case GLUT_KEY_PAGE_DOWN:
+    transY_direction = 0;
+    break;
+  }
+}
+
+void onReshape(int width, int height) {
+  screen_width = width;
+  screen_height = height;
+  glViewport(0, 0, screen_width, screen_height);
+}
+
 void free_resources()
 {
   glDeleteProgram(program);
@@ -283,7 +405,7 @@ void free_resources()
 int main(int argc, char* argv[]) {
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
-  glutInitWindowSize(640, 480);
+  glutInitWindowSize(screen_width, screen_height);
   glutCreateWindow("Rotating Suzanne");
 
   GLenum glew_status = glewInit();
@@ -292,12 +414,21 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  if (init_resources()) {
+  if (argc != 4) {
+    fprintf(stderr, "Usage: %s model.obj vertex_shader.v.glsl fragment_shader.f.glsl\n", argv[0]);
+    exit(0);
+  }
+
+  if (init_resources(argv[1], argv[2], argv[3])) {
     glutDisplayFunc(display);
+    glutSpecialFunc(onSpecial);
+    glutSpecialUpFunc(onSpecialUp);
+    glutReshapeFunc(onReshape);
     glutIdleFunc(idle);
     glEnable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    last_ticks = glutGet(GLUT_ELAPSED_TIME);
     glutMainLoop();
   }
 

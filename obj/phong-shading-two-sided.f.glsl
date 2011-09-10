@@ -38,13 +38,13 @@ material frontMaterial = material(
   vec4(0.2, 0.2, 0.2, 1.0),
   vec4(1.0, 0.0, 0.0, 1.0),
   vec4(1.0, 1.0, 1.0, 1.0),
-  100.0
+  20.0
 );
 material backMaterial = material(
   vec4(0.2, 0.2, 0.2, 1.0),
   vec4(0.0, 0.0, 1.0, 1.0),
   vec4(1.0, 1.0, 1.0, 1.0),
-  100.0
+  20.0
 );
 
 void main()
