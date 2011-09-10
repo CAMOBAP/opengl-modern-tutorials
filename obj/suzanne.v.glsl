@@ -65,14 +65,14 @@ void main(void)
     }
   else // point or spot light (or other kind of light)
     {
-      vec3 vertexToLightSource = normalize(vec3(light0.position - m * v_coord));
+      vec3 vertexToLightSource = vec3(light0.position - m * v_coord);
       float distance = length(vertexToLightSource);
       lightDirection = normalize(vertexToLightSource);
 
       if (light0.spotCutoff <= 90.0) // spotlight
 	{
 	  float clampedCosine = max(0.0, dot(-lightDirection, normalize(light0.spotDirection)));
-	  if (clampedCosine < cos(light0.spotCutoff * 3.14159 / 180.0)) // outside of spotlight cone
+	  if (clampedCosine < cos(radians(light0.spotCutoff))) // outside of spotlight cone
 	    {
 	      attenuation = 0.0;
 	    }
