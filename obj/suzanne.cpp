@@ -151,8 +151,8 @@ int init_resources()
   load_obj("suzanne.obj", suzanne_vertices, suzanne_normals, suzanne_elements);
 
   GLuint vs, fs;
-  if ((vs = create_shader("suzanne.v.glsl", GL_VERTEX_SHADER))   == 0) return 0;
-  if ((fs = create_shader("suzanne.f.glsl", GL_FRAGMENT_SHADER)) == 0) return 0;
+  if ((vs = create_shader("phong-shading.v.glsl", GL_VERTEX_SHADER))   == 0) return 0;
+  if ((fs = create_shader("phong-shading.f.glsl", GL_FRAGMENT_SHADER)) == 0) return 0;
 
   program = glCreateProgram();
   glAttachShader(program, vs);
