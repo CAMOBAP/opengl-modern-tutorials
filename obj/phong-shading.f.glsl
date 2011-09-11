@@ -20,20 +20,20 @@ struct lightSource
 const int numberOfLights = 2;
 lightSource[numberOfLights] lights;
 lightSource light0 = lightSource(
-  vec4(0.0, -2.0, 1.0, 1.0),
-  vec4(1.0,  1.0, 1.0, 1.0),
-  vec4(1.0,  1.0, 1.0, 1.0),
+  vec4(0.0,  1.0,  2.0, 1.0),
+  vec4(1.0,  1.0,  1.0, 1.0),
+  vec4(1.0,  1.0,  1.0, 1.0),
   0.0, 1.0, 0.0,
   180.0, 0.0,
-  vec3(-1.0, 1.0, -0.5)
+  vec3(0.0, 0.0, 0.0)
 );
 lightSource light1 = lightSource(
-    vec4(0.0,  0.0, -2.0, 1.0),
+    vec4(0.0,  2.0,  0.0, 1.0),
     vec4(2.0,  0.0,  0.0, 1.0),
     vec4(0.1,  0.1,  0.1, 1.0),
     0.0, 1.0, 0.0,
     80.0, 10.0,
-    vec3(0.0, 0.0, 1.0)
+    vec3(0.0, 1.0, 0.0)
 );
 vec4 scene_ambient = vec4(0.2, 0.2, 0.2, 1.0);
  

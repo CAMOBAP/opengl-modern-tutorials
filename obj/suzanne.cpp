@@ -26,17 +26,18 @@ GLint attribute_v_normal;
 GLint uniform_m, uniform_v, uniform_p;
 GLint uniform_m_3x3_inv_transp, uniform_v_inv;
 using namespace std;
-vector<glm::vec4> suzanne_vertices;
-vector<glm::vec3> suzanne_normals;
-vector<GLushort> suzanne_elements;
 
 enum MODES { MODE_OBJECT, MODE_CAMERA, MODE_LIGHT, MODE_LAST } view_mode;
-int rotZ_direction = 0, rotX_direction = 0, transY_direction = 0;
-struct transform {
-  float rotZ, rotX, transY;
-  glm::mat4 matrix;
-} transforms[MODE_LAST];
+int rotY_direction = 0, rotX_direction = 0, transZ_direction = 0;
+glm::mat4 transforms[MODE_LAST];
 int last_ticks = 0;
+
+struct mesh {
+  vector<glm::vec4> vertices;
+  vector<glm::vec3> normals;
+  vector<GLushort> elements;
+  glm::mat4 object2world;
+} mesh;
 
 /**
  * Store all the file's contents in memory, useful to pass shaders
@@ -120,7 +121,7 @@ GLint create_shader(const char* filename, GLenum type)
   return res;
 }
 
-void load_obj(const char* filename, vector<glm::vec4> &vertices, vector<glm::vec3> &normals, vector<GLushort> &elements) {
+void load_obj(const char* filename, struct mesh* mesh) {
   ifstream in(filename, ios::in);
   if (!in) { cerr << "Cannot open " << filename << endl; exit(1); }
 
@@ -129,27 +130,27 @@ void load_obj(const char* filename, vector<glm::vec4> &vertices, vector<glm::vec
     if (line.substr(0,2) == "v ") {
       istringstream s(line.substr(2));
       glm::vec4 v; s >> v.x; s >> v.y; s >> v.z; v.w = 1.0;
-      vertices.push_back(v);
+      mesh->vertices.push_back(v);
     }  else if (line.substr(0,2) == "f ") {
       istringstream s(line.substr(2));
       GLushort a,b,c;
       s >> a; s >> b; s >> c;
       a--; b--; c--;
-      elements.push_back(a); elements.push_back(b); elements.push_back(c);
+      mesh->elements.push_back(a); mesh->elements.push_back(b); mesh->elements.push_back(c);
     }
     else if (line[0] == '#') { /* ignoring this line */ }
     else { /* ignoring this line */ }
   }
 
-  normals.reserve(vertices.size());
-  for (int i = 0; i < elements.size(); i+=3) {
-    GLushort ia = elements[i];
-    GLushort ib = elements[i+1];
-    GLushort ic = elements[i+2];
+  mesh->normals.reserve(mesh->vertices.size());
+  for (int i = 0; i < mesh->elements.size(); i+=3) {
+    GLushort ia = mesh->elements[i];
+    GLushort ib = mesh->elements[i+1];
+    GLushort ic = mesh->elements[i+2];
     glm::vec3 normal = glm::normalize(glm::cross(
-      glm::vec3(vertices[ib]) - glm::vec3(vertices[ia]),
-      glm::vec3(vertices[ic]) - glm::vec3(vertices[ia])));
-    normals[ia] = normals[ib] = normals[ic] = normal;
+      glm::vec3(mesh->vertices[ib]) - glm::vec3(mesh->vertices[ia]),
+      glm::vec3(mesh->vertices[ic]) - glm::vec3(mesh->vertices[ia])));
+    mesh->normals[ia] = mesh->normals[ib] = mesh->normals[ic] = normal;
   }
 }
 
@@ -157,7 +158,7 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
 {
   GLint link_ok = GL_FALSE;
 
-  load_obj(model_filename, suzanne_vertices, suzanne_normals, suzanne_elements);
+  load_obj(model_filename, &mesh);
 
   GLuint vs, fs;
   if ((vs = create_shader(vshader_filename, GL_VERTEX_SHADER))   == 0) return 0;
@@ -221,120 +222,12 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
   return 1;
 }
 
-void display()
-{
-  glUseProgram(program);
-
-  glClearColor(0.45, 0.45, 0.45, 1.0);
-  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-
-  glEnableVertexAttribArray(attribute_v_coord);
-  // Describe our vertices array to OpenGL (it can't guess its format automatically)
-  glVertexAttribPointer(
-    attribute_v_coord,  // attribute
-    4,                  // number of elements per vertex, here (x,y,z,w)
-    GL_FLOAT,           // the type of each element
-    GL_FALSE,           // take our values as-is
-    sizeof(suzanne_vertices[0]),  // size of each vertex
-    suzanne_vertices.data()       // pointer to the C array
-  );
-
-  glEnableVertexAttribArray(attribute_v_normal);
-  // Describe our vertices array to OpenGL (it can't guess its format automatically)
-  glVertexAttribPointer(
-    attribute_v_normal, // attribute
-    3,                  // number of elements per vertex, here (x,y,z)
-    GL_FLOAT,           // the type of each element
-    GL_FALSE,           // take our values as-is
-    sizeof(suzanne_normals[0]),  // size of each vertex
-    suzanne_normals.data()       // pointer to the C array
-  );
-
-  /* Push each element in buffer_vertices to the vertex shader */
-  glDrawElements(GL_TRIANGLES, suzanne_elements.size(), GL_UNSIGNED_SHORT, suzanne_elements.data());
-
-
-  glm::vec4 square_vertices[] = {
-    glm::vec4(-2.0, -2.0, 0.0, 1.0),
-    glm::vec4( 2.0, -2.0, 0.0, 1.0),
-    glm::vec4(-2.0,  2.0, 0.0, 1.0),
-    glm::vec4(-2.0,  2.0, 0.0, 1.0),
-    glm::vec4( 2.0, -2.0, 0.0, 1.0),
-    glm::vec4( 2.0,  2.0, 0.0, 1.0)
-  };
-  glm::vec3 square_normals[] = {
-    glm::vec3(0.0, 0.0, 1.0),
-    glm::vec3(0.0, 0.0, 1.0),
-    glm::vec3(0.0, 0.0, 1.0),
-    glm::vec3(0.0, 0.0, 1.0),
-    glm::vec3(0.0, 0.0, 1.0),
-    glm::vec3(0.0, 0.0, 1.0)
-  };
-  glVertexAttribPointer(
-    attribute_v_coord,  // attribute
-    4,                  // number of elements per vertex, here (x,y,z,w)
-    GL_FLOAT,           // the type of each element
-    GL_FALSE,           // take our values as-is
-    sizeof(square_vertices[0]),  // size of each vertex
-    square_vertices              // pointer to the C array
-  );
-  glVertexAttribPointer(
-    attribute_v_normal, // attribute
-    3,                  // number of elements per vertex, here (x,y,z)
-    GL_FLOAT,           // the type of each element
-    GL_FALSE,           // take our values as-is
-    sizeof(square_normals[0]),  // size of each vertex
-    square_normals              // pointer to the C array
-  );
-  glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0)));
-  glm::mat3 m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(1.0)));
-  glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
-  glDrawArrays(GL_TRIANGLES, 0, 6);
-
-  glDisableVertexAttribArray(attribute_v_coord);
-  glDisableVertexAttribArray(attribute_v_normal);
-  glutSwapBuffers();
-}
-
-void idle() {
-  int delta_t = glutGet(GLUT_ELAPSED_TIME) - last_ticks;
-  last_ticks = glutGet(GLUT_ELAPSED_TIME);
-  float delta_rotZ = rotZ_direction * delta_t / 1000.0 * 90;  // 90° per second
-  float delta_rotX = rotX_direction * delta_t / 1000.0 * 90;  // 90° per second;
-  float delta_transY = transY_direction * delta_t / 1000.0 * 2;  // 2 units per second;
-  transforms[view_mode].rotZ += delta_rotZ;
-  transforms[view_mode].rotX += delta_rotX;
-  transforms[view_mode].transY += delta_transY;
-
-  for (int i = 0; i < MODE_LAST; i++) {
-    transforms[i].matrix =
-      glm::translate(glm::mat4(1.0f), glm::vec3(0.0, transforms[i].transY, 0.0))
-      * glm::rotate(glm::mat4(1.0f), transforms[i].rotX, glm::vec3(1.0, 0.0, 0.0))
-      * glm::rotate(glm::mat4(1.0f), transforms[i].rotZ, glm::vec3(0.0, 0.0, 1.0));
-  }
-
-  // Model
-  glm::mat4 model2world   = transforms[MODE_OBJECT].matrix;
-  // View
-  glm::mat4 world2camera = glm::lookAt(
-    glm::vec3(0.0, -4.0, 0.0),   // eye
+void init_view() {
+  mesh.object2world = glm::mat4(1.0);
+  transforms[MODE_CAMERA] = glm::inverse(glm::lookAt(
+    glm::vec3(0.0,  0.0, 4.0),   // eye
     glm::vec3(0.0,  0.0, 0.0),   // direction
-    glm::vec3(0.0,  0.0, 1.0))  // up
-    * glm::rotate(glm::mat4(1.0f), transforms[MODE_CAMERA].rotX, glm::vec3(1.0, 0.0, 0.0))
-    * glm::rotate(glm::mat4(1.0f), transforms[MODE_CAMERA].rotZ, glm::vec3(0.0, 0.0, 1.0));
-
-  // Projection
-  glm::mat4 camera2screen = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 100.0f);
-
-  glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(model2world));
-  glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(world2camera));
-  glUniformMatrix4fv(uniform_p, 1, GL_FALSE, glm::value_ptr(camera2screen));
-
-  glm::mat3 m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(model2world)));
-  glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
-  glm::mat4 v_inv = glm::inverse(world2camera);
-  glUniformMatrix3fv(uniform_v_inv, 1, GL_FALSE, glm::value_ptr(v_inv));
-  glutPostRedisplay();
+    glm::vec3(0.0,  1.0, 0.0)));  // up
 }
 
 void onSpecial(int key, int x, int y) {
@@ -349,10 +242,10 @@ void onSpecial(int key, int x, int y) {
     view_mode = MODE_LIGHT;
     break;
   case GLUT_KEY_LEFT:
-    rotZ_direction = -1;
+    rotY_direction = 1;
     break;
   case GLUT_KEY_RIGHT:
-    rotZ_direction = 1;
+    rotY_direction = -1;
     break;
   case GLUT_KEY_UP:
     rotX_direction = -1;
@@ -361,14 +254,13 @@ void onSpecial(int key, int x, int y) {
     rotX_direction = 1;
     break;
   case GLUT_KEY_PAGE_UP:
-    transY_direction = 1;
+    transZ_direction = 1;
     break;
   case GLUT_KEY_PAGE_DOWN:
-    transY_direction = -1;
+    transZ_direction = -1;
     break;
   case GLUT_KEY_HOME:
-    for (int i = 0; i < MODE_LAST; i++)
-      transforms[i].rotZ = transforms[i].rotX = transforms[i].transY = 0;
+    init_view();
     break;
   }
 }
@@ -377,7 +269,7 @@ void onSpecialUp(int key, int x, int y) {
   switch (key) {
   case GLUT_KEY_LEFT:
   case GLUT_KEY_RIGHT:
-    rotZ_direction = 0;
+    rotY_direction = 0;
     break;
   case GLUT_KEY_UP:
   case GLUT_KEY_DOWN:
@@ -385,9 +277,123 @@ void onSpecialUp(int key, int x, int y) {
     break;
   case GLUT_KEY_PAGE_UP:
   case GLUT_KEY_PAGE_DOWN:
-    transY_direction = 0;
+    transZ_direction = 0;
     break;
   }
+}
+
+void idle() {
+  int delta_t = glutGet(GLUT_ELAPSED_TIME) - last_ticks;
+  last_ticks = glutGet(GLUT_ELAPSED_TIME);
+  float delta_rotY = rotY_direction * delta_t / 1000.0 * 120;  // 120° per second
+  float delta_rotX = rotX_direction * delta_t / 1000.0 * 120;  // 120° per second;
+  float delta_transZ = transZ_direction * delta_t / 1000.0 * 3;  // 3 units per second;
+  
+  if (view_mode == MODE_OBJECT) {
+    mesh.object2world = glm::rotate(mesh.object2world, delta_rotY, glm::vec3(0.0, 1.0, 0.0));
+    mesh.object2world = glm::rotate(mesh.object2world, delta_rotX, glm::vec3(1.0, 0.0, 0.0));
+    mesh.object2world = glm::translate(mesh.object2world, glm::vec3(0.0, 0.0, delta_transZ));
+  } else if (view_mode == MODE_CAMERA) {
+    transforms[MODE_CAMERA] = glm::rotate(transforms[MODE_CAMERA], delta_rotY, glm::vec3(0.0, 1.0, 0.0));
+    transforms[MODE_CAMERA] = glm::rotate(transforms[MODE_CAMERA], delta_rotX, glm::vec3(1.0, 0.0, 0.0));
+    transforms[MODE_CAMERA] = glm::translate(transforms[MODE_CAMERA], glm::vec3(0.0, 0.0, delta_transZ));
+  }
+
+  // Model
+  // Set in onDisplay() - cf. mesh.object2world
+
+  // View
+  glm::mat4 world2camera = glm::inverse(transforms[MODE_CAMERA]);
+
+  // Projection
+  glm::mat4 camera2screen = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 100.0f);
+
+  glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(world2camera));
+  glUniformMatrix4fv(uniform_p, 1, GL_FALSE, glm::value_ptr(camera2screen));
+
+  glm::mat4 v_inv = glm::inverse(world2camera);
+  glUniformMatrix3fv(uniform_v_inv, 1, GL_FALSE, glm::value_ptr(v_inv));
+  glutPostRedisplay();
+}
+
+void display()
+{
+  glUseProgram(program);
+
+  glClearColor(0.45, 0.45, 0.45, 1.0);
+  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+  glEnableVertexAttribArray(attribute_v_coord);
+  // Describe our vertices array to OpenGL (it can't guess its format automatically)
+  glVertexAttribPointer(
+    attribute_v_coord,  // attribute
+    4,                  // number of elements per vertex, here (x,y,z,w)
+    GL_FLOAT,           // the type of each element
+    GL_FALSE,           // take our values as-is
+    sizeof(mesh.vertices[0]),  // size of each vertex
+    mesh.vertices.data()       // pointer to the C array
+  );
+
+  glEnableVertexAttribArray(attribute_v_normal);
+  // Describe our vertices array to OpenGL (it can't guess its format automatically)
+  glVertexAttribPointer(
+    attribute_v_normal, // attribute
+    3,                  // number of elements per vertex, here (x,y,z)
+    GL_FLOAT,           // the type of each element
+    GL_FALSE,           // take our values as-is
+    sizeof(mesh.normals[0]),  // size of each vertex
+    mesh.normals.data()       // pointer to the C array
+  );
+
+  /* Apply object's transformation matrix */
+  glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(mesh.object2world));
+  glm::mat3 m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(mesh.object2world)));
+  glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
+
+  /* Push each element in buffer_vertices to the vertex shader */
+  glDrawElements(GL_TRIANGLES, mesh.elements.size(), GL_UNSIGNED_SHORT, mesh.elements.data());
+
+
+  glm::vec4 ground_vertices[] = {
+    glm::vec4(-2.0, 0.0, -2.0, 1.0),
+    glm::vec4( 2.0, 0.0, -2.0, 1.0),
+    glm::vec4(-2.0, 0.0, 2.0, 1.0),
+    glm::vec4(-2.0, 0.0,  2.0, 1.0),
+    glm::vec4( 2.0, 0.0, -2.0, 1.0),
+    glm::vec4( 2.0, 0.0,  2.0, 1.0)
+  };
+  glm::vec3 ground_normals[] = {
+    glm::vec3(0.0, 1.0, 0.0),
+    glm::vec3(0.0, 1.0, 0.0),
+    glm::vec3(0.0, 1.0, 0.0),
+    glm::vec3(0.0, 1.0, 0.0),
+    glm::vec3(0.0, 1.0, 0.0),
+    glm::vec3(0.0, 1.0, 0.0),
+  };
+  glVertexAttribPointer(
+    attribute_v_coord,  // attribute
+    4,                  // number of elements per vertex, here (x,y,z,w)
+    GL_FLOAT,           // the type of each element
+    GL_FALSE,           // take our values as-is
+    sizeof(ground_vertices[0]),  // size of each vertex
+    ground_vertices              // pointer to the C array
+  );
+  glVertexAttribPointer(
+    attribute_v_normal, // attribute
+    3,                  // number of elements per vertex, here (x,y,z)
+    GL_FLOAT,           // the type of each element
+    GL_FALSE,           // take our values as-is
+    sizeof(ground_normals[0]),  // size of each vertex
+    ground_normals              // pointer to the C array
+  );
+  glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0)));
+  m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(1.0)));
+  glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
+  glDrawArrays(GL_TRIANGLES, 0, 6);
+
+  glDisableVertexAttribArray(attribute_v_coord);
+  glDisableVertexAttribArray(attribute_v_normal);
+  glutSwapBuffers();
 }
 
 void onReshape(int width, int height) {
@@ -420,6 +426,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (init_resources(argv[1], argv[2], argv[3])) {
+    init_view();
     glutDisplayFunc(display);
     glutSpecialFunc(onSpecial);
     glutSpecialUpFunc(onSpecialUp);
