@@ -75,10 +75,10 @@ void main()
 	{
 	  vec3 positionToLightSource = vec3(lights[index].position - position);
 	  float distance = length(positionToLightSource);
+	  lightDirection = normalize(positionToLightSource);
 	  attenuation = 1.0 / (lights[index].constantAttenuation
 			       + lights[index].linearAttenuation * distance
 			       + lights[index].quadraticAttenuation * distance * distance);
-	  lightDirection = normalize(positionToLightSource);
 	  
 	  if (lights[index].spotCutoff <= 90.0) // spotlight?
 	    {
