@@ -145,7 +145,7 @@ void display()
   );
 
   /* Push each element in buffer_vertices to the vertex shader */
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, 3);
+  glDrawArrays(GL_TRIANGLES, 0, 3);
 
   glDisableVertexAttribArray(attribute_coord2d);
   glutSwapBuffers();
