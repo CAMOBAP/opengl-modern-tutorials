@@ -18,6 +18,7 @@ int init_resources()
 
   GLuint vs = glCreateShader(GL_VERTEX_SHADER);
   const char *vs_source = 
+    "#version 120\n"
     "attribute vec2 coord2d;                  "
     "void main(void) {                        "
     "  gl_Position = vec4(coord2d, 0.0, 1.0); "
@@ -32,6 +33,7 @@ int init_resources()
 
   GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
   const char *fs_source = 
+    "#version 120\n"
     "void main(void) {        "
     "  gl_FragColor[0] = 0.0; "
     "  gl_FragColor[1] = 0.0; "

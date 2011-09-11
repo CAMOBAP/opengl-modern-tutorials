@@ -1,4 +1,4 @@
-#version 110
+#version 120
 varying vec4 frontColor; // color for front face
 varying vec4 backColor; // color for back face
 
