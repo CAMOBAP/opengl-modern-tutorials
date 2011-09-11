@@ -316,7 +316,7 @@ void idle() {
   glUniformMatrix4fv(uniform_p, 1, GL_FALSE, glm::value_ptr(camera2screen));
 
   glm::mat4 v_inv = glm::inverse(world2camera);
-  glUniformMatrix3fv(uniform_v_inv, 1, GL_FALSE, glm::value_ptr(v_inv));
+  glUniformMatrix4fv(uniform_v_inv, 1, GL_FALSE, glm::value_ptr(v_inv));
   glutPostRedisplay();
 }
 
