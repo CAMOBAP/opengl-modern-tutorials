@@ -21,12 +21,12 @@ struct lightSource
   vec3 spotDirection;
 };
 lightSource light0 = lightSource(
-  vec4(0.0, -2.0, 1.0, 1.0),
-  vec4(1.0, 1.0, 1.0, 1.0),
-  vec4(1.0, 1.0, 1.0, 1.0),
+  vec4(0.0,  1.0,  2.0, 1.0),
+  vec4(1.0,  1.0,  1.0, 1.0),
+  vec4(1.0,  1.0,  1.0, 1.0),
   0.0, 1.0, 0.0,
   180.0, 0.0,
-  vec3(-1.0, 1.0, -0.5)
+  vec3(0.0, 0.0, 0.0)
 );
 vec4 scene_ambient = vec4(0.2, 0.2, 0.2, 1.0);
 
@@ -39,15 +39,15 @@ struct material
 };
 material frontMaterial = material(
   vec4(0.2, 0.2, 0.2, 1.0),
-  vec4(1.0, 0.0, 0.0, 1.0),
+  vec4(1.0, 0.8, 0.8, 1.0),
   vec4(1.0, 1.0, 1.0, 1.0),
-  100.0
+  5.0
 );
 material backMaterial = material(
   vec4(0.2, 0.2, 0.2, 1.0),
   vec4(0.0, 0.0, 1.0, 1.0),
   vec4(1.0, 1.0, 1.0, 1.0),
-  100.0
+  5.0
 );
 
 void main(void)
