@@ -224,8 +224,11 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
 
 void init_view() {
   mesh.object2world = glm::mat4(1.0);
+  // lookAt is already reverse the transformation, but we're reversing
+  // the camera transformation by ourselves already in idle(), so
+  // let's inverse it again
   transforms[MODE_CAMERA] = glm::inverse(glm::lookAt(
-    glm::vec3(0.0,  0.0, 4.0),   // eye
+    glm::vec3(0.0,  2.0, 4.0),   // eye
     glm::vec3(0.0,  0.0, 0.0),   // direction
     glm::vec3(0.0,  1.0, 0.0)));  // up
 }
@@ -248,16 +251,16 @@ void onSpecial(int key, int x, int y) {
     rotY_direction = -1;
     break;
   case GLUT_KEY_UP:
-    rotX_direction = -1;
-    break;
-  case GLUT_KEY_DOWN:
-    rotX_direction = 1;
-    break;
-  case GLUT_KEY_PAGE_UP:
     transZ_direction = 1;
     break;
-  case GLUT_KEY_PAGE_DOWN:
+  case GLUT_KEY_DOWN:
     transZ_direction = -1;
+    break;
+  case GLUT_KEY_PAGE_UP:
+    rotX_direction = -1;
+    break;
+  case GLUT_KEY_PAGE_DOWN:
+    rotX_direction = 1;
     break;
   case GLUT_KEY_HOME:
     init_view();
@@ -273,11 +276,11 @@ void onSpecialUp(int key, int x, int y) {
     break;
   case GLUT_KEY_UP:
   case GLUT_KEY_DOWN:
-    rotX_direction = 0;
+    transZ_direction = 0;
     break;
   case GLUT_KEY_PAGE_UP:
   case GLUT_KEY_PAGE_DOWN:
-    transZ_direction = 0;
+    rotX_direction = 0;
     break;
   }
 }
@@ -287,22 +290,24 @@ void idle() {
   last_ticks = glutGet(GLUT_ELAPSED_TIME);
   float delta_rotY = rotY_direction * delta_t / 1000.0 * 120;  // 120° per second
   float delta_rotX = rotX_direction * delta_t / 1000.0 * 120;  // 120° per second;
-  float delta_transZ = transZ_direction * delta_t / 1000.0 * 3;  // 3 units per second;
+  float delta_transZ = transZ_direction * delta_t / 1000.0 * 5;  // 5 units per second;
   
   if (view_mode == MODE_OBJECT) {
     mesh.object2world = glm::rotate(mesh.object2world, delta_rotY, glm::vec3(0.0, 1.0, 0.0));
     mesh.object2world = glm::rotate(mesh.object2world, delta_rotX, glm::vec3(1.0, 0.0, 0.0));
     mesh.object2world = glm::translate(mesh.object2world, glm::vec3(0.0, 0.0, delta_transZ));
   } else if (view_mode == MODE_CAMERA) {
+    // Camera is reverse-facing, so reverse Z translation and X rotation:
     transforms[MODE_CAMERA] = glm::rotate(transforms[MODE_CAMERA], delta_rotY, glm::vec3(0.0, 1.0, 0.0));
-    transforms[MODE_CAMERA] = glm::rotate(transforms[MODE_CAMERA], delta_rotX, glm::vec3(1.0, 0.0, 0.0));
-    transforms[MODE_CAMERA] = glm::translate(transforms[MODE_CAMERA], glm::vec3(0.0, 0.0, delta_transZ));
+    transforms[MODE_CAMERA] = glm::rotate(transforms[MODE_CAMERA], -delta_rotX, glm::vec3(1.0, 0.0, 0.0));
+    transforms[MODE_CAMERA] = glm::translate(transforms[MODE_CAMERA], glm::vec3(0.0, 0.0, -delta_transZ));
   }
 
   // Model
   // Set in onDisplay() - cf. mesh.object2world
 
   // View
+  // Inverse of the camera2world matrix:
   glm::mat4 world2camera = glm::inverse(transforms[MODE_CAMERA]);
 
   // Projection
@@ -355,12 +360,12 @@ void display()
 
 
   glm::vec4 ground_vertices[] = {
-    glm::vec4(-2.0, 0.0, -2.0, 1.0),
-    glm::vec4( 2.0, 0.0, -2.0, 1.0),
-    glm::vec4(-2.0, 0.0, 2.0, 1.0),
-    glm::vec4(-2.0, 0.0,  2.0, 1.0),
-    glm::vec4( 2.0, 0.0, -2.0, 1.0),
-    glm::vec4( 2.0, 0.0,  2.0, 1.0)
+    glm::vec4(-4.0, 0.0,  4.0, 1.0),
+    glm::vec4( 4.0, 0.0,  4.0, 1.0),
+    glm::vec4(-4.0, 0.0, -4.0, 1.0),
+    glm::vec4(-4.0, 0.0, -4.0, 1.0),
+    glm::vec4( 4.0, 0.0,  4.0, 1.0),
+    glm::vec4( 4.0, 0.0, -4.0, 1.0)
   };
   glm::vec3 ground_normals[] = {
     glm::vec3(0.0, 1.0, 0.0),
@@ -391,8 +396,41 @@ void display()
   glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
   glDrawArrays(GL_TRIANGLES, 0, 6);
 
-  glDisableVertexAttribArray(attribute_v_coord);
+
   glDisableVertexAttribArray(attribute_v_normal);
+  glm::vec4 light_position = glm::vec4(0.0,  1.0,  2.0, 1.0);
+  vector<glm::vec4> light_bbox_vertices;
+  light_bbox_vertices.push_back(light_position - glm::vec4(-1.0, -1.0, -1.0, 0.0));
+  light_bbox_vertices.push_back(light_position - glm::vec4( 1.0, -1.0, -1.0, 0.0));
+  light_bbox_vertices.push_back(light_position - glm::vec4( 1.0,  1.0, -1.0, 0.0));
+  light_bbox_vertices.push_back(light_position - glm::vec4(-1.0,  1.0, -1.0, 0.0));
+  light_bbox_vertices.push_back(light_position - glm::vec4(-1.0, -1.0,  1.0, 0.0));
+  light_bbox_vertices.push_back(light_position - glm::vec4( 1.0, -1.0,  1.0, 0.0));
+  light_bbox_vertices.push_back(light_position - glm::vec4( 1.0,  1.0,  1.0, 0.0));
+  light_bbox_vertices.push_back(light_position - glm::vec4(-1.0,  1.0,  1.0, 0.0));
+  glVertexAttribPointer(
+    attribute_v_coord,  // attribute
+    4,                  // number of elements per vertex, here (x,y,z,w)
+    GL_FLOAT,           // the type of each element
+    GL_FALSE,           // take our values as-is
+    sizeof(light_bbox_vertices[0]),  // size of each vertex
+    light_bbox_vertices.data()       // pointer to the C array
+  );
+  glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0)));
+  m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(1.0)));
+  glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
+  GLushort light_bbox_elements[4];
+  light_bbox_elements[0] = 0; light_bbox_elements[1] = 1; light_bbox_elements[2] = 2; light_bbox_elements[3] = 3;
+  glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, light_bbox_elements);
+  light_bbox_elements[0] = 4; light_bbox_elements[1] = 5; light_bbox_elements[2] = 6; light_bbox_elements[3] = 7;
+  glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, light_bbox_elements);
+  light_bbox_elements[0] = 0; light_bbox_elements[1] = 4; light_bbox_elements[2] = 1; light_bbox_elements[3] = 5;
+  glDrawElements(GL_LINES, 4, GL_UNSIGNED_SHORT, light_bbox_elements);
+  light_bbox_elements[0] = 2; light_bbox_elements[1] = 6; light_bbox_elements[2] = 3; light_bbox_elements[3] = 7;
+  glDrawElements(GL_LINES, 4, GL_UNSIGNED_SHORT, light_bbox_elements);
+
+
+  glDisableVertexAttribArray(attribute_v_coord);
   glutSwapBuffers();
 }
 
