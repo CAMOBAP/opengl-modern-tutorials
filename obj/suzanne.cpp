@@ -448,7 +448,7 @@ int main(int argc, char* argv[]) {
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
   glutInitWindowSize(screen_width, screen_height);
-  glutCreateWindow("Rotating Suzanne");
+  glutCreateWindow("OBJ viewer");
 
   GLenum glew_status = glewInit();
   if (glew_status != GLEW_OK) {
