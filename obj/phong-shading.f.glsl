@@ -75,7 +75,9 @@ void main()
 	{
 	  vec3 positionToLightSource = vec3(lights[index].position - position);
 	  float distance = length(positionToLightSource);
-	  attenuation = 1.0 / distance; // linear attenuation 
+	  attenuation = 1.0 / (lights[index].constantAttenuation
+			       + lights[index].linearAttenuation * distance
+			       + lights[index].quadraticAttenuation * distance * distance);
 	  lightDirection = normalize(positionToLightSource);
 	  
 	  if (lights[index].spotCutoff <= 90.0) // spotlight?
@@ -90,12 +92,6 @@ void main()
 		  attenuation = attenuation * pow(clampedCosine, lights[index].spotExponent);   
 		}
 	    }
-	  else
-	    {
-	      attenuation = 1.0 / (lights[index].constantAttenuation 
-				   + lights[index].linearAttenuation * distance
-				   + lights[index].quadraticAttenuation * distance * distance);
-	    }
 	}
       
       vec3 diffuseReflection = attenuation 
@@ -109,7 +105,7 @@ void main()
 	}
       else // light source on the right side
 	{
-	  specularReflection = attenuation * vec3(lights[index].specular) * vec3(frontMaterial.specular) 
+	  specularReflection = attenuation * vec3(lights[index].specular) * vec3(frontMaterial.specular)
 	    * pow(max(0.0, dot(reflect(-lightDirection, normalDirection), viewDirection)), frontMaterial.shininess);
 	}
 

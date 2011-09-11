@@ -358,29 +358,28 @@ void display()
   glDrawElements(GL_TRIANGLES, mesh.elements.size(), GL_UNSIGNED_SHORT, mesh.elements.data());
 
 
-  glm::vec4 ground_vertices[] = {
-    glm::vec4(-4.0, 0.0,  4.0, 1.0),
-    glm::vec4( 4.0, 0.0,  4.0, 1.0),
-    glm::vec4(-4.0, 0.0, -4.0, 1.0),
-    glm::vec4(-4.0, 0.0, -4.0, 1.0),
-    glm::vec4( 4.0, 0.0,  4.0, 1.0),
-    glm::vec4( 4.0, 0.0, -4.0, 1.0)
-  };
-  glm::vec3 ground_normals[] = {
-    glm::vec3(0.0, 1.0, 0.0),
-    glm::vec3(0.0, 1.0, 0.0),
-    glm::vec3(0.0, 1.0, 0.0),
-    glm::vec3(0.0, 1.0, 0.0),
-    glm::vec3(0.0, 1.0, 0.0),
-    glm::vec3(0.0, 1.0, 0.0),
-  };
+#define GROUND_SIZE 20
+  vector<glm::vec4> ground_vertices;
+  vector<glm::vec3> ground_normals;
+  for (int i = -GROUND_SIZE/2; i < GROUND_SIZE/2; i++) {
+    for (int j = -GROUND_SIZE/2; j < GROUND_SIZE/2; j++) {
+      ground_vertices.push_back(glm::vec4(i,   0.0,  j+1, 1.0));
+      ground_vertices.push_back(glm::vec4(i+1, 0.0,  j+1, 1.0));
+      ground_vertices.push_back(glm::vec4(i,   0.0,  j,   1.0));
+      ground_vertices.push_back(glm::vec4(i,   0.0,  j,   1.0));
+      ground_vertices.push_back(glm::vec4(i+1, 0.0,  j+1, 1.0));
+      ground_vertices.push_back(glm::vec4(i+1, 0.0,  j,   1.0));
+      for (int k = 0; k < 6; k++)
+	ground_normals.push_back(glm::vec3(0.0, 1.0, 0.0));
+    }
+  }
   glVertexAttribPointer(
     attribute_v_coord,  // attribute
     4,                  // number of elements per vertex, here (x,y,z,w)
     GL_FLOAT,           // the type of each element
     GL_FALSE,           // take our values as-is
     sizeof(ground_vertices[0]),  // size of each vertex
-    ground_vertices              // pointer to the C array
+    ground_vertices.data()       // pointer to the C array
   );
   glVertexAttribPointer(
     attribute_v_normal, // attribute
@@ -388,25 +387,25 @@ void display()
     GL_FLOAT,           // the type of each element
     GL_FALSE,           // take our values as-is
     sizeof(ground_normals[0]),  // size of each vertex
-    ground_normals              // pointer to the C array
+    ground_normals.data()       // pointer to the C array
   );
   glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0)));
   m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(1.0)));
   glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
-  glDrawArrays(GL_TRIANGLES, 0, 6);
+  glDrawArrays(GL_TRIANGLES, 0, ground_vertices.size());
 
 
   glDisableVertexAttribArray(attribute_v_normal);
   glm::vec4 light_position = glm::vec4(0.0,  1.0,  2.0, 1.0);
   vector<glm::vec4> light_bbox_vertices;
-  light_bbox_vertices.push_back(light_position - glm::vec4(-1.0, -1.0, -1.0, 0.0));
-  light_bbox_vertices.push_back(light_position - glm::vec4( 1.0, -1.0, -1.0, 0.0));
-  light_bbox_vertices.push_back(light_position - glm::vec4( 1.0,  1.0, -1.0, 0.0));
-  light_bbox_vertices.push_back(light_position - glm::vec4(-1.0,  1.0, -1.0, 0.0));
-  light_bbox_vertices.push_back(light_position - glm::vec4(-1.0, -1.0,  1.0, 0.0));
-  light_bbox_vertices.push_back(light_position - glm::vec4( 1.0, -1.0,  1.0, 0.0));
-  light_bbox_vertices.push_back(light_position - glm::vec4( 1.0,  1.0,  1.0, 0.0));
-  light_bbox_vertices.push_back(light_position - glm::vec4(-1.0,  1.0,  1.0, 0.0));
+  light_bbox_vertices.push_back(light_position - glm::vec4(-0.1, -0.1, -0.1, 0.0));
+  light_bbox_vertices.push_back(light_position - glm::vec4( 0.1, -0.1, -0.1, 0.0));
+  light_bbox_vertices.push_back(light_position - glm::vec4( 0.1,  0.1, -0.1, 0.0));
+  light_bbox_vertices.push_back(light_position - glm::vec4(-0.1,  0.1, -0.1, 0.0));
+  light_bbox_vertices.push_back(light_position - glm::vec4(-0.1, -0.1,  0.1, 0.0));
+  light_bbox_vertices.push_back(light_position - glm::vec4( 0.1, -0.1,  0.1, 0.0));
+  light_bbox_vertices.push_back(light_position - glm::vec4( 0.1,  0.1,  0.1, 0.0));
+  light_bbox_vertices.push_back(light_position - glm::vec4(-0.1,  0.1,  0.1, 0.0));
   glVertexAttribPointer(
     attribute_v_coord,  // attribute
     4,                  // number of elements per vertex, here (x,y,z,w)
