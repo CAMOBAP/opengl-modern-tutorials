@@ -28,7 +28,7 @@ lightSource light0 = lightSource(
   vec3(0.0, 0.0, 0.0)
 );
 lightSource light1 = lightSource(
-    vec4(0.0,  2.0,  0.0, 1.0),
+    vec4(0.0, -2.0,  0.0, 1.0),
     vec4(2.0,  0.0,  0.0, 1.0),
     vec4(0.1,  0.1,  0.1, 1.0),
     0.0, 1.0, 0.0,

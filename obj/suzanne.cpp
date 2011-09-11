@@ -224,13 +224,10 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
 
 void init_view() {
   mesh.object2world = glm::mat4(1.0);
-  // lookAt is already reverse the transformation, but we're reversing
-  // the camera transformation by ourselves already in idle(), so
-  // let's inverse it again
-  transforms[MODE_CAMERA] = glm::inverse(glm::lookAt(
+  transforms[MODE_CAMERA] = glm::lookAt(
     glm::vec3(0.0,  2.0, 4.0),   // eye
     glm::vec3(0.0,  0.0, 0.0),   // direction
-    glm::vec3(0.0,  1.0, 0.0)));  // up
+    glm::vec3(0.0,  1.0, 0.0));  // up
 }
 
 void onSpecial(int key, int x, int y) {
@@ -297,18 +294,20 @@ void idle() {
     mesh.object2world = glm::rotate(mesh.object2world, delta_rotX, glm::vec3(1.0, 0.0, 0.0));
     mesh.object2world = glm::translate(mesh.object2world, glm::vec3(0.0, 0.0, delta_transZ));
   } else if (view_mode == MODE_CAMERA) {
-    // Camera is reverse-facing, so reverse Z translation and X rotation:
-    transforms[MODE_CAMERA] = glm::rotate(transforms[MODE_CAMERA], delta_rotY, glm::vec3(0.0, 1.0, 0.0));
-    transforms[MODE_CAMERA] = glm::rotate(transforms[MODE_CAMERA], -delta_rotX, glm::vec3(1.0, 0.0, 0.0));
-    transforms[MODE_CAMERA] = glm::translate(transforms[MODE_CAMERA], glm::vec3(0.0, 0.0, -delta_transZ));
+    // Camera is reverse-facing, so reverse Z translation and X rotation.
+    // Plus, the View matrix is the inverse of the camera2world (it's
+    // world->camera), so we'll reverse the transformations.
+    // Alternatively, imagine that you transform the world, instead of positioning the camera.
+    transforms[MODE_CAMERA] = glm::rotate(glm::mat4(1.0), -delta_rotY, glm::vec3(0.0, 1.0, 0.0)) * transforms[MODE_CAMERA];
+    transforms[MODE_CAMERA] = glm::rotate(glm::mat4(1.0), delta_rotX, glm::vec3(1.0, 0.0, 0.0)) * transforms[MODE_CAMERA];
+    transforms[MODE_CAMERA] = glm::translate(glm::mat4(1.0), glm::vec3(0.0, 0.0, delta_transZ)) * transforms[MODE_CAMERA];
   }
 
   // Model
   // Set in onDisplay() - cf. mesh.object2world
 
   // View
-  // Inverse of the camera2world matrix:
-  glm::mat4 world2camera = glm::inverse(transforms[MODE_CAMERA]);
+  glm::mat4 world2camera = transforms[MODE_CAMERA];
 
   // Projection
   glm::mat4 camera2screen = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 100.0f);
