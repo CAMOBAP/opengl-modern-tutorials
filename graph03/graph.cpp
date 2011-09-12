@@ -24,7 +24,7 @@ struct point {
   GLfloat y;
 };
 
-GLuint vbo;
+GLuint vbo[3];
 
 const int border = 10;
 const int ticksize = 10;
@@ -153,8 +153,8 @@ int init_resources()
   }
 
   // Create the vertex buffer object
-  glGenBuffers(1, &vbo);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glGenBuffers(3, vbo);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 
   // Create our own temporary buffer
   point graph[2000];
@@ -168,6 +168,11 @@ int init_resources()
 
   // Tell OpenGL to copy our array to the buffer object
   glBufferData(GL_ARRAY_BUFFER, sizeof graph, graph, GL_STATIC_DRAW);
+
+  // Create a VBO for the border
+  static const point border[4] = {{-1, -1}, {1, -1}, {1, 1}, {-1, 1}};
+  glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+  glBufferData(GL_ARRAY_BUFFER, sizeof border, border, GL_STATIC_DRAW);
 
   return 1;
 }
@@ -240,14 +245,11 @@ void display()
   glUniform4fv(uniform_color, 1, red);
 
   // Draw using the vertices in our vertex buffer object
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
  
   glEnableVertexAttribArray(attribute_coord2d);
   glVertexAttribPointer(attribute_coord2d, 2, GL_FLOAT, GL_FALSE, 0, 0);
   glDrawArrays(GL_LINE_STRIP, 0, 2000);
-
-  // Stop using the vertex buffer object
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   // Stop clipping
   glViewport(0, 0, window_width, window_height);
@@ -275,8 +277,8 @@ void display()
   glUniform4fv(uniform_color, 1, black);
 
   // Draw a border around our graph
-  static const point border[4] = {{-1, -1}, {1, -1}, {1, 1}, {-1, 1}};
-  glVertexAttribPointer(attribute_coord2d, 2, GL_FLOAT, GL_FALSE, 0, border);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+  glVertexAttribPointer(attribute_coord2d, 2, GL_FLOAT, GL_FALSE, 0, 0);
   glDrawArrays(GL_LINE_LOOP, 0, 4);
 
   /* ----------------------------------------------------------------*/
@@ -293,7 +295,9 @@ void display()
 	  ticks[i * 2 + 1].y = y; 
   }
 
-  glVertexAttribPointer(attribute_coord2d, 2, GL_FLOAT, GL_FALSE, 0, ticks);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
+  glBufferData(GL_ARRAY_BUFFER, sizeof ticks, ticks, GL_DYNAMIC_DRAW);
+  glVertexAttribPointer(attribute_coord2d, 2, GL_FLOAT, GL_FALSE, 0, 0);
   glDrawArrays(GL_LINES, 0, 42);
 
   /* ----------------------------------------------------------------*/
@@ -321,7 +325,8 @@ void display()
 	  ticks[i * 2 + 1].y = -1 - ticksize * tickscale * pixel_y;
   }
 
-  glVertexAttribPointer(attribute_coord2d, 2, GL_FLOAT, GL_FALSE, 0, ticks);
+  glBufferData(GL_ARRAY_BUFFER, sizeof ticks, ticks, GL_DYNAMIC_DRAW);
+  glVertexAttribPointer(attribute_coord2d, 2, GL_FLOAT, GL_FALSE, 0, 0);
   glDrawArrays(GL_LINES, 0, nticks * 2);
 
   // And we are done.
