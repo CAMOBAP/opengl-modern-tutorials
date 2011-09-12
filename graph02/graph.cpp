@@ -170,7 +170,6 @@ int init_resources()
 	       graph);
 
   // Create the vertex buffer object
-  glEnableClientState(GL_VERTEX_ARRAY);
   glGenBuffers(1, &vbo);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
 

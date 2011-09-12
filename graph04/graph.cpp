@@ -187,7 +187,6 @@ int init_resources()
   );
 
   // Create two vertex buffer objects
-  glEnableClientState(GL_VERTEX_ARRAY);
   glGenBuffers(2, vbo);
 
   // Create an array for 101 * 101 vertices
