@@ -120,6 +120,7 @@ int init_resources()
   glGetProgramiv(program, GL_LINK_STATUS, &link_ok);
   if (!link_ok) {
     fprintf(stderr, "glLinkProgram:");
+    print_log(program);
     return 0;
   }
 

@@ -171,6 +171,7 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
   glGetProgramiv(program, GL_LINK_STATUS, &link_ok);
   if (!link_ok) {
     fprintf(stderr, "glLinkProgram:");
+    print_log(program);
     return 0;
   }
 
