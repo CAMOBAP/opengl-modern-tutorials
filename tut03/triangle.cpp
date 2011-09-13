@@ -119,15 +119,16 @@ int init_resources()
   };
   */
   struct attributes triangle_attributes[] = {
-      {{ 0.0,  0.8}, {1.0, 1.0, 0.0}},
-      {{-0.8, -0.8}, {0.0, 0.0, 1.0}},
-      {{ 0.8, -0.8}, {1.0, 0.0, 0.0}}
+    {{ 0.0,  0.8}, {1.0, 1.0, 0.0}},
+    {{-0.8, -0.8}, {0.0, 0.0, 1.0}},
+    {{ 0.8, -0.8}, {1.0, 0.0, 0.0}}
   };
   glGenBuffers(1, &vbo_triangle);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_triangle);
   glBufferData(GL_ARRAY_BUFFER, sizeof(triangle_attributes), triangle_attributes, GL_STATIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+  /*
   GLfloat triangle_colors[] = {
     1.0, 1.0, 0.0,
     0.0, 0.0, 1.0,
@@ -137,6 +138,7 @@ int init_resources()
   glBindBuffer(GL_ARRAY_BUFFER, vbo_triangle_colors);
   glBufferData(GL_ARRAY_BUFFER, sizeof(triangle_colors), triangle_colors, GL_STATIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
+  */
 
   GLint link_ok = GL_FALSE;
 
@@ -222,7 +224,7 @@ void display()
   );
   glVertexAttribPointer(
     attribute_v_color,      // attribute
-    3,                      // number of elements per vertex, here (x,y)
+    3,                      // number of elements per vertex, here (r,g,b)
     GL_FLOAT,               // the type of each element
     GL_FALSE,               // take our values as-is
     sizeof(struct attributes),  // stride
