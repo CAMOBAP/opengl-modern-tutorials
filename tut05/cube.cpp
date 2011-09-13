@@ -15,9 +15,32 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+GLuint vbo_cube_vertices, vbo_cube_colors;
+GLuint vbo_cube_elements;
 GLuint program;
 GLint attribute_coord3d, attribute_v_color;
 GLint uniform_mvp;
+
+GLushort cube_elements[] = {
+  // front
+  0, 1, 2,
+  2, 3, 0,
+  // top
+  1, 5, 6,
+  6, 2, 1,
+  // back
+  7, 6, 5,
+  5, 4, 7,
+  // bottom
+  4, 0, 3,
+  3, 7, 4,
+  // left
+  4, 5, 1,
+  1, 0, 4,
+  // right
+  3, 2, 6,
+  6, 7, 3,
+};
 
 /**
  * Store all the file's contents in memory, useful to pass shaders
@@ -103,6 +126,45 @@ GLint create_shader(const char* filename, GLenum type)
 
 int init_resources()
 {
+  GLfloat cube_vertices[] = {
+    // front
+    -1.0, -1.0,  1.0,
+     1.0, -1.0,  1.0,
+     1.0,  1.0,  1.0,
+    -1.0,  1.0,  1.0,
+    // back
+    -1.0, -1.0, -1.0,
+     1.0, -1.0, -1.0,
+     1.0,  1.0, -1.0,
+    -1.0,  1.0, -1.0,
+  };
+  glGenBuffers(1, &vbo_cube_vertices);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_vertices);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  GLfloat cube_colors[] = {
+    // front colors
+    1.0, 0.0, 0.0,
+    0.0, 1.0, 0.0,
+    0.0, 0.0, 1.0,
+    1.0, 1.0, 1.0,
+    // back colors
+    1.0, 0.0, 0.0,
+    0.0, 1.0, 0.0,
+    0.0, 0.0, 1.0,
+    1.0, 1.0, 1.0,
+  };
+  glGenBuffers(1, &vbo_cube_colors);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_colors);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(cube_colors), cube_colors, GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  glGenBuffers(1, &vbo_cube_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_cube_elements);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_elements), cube_elements, GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
   GLint link_ok = GL_FALSE;
 
   GLuint vs, fs;
@@ -150,18 +212,7 @@ void display()
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
   glEnableVertexAttribArray(attribute_coord3d);
-  GLfloat cube_vertices[] = {
-    // front
-    -1.0, -1.0,  1.0,
-     1.0, -1.0,  1.0,
-     1.0,  1.0,  1.0,
-    -1.0,  1.0,  1.0,
-    // back
-    -1.0, -1.0, -1.0,
-     1.0, -1.0, -1.0,
-     1.0,  1.0, -1.0,
-    -1.0,  1.0, -1.0,
-  };
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_vertices);
   // Describe our vertices array to OpenGL (it can't guess its format automatically)
   glVertexAttribPointer(
     attribute_coord3d, // attribute
@@ -169,54 +220,23 @@ void display()
     GL_FLOAT,          // the type of each element
     GL_FALSE,          // take our values as-is
     0,                 // no extra data between each position
-    cube_vertices      // pointer to the C array
+    0                  // offset of first element
   );
 
   glEnableVertexAttribArray(attribute_v_color);
-  GLfloat cube_colors[] = {
-    // front colors
-    1.0, 0.0, 0.0,
-    0.0, 1.0, 0.0,
-    0.0, 0.0, 1.0,
-    1.0, 1.0, 1.0,
-    // back colors
-    1.0, 0.0, 0.0,
-    0.0, 1.0, 0.0,
-    0.0, 0.0, 1.0,
-    1.0, 1.0, 1.0,
-  };
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_colors);
   glVertexAttribPointer(
     attribute_v_color, // attribute
     3,                 // number of elements per vertex, here (R,G,B)
     GL_FLOAT,          // the type of each element
     GL_FALSE,          // take our values as-is
     0,                 // no extra data between each position
-    cube_colors        // pointer to the C array
+    0                  // offset of first element
   );
 
-  GLushort cube_elements[] = {
-    // front
-    0, 1, 2,
-    2, 3, 0,
-    // top
-    1, 5, 6,
-    6, 2, 1,
-    // back
-    7, 6, 5,
-    5, 4, 7,
-    // bottom
-    4, 0, 3,
-    3, 7, 4,
-    // left
-    4, 5, 1,
-    1, 0, 4,
-    // right
-    3, 2, 6,
-    6, 7, 3,
-  };
-
   /* Push each element in buffer_vertices to the vertex shader */
-  glDrawElements(GL_TRIANGLES, sizeof(cube_elements)/sizeof(GLushort), GL_UNSIGNED_SHORT, cube_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_cube_elements);
+  glDrawElements(GL_TRIANGLES, sizeof(cube_elements)/sizeof(GLushort), GL_UNSIGNED_SHORT, 0);
 
   glDisableVertexAttribArray(attribute_coord3d);
   glDisableVertexAttribArray(attribute_v_color);
@@ -241,6 +261,9 @@ void idle() {
 void free_resources()
 {
   glDeleteProgram(program);
+  glDeleteBuffers(1, &vbo_cube_vertices);
+  glDeleteBuffers(1, &vbo_cube_colors);
+  glDeleteBuffers(1, &vbo_cube_elements);
 }
 
 
