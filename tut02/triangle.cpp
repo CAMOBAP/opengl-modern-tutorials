@@ -9,6 +9,7 @@
 /* Using the GLUT library for the base windowing setup */
 #include <GL/glut.h>
 
+GLuint vbo_triangle;
 GLuint program;
 GLint attribute_coord2d;
 
@@ -96,6 +97,16 @@ GLint create_shader(const char* filename, GLenum type)
 
 int init_resources()
 {
+  GLfloat triangle_vertices[] = {
+     0.0,  0.8,
+    -0.8, -0.8,
+     0.8, -0.8,
+  };
+  glGenBuffers(1, &vbo_triangle);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_triangle);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(triangle_vertices), triangle_vertices, GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
   GLint link_ok = GL_FALSE;
 
   GLuint vs, fs;
@@ -130,19 +141,15 @@ void display()
   glClear(GL_COLOR_BUFFER_BIT);
 
   glEnableVertexAttribArray(attribute_coord2d);
-  GLfloat triangle_vertices[] = {
-     0.0,  0.8,
-    -0.8, -0.8,
-     0.8, -0.8,
-  };
   /* Describe our vertices array to OpenGL (it can't guess its format automatically) */
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_triangle);
   glVertexAttribPointer(
     attribute_coord2d, // attribute
     2,                 // number of elements per vertex, here (x,y)
     GL_FLOAT,          // the type of each element
     GL_FALSE,          // take our values as-is
     0,                 // no extra data between each position
-    triangle_vertices  // pointer to the C array
+    0                  // offset of first element
   );
 
   /* Push each element in buffer_vertices to the vertex shader */
@@ -155,6 +162,7 @@ void display()
 void free_resources()
 {
   glDeleteProgram(program);
+  glDeleteBuffers(1, &vbo_triangle);
 }
 
 
