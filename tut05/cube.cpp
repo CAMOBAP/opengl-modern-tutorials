@@ -21,27 +21,6 @@ GLuint program;
 GLint attribute_coord3d, attribute_v_color;
 GLint uniform_mvp;
 
-GLushort cube_elements[] = {
-  // front
-  0, 1, 2,
-  2, 3, 0,
-  // top
-  1, 5, 6,
-  6, 2, 1,
-  // back
-  7, 6, 5,
-  5, 4, 7,
-  // bottom
-  4, 0, 3,
-  3, 7, 4,
-  // left
-  4, 5, 1,
-  1, 0, 4,
-  // right
-  3, 2, 6,
-  6, 7, 3,
-};
-
 /**
  * Store all the file's contents in memory, useful to pass shaders
  * source code to OpenGL
@@ -160,6 +139,26 @@ int init_resources()
   glBufferData(GL_ARRAY_BUFFER, sizeof(cube_colors), cube_colors, GL_STATIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+  GLushort cube_elements[] = {
+    // front
+    0, 1, 2,
+    2, 3, 0,
+    // top
+    1, 5, 6,
+    6, 2, 1,
+    // back
+    7, 6, 5,
+    5, 4, 7,
+    // bottom
+    4, 0, 3,
+    3, 7, 4,
+    // left
+    4, 5, 1,
+    1, 0, 4,
+    // right
+    3, 2, 6,
+    6, 7, 3,
+  };
   glGenBuffers(1, &vbo_cube_elements);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_cube_elements);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_elements), cube_elements, GL_STATIC_DRAW);
@@ -212,8 +211,8 @@ void display()
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
   glEnableVertexAttribArray(attribute_coord3d);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_vertices);
   // Describe our vertices array to OpenGL (it can't guess its format automatically)
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_vertices);
   glVertexAttribPointer(
     attribute_coord3d, // attribute
     3,                 // number of elements per vertex, here (x,y,z)
@@ -236,7 +235,8 @@ void display()
 
   /* Push each element in buffer_vertices to the vertex shader */
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_cube_elements);
-  glDrawElements(GL_TRIANGLES, sizeof(cube_elements)/sizeof(GLushort), GL_UNSIGNED_SHORT, 0);
+  int size;  glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
+  glDrawElements(GL_TRIANGLES, size/sizeof(GLushort), GL_UNSIGNED_SHORT, 0);
 
   glDisableVertexAttribArray(attribute_coord3d);
   glDisableVertexAttribArray(attribute_v_color);
