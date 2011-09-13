@@ -228,8 +228,8 @@ void display()
     GL_FLOAT,               // the type of each element
     GL_FALSE,               // take our values as-is
     sizeof(struct attributes),  // stride
-    //(void*) (2 * sizeof(GLfloat))     // offset of first element
-    (void*) offsetof(struct attributes, v_color)  // offset
+    //(GLvoid*) (2 * sizeof(GLfloat))     // offset of first element
+    (GLvoid*) offsetof(struct attributes, v_color)  // offset
   );
 
   /* Push each element in buffer_vertices to the vertex shader */

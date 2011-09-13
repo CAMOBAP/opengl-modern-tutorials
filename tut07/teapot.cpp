@@ -16,6 +16,8 @@
 #include <glm/gtc/type_ptr.hpp>
 
 int screen_width=800, screen_height=600;
+GLuint vbo_teapot_vertices, vbo_teapot_colors, vbo_teapot_elements,
+  vbo_teapot_cp_vertices, vbo_teapot_cp_colors, vbo_teapot_cp_elements;
 GLuint program;
 GLint attribute_coord3d, attribute_v_color;
 GLint uniform_mvp;
@@ -359,11 +361,11 @@ GLushort teapot_patches[][ORDER+1][ORDER+1] = {
 #define RESU 10
 #define RESV 10
 struct vertex teapot_vertices[TEAPOT_NB_PATCHES * RESU*RESV];
-GLushort teapot_elements[TEAPOT_NB_PATCHES * (RESU-1)*(RESV-1) * 2*3];
 GLfloat teapot_colors[TEAPOT_NB_PATCHES * RESU*RESV * 3];
+GLushort teapot_elements[TEAPOT_NB_PATCHES * (RESU-1)*(RESV-1) * 2*3];
 
-GLushort teapot_cp_elements[TEAPOT_NB_PATCHES][ORDER+1][ORDER+1];
 GLfloat teapot_cp_colors[269*3];
+GLushort teapot_cp_elements[TEAPOT_NB_PATCHES][ORDER+1][ORDER+1];
 
 void build_control_points_k(int p, struct vertex control_points_k[][ORDER+1]);
 struct vertex compute_position(struct vertex control_points_k[][ORDER+1], float u, float v);
@@ -532,6 +534,32 @@ GLint create_shader(const char* filename, GLenum type)
 
 int init_resources()
 {
+  build_teapot();
+
+  glGenBuffers(1, &vbo_teapot_vertices);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_teapot_vertices);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(teapot_vertices), teapot_vertices, GL_STATIC_DRAW);
+  
+  glGenBuffers(1, &vbo_teapot_colors);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_teapot_colors);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(teapot_colors), teapot_colors, GL_STATIC_DRAW);
+
+  glGenBuffers(1, &vbo_teapot_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_teapot_elements);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(teapot_elements), teapot_elements, GL_STATIC_DRAW);
+
+  glGenBuffers(1, &vbo_teapot_cp_vertices);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_teapot_cp_vertices);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(teapot_cp_vertices), teapot_cp_vertices, GL_STATIC_DRAW);
+  
+  glGenBuffers(1, &vbo_teapot_cp_colors);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_teapot_cp_colors);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(teapot_cp_colors), teapot_cp_colors, GL_STATIC_DRAW);
+
+  glGenBuffers(1, &vbo_teapot_cp_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_teapot_cp_elements);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(teapot_cp_elements), teapot_cp_elements, GL_STATIC_DRAW);
+
   GLint link_ok = GL_FALSE;
 
   GLuint vs, fs;
@@ -570,8 +598,6 @@ int init_resources()
     return 0;
   }
 
-  build_teapot();
-
   return 1;
 }
 
@@ -584,50 +610,55 @@ void display()
   // Draw Teapot
   glEnableVertexAttribArray(attribute_coord3d);
   // Describe our vertices array to OpenGL (it can't guess its format automatically)
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_teapot_vertices);
   glVertexAttribPointer(
     attribute_coord3d, // attribute
     3,                 // number of elements per vertex, here (x,y,z)
     GL_FLOAT,          // the type of each element
     GL_FALSE,          // take our values as-is
     0,                 // no extra data between each position
-    teapot_vertices    // pointer to the C array
+    0                  // offset of first element
   );
   glEnableVertexAttribArray(attribute_v_color);
   // Describe our vertices array to OpenGL (it can't guess its format automatically)
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_teapot_colors);
   glVertexAttribPointer(
     attribute_v_color, // attribute
     3,                 // number of elements per vertex, here (x,y,z)
     GL_FLOAT,          // the type of each element
     GL_FALSE,          // take our values as-is
     0,                 // no extra data between each position
-    teapot_colors      // pointer to the C array
+    0                  // offset of first element
   );
-  glDrawElements(GL_TRIANGLES, sizeof(teapot_elements)/sizeof(teapot_elements[0]), GL_UNSIGNED_SHORT, teapot_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_teapot_elements);
+  glDrawElements(GL_TRIANGLES, sizeof(teapot_elements)/sizeof(teapot_elements[0]), GL_UNSIGNED_SHORT, 0);
 
 
   // Draw Control points
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_teapot_cp_vertices);
   glVertexAttribPointer(
     attribute_coord3d, // attribute
     3,                 // number of elements per vertex, here (x,y,z)
     GL_FLOAT,          // the type of each element
     GL_FALSE,          // take our values as-is
     0,                 // no extra data between each position
-    teapot_cp_vertices // pointer to the C array
+    0                  // offset of first element
   );
-  glEnableVertexAttribArray(attribute_v_color);
   // Describe our vertices array to OpenGL (it can't guess its format automatically)
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_teapot_cp_colors);
   glVertexAttribPointer(
     attribute_v_color, // attribute
     3,                 // number of elements per vertex, here (x,y,z)
     GL_FLOAT,          // the type of each element
     GL_FALSE,          // take our values as-is
     0,                 // no extra data between each position
-    teapot_cp_colors   // pointer to the C array
+    0                  // offset of first element
   );
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_teapot_cp_elements);
+  GLushort offset = 0;
   for (int p = 0; p < TEAPOT_NB_PATCHES; p++)
-    for (int i = 0; i < (ORDER+1); i++)
-      glDrawElements(GL_LINE_LOOP, (ORDER+1), GL_UNSIGNED_SHORT, &(teapot_cp_elements[p][i]));
-
+    for (int i = 0; i < ORDER+1; i++, offset += (ORDER+1)*sizeof(GLushort))
+      glDrawElements(GL_LINE_LOOP, ORDER+1, GL_UNSIGNED_SHORT, (GLvoid*)offset);
 
   glDisableVertexAttribArray(attribute_coord3d);
   glDisableVertexAttribArray(attribute_v_color);
@@ -661,6 +692,12 @@ void onReshape(int width, int height) {
 void free_resources()
 {
   glDeleteProgram(program);
+  glDeleteBuffers(1, &vbo_teapot_vertices);
+  glDeleteBuffers(1, &vbo_teapot_colors);
+  glDeleteBuffers(1, &vbo_teapot_elements);
+  glDeleteBuffers(1, &vbo_teapot_cp_vertices);
+  glDeleteBuffers(1, &vbo_teapot_cp_colors);
+  glDeleteBuffers(1, &vbo_teapot_cp_elements);
 }
 
 
