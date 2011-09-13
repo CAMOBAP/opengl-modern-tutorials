@@ -10,9 +10,15 @@
 /* Using the GLUT library for the base windowing setup */
 #include <GL/glut.h>
 
+GLuint vbo_triangle, vbo_triangle_colors;
 GLuint program;
 GLint attribute_coord2d, attribute_v_color;
 GLint uniform_fade;
+
+struct attributes {
+  GLfloat coord2d[2];
+  GLfloat v_color[3];
+};
 
 /**
  * Store all the file's contents in memory, useful to pass shaders
@@ -98,6 +104,40 @@ GLint create_shader(const char* filename, GLenum type)
 
 int init_resources()
 {
+  /*
+  GLfloat triangle_vertices[] = {
+     0.0,  0.8,
+    -0.8, -0.8,
+     0.8, -0.8,
+  };
+  */
+  /*
+  GLfloat triangle_attributes[] = {
+     0.0,  0.8,   1.0, 1.0, 0.0,
+    -0.8, -0.8,   0.0, 0.0, 1.0,
+     0.8, -0.8,   1.0, 0.0, 0.0,
+  };
+  */
+  struct attributes triangle_attributes[] = {
+      {{ 0.0,  0.8}, {1.0, 1.0, 0.0}},
+      {{-0.8, -0.8}, {0.0, 0.0, 1.0}},
+      {{ 0.8, -0.8}, {1.0, 0.0, 0.0}}
+  };
+  glGenBuffers(1, &vbo_triangle);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_triangle);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(triangle_attributes), triangle_attributes, GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  GLfloat triangle_colors[] = {
+    1.0, 1.0, 0.0,
+    0.0, 0.0, 1.0,
+    1.0, 0.0, 0.0,
+  };
+  glGenBuffers(1, &vbo_triangle_colors);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_triangle_colors);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(triangle_colors), triangle_colors, GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
   GLint link_ok = GL_FALSE;
 
   GLuint vs, fs;
@@ -146,71 +186,48 @@ void display()
 
   /*
   glEnableVertexAttribArray(attribute_coord2d);
-  GLfloat triangle_vertices[] = {
-     0.0,  0.8,
-    -0.8, -0.8,
-     0.8, -0.8,
-  };
-  // Describe our vertices array to OpenGL (it can't guess its format automatically)
+  /\* Describe our vertices array to OpenGL (it can't guess its format automatically) *\/
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_triangle);
   glVertexAttribPointer(
     attribute_coord2d, // attribute
     2,                 // number of elements per vertex, here (x,y)
     GL_FLOAT,          // the type of each element
     GL_FALSE,          // take our values as-is
     0,                 // no extra data between each position
-    triangle_vertices  // pointer to the C array
+    0                  // offset of first element
   );
 
   glEnableVertexAttribArray(attribute_v_color);
-  GLfloat triangle_colors[] = {
-    1.0, 1.0, 0.0,
-    0.0, 0.0, 1.0,
-    1.0, 0.0, 0.0,
-  };
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_triangle_colors);
   glVertexAttribPointer(
     attribute_v_color, // attribute
     3,                 // number of elements per vertex, here (x,y)
     GL_FLOAT,          // the type of each element
     GL_FALSE,          // take our values as-is
     0,                 // no extra data between each position
-    triangle_colors    // pointer to the C array
+    0                  // offset of first element
   );
   */
 
-  /*
-  GLfloat triangle_attributes[] = {
-     0.0,  0.8,   1.0, 1.0, 0.0,
-    -0.8, -0.8,   0.0, 0.0, 1.0,
-     0.8, -0.8,   1.0, 0.0, 0.0,
-  };
-  */
-  struct attributes {
-      GLfloat coord2d[2];
-      GLfloat v_color[3];
-  };
-  
-  struct attributes triangle_attributes[] = {
-      {{ 0.0,  0.8}, {1.0, 1.0, 0.0}},
-      {{-0.8, -0.8}, {0.0, 0.0, 1.0}},
-      {{ 0.8, -0.8}, {1.0, 0.0, 0.0}}
-  };
   glEnableVertexAttribArray(attribute_coord2d);
   glEnableVertexAttribArray(attribute_v_color);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_triangle);
   glVertexAttribPointer(
     attribute_coord2d,   // attribute
     2,                   // number of elements per vertex, here (x,y)
     GL_FLOAT,            // the type of each element
     GL_FALSE,            // take our values as-is
-    sizeof(struct attributes), // next coord2d appears every 5 floats
-    triangle_attributes  // pointer to the C array
+    sizeof(struct attributes),  // next coord2d appears every 5 floats
+    0                    // offset of first element
   );
   glVertexAttribPointer(
     attribute_v_color,      // attribute
     3,                      // number of elements per vertex, here (x,y)
     GL_FLOAT,               // the type of each element
     GL_FALSE,               // take our values as-is
-    sizeof(struct attributes),    // next color appears every 5 floats
-    triangle_attributes[0].v_color // pointer to the C array
+    sizeof(struct attributes),  // stride
+    //(void*) (2 * sizeof(GLfloat))     // offset of first element
+    (void*) offsetof(struct attributes, v_color)  // offset
   );
 
   /* Push each element in buffer_vertices to the vertex shader */
@@ -230,6 +247,8 @@ void idle() {
 void free_resources()
 {
   glDeleteProgram(program);
+  glDeleteBuffers(1, &vbo_triangle);
+  //glDeleteBuffers(1, &vbo_triangle_colors);
 }
 
 
