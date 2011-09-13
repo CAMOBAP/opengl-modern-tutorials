@@ -643,7 +643,7 @@ void idle() {
     glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -1.5));
 
   glm::mat4 model = glm::mat4(1.0f);
-  glm::mat4 view = glm::lookAt(glm::vec3(8.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
+  glm::mat4 view = glm::lookAt(glm::vec3(0.0, 0.0, 8.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
   glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 10.0f);
 
   glm::mat4 mvp = projection * view * model * anim;
