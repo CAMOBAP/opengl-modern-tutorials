@@ -15,6 +15,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+int screen_width=800, screen_height=600;
 GLuint program;
 GLint attribute_coord3d, attribute_v_color;
 GLint uniform_mvp;
@@ -643,12 +644,18 @@ void idle() {
 
   glm::mat4 model = glm::mat4(1.0f);
   glm::mat4 view = glm::lookAt(glm::vec3(8.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
-  glm::mat4 projection = glm::perspective(45.0f, 1.0f*640/480, 0.1f, 20.0f);
+  glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 10.0f);
 
   glm::mat4 mvp = projection * view * model * anim;
 
   glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
   glutPostRedisplay();
+}
+
+void onReshape(int width, int height) {
+  screen_width = width;
+  screen_height = height;
+  glViewport(0, 0, screen_width, screen_height);
 }
 
 void free_resources()
@@ -660,7 +667,7 @@ void free_resources()
 int main(int argc, char* argv[]) {
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
-  glutInitWindowSize(640, 480);
+  glutInitWindowSize(screen_width, screen_height);
   glutCreateWindow("My Rotating Teapot");
 
   GLenum glew_status = glewInit();
@@ -671,6 +678,7 @@ int main(int argc, char* argv[]) {
 
   if (init_resources()) {
     glutDisplayFunc(display);
+    glutReshapeFunc(onReshape);
     glutIdleFunc(idle);
     glEnable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
