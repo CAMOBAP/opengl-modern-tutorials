@@ -1,3 +1,5 @@
+#version 120
+
 varying vec4 graph_coord;
 
 void main(void) {

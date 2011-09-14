@@ -1,3 +1,5 @@
+#version 120
+
 attribute float coord1d;
 varying vec4 f_color;
 uniform float offset_x;

@@ -1,3 +1,5 @@
+#version 120
+
 varying vec3 f_color;
 uniform float fade;
 void main(void) {

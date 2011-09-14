@@ -1,3 +1,5 @@
+#version 120
+
 attribute vec3 coord3d;
 attribute vec2 texcoord;
 varying vec2 f_texcoord;
