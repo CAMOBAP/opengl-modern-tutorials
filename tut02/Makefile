@@ -1,3 +1,3 @@
 CC=g++
-LDLIBS=-lGL -lGLEW -lglut
+LDLIBS=-lglut -lGLEW -lGL
 all: triangle
