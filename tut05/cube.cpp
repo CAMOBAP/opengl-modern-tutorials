@@ -121,7 +121,6 @@ int init_resources()
   glGenBuffers(1, &vbo_cube_vertices);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_vertices);
   glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   GLfloat cube_colors[] = {
     // front colors
@@ -138,7 +137,6 @@ int init_resources()
   glGenBuffers(1, &vbo_cube_colors);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_colors);
   glBufferData(GL_ARRAY_BUFFER, sizeof(cube_colors), cube_colors, GL_STATIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   GLushort cube_elements[] = {
     // front
@@ -163,7 +161,6 @@ int init_resources()
   glGenBuffers(1, &vbo_cube_elements);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_cube_elements);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_elements), cube_elements, GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
   GLint link_ok = GL_FALSE;
 

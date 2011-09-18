@@ -126,7 +126,6 @@ int init_resources()
   glGenBuffers(1, &vbo_triangle);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_triangle);
   glBufferData(GL_ARRAY_BUFFER, sizeof(triangle_attributes), triangle_attributes, GL_STATIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   /*
   GLfloat triangle_colors[] = {
@@ -137,7 +136,6 @@ int init_resources()
   glGenBuffers(1, &vbo_triangle_colors);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_triangle_colors);
   glBufferData(GL_ARRAY_BUFFER, sizeof(triangle_colors), triangle_colors, GL_STATIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
   */
 
   GLint link_ok = GL_FALSE;
