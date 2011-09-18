@@ -223,7 +223,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  if (GLEW_VERSION_2_0) {
+  if (!GLEW_VERSION_2_0) {
     fprintf(stderr, "Error: your graphic card does not support OpenGL 2.0\n");
     return 1;
   }
