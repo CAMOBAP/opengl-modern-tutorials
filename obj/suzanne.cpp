@@ -359,6 +359,25 @@ void onSpecialUp(int key, int x, int y) {
   }
 }
 
+/**
+ * Get a normalized vector from the center of the virtual ball O to a
+ * point P on the virtual ball surface, such that P is aligned on
+ * screen's (X,Y) coordinates.  If (X,Y) is too far away from the
+ * sphere, return the nearest point on the virtual ball surface.
+ */
+glm::vec3 get_arcball_vector(int x, int y) {
+  glm::vec3 P = glm::vec3(1.0*x/screen_width*2 - 1.0,
+			  1.0*y/screen_height*2 - 1.0,
+			  0);
+  P.y = -P.y;
+  float OP_squared = P.x * P.x + P.y * P.y;
+  if (OP_squared <= 1*1)
+    P.z = sqrt(1*1 - OP_squared);  // Pythagore
+  else
+    P = glm::normalize(P);  // nearest point
+  return P;
+}
+
 void idle() {
   /* Handle keyboard-based transformations */
   int delta_t = glutGet(GLUT_ELAPSED_TIME) - last_ticks;
@@ -369,23 +388,13 @@ void idle() {
   
   /* Handle arcball */
   if (cur_mx != last_mx || cur_my != last_my) {
-    glm::vec3 va = glm::vec3(1.0*last_mx/screen_width*2 - 1.0, 1 - 1.0*last_my/screen_height*2, 0);
-    glm::vec3 vb = glm::vec3(1.0* cur_mx/screen_width*2 - 1.0, 1 - 1.0* cur_my/screen_height*2, 0);
-    float Oa_square = va.x * va.x + va.y * va.y;
-    if (Oa_square <= 1)
-      va.z = sqrt(1*1 - Oa_square);
-    else
-      va = glm::normalize(va);
-    float Ob_square = vb.x * vb.x + vb.y * vb.y;  vb.z = (Ob_square > 1) ? 0 : sqrt(1*1 - Ob_square);
-    if (Ob_square <= 1)
-      vb.z = sqrt(1*1 - Ob_square);
-    else
-      vb = glm::normalize(vb);
-    float angle = glm::degrees(acos(min(glm::dot(va, vb), 1.0f)));
-    glm::vec3 axis_camera = glm::cross(va, vb);
-    glm::vec3 axis_object = glm::vec3(glm::inverse(transforms[MODE_CAMERA] * mesh.object2world)
-				      * glm::vec4(axis_camera.x, axis_camera.y, axis_camera.z, 0));
-    mesh.object2world = glm::rotate(mesh.object2world, angle, axis_object);
+    glm::vec3 va = get_arcball_vector(last_mx, last_my);
+    glm::vec3 vb = get_arcball_vector( cur_mx,  cur_my);
+    float angle = acos(min(1.0f, glm::dot(va, vb)));
+    glm::vec3 axis_in_camera_coord = glm::cross(va, vb);
+    glm::mat3 camera2object = glm::inverse(glm::mat3(transforms[MODE_CAMERA]) * glm::mat3(mesh.object2world));
+    glm::vec3 axis_in_object_coord = camera2object * axis_in_camera_coord;
+    mesh.object2world = glm::rotate(mesh.object2world, glm::degrees(angle), axis_in_object_coord);
     last_mx = cur_mx;
     last_my = cur_my;
   }
