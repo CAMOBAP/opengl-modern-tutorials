@@ -32,6 +32,7 @@ GLint uniform_m, uniform_v, uniform_p;
 GLint uniform_m_3x3_inv_transp, uniform_v_inv;
 bool compute_arcball;
 int last_mx = 0, last_my = 0, cur_mx = 0, cur_my = 0;
+int arcball_on = false;
 using namespace std;
 
 enum MODES { MODE_OBJECT, MODE_CAMERA, MODE_LIGHT, MODE_LAST } view_mode;
@@ -526,15 +527,20 @@ void display()
 }
 
 void onMouse(int button, int state, int x, int y) {
-  if (button == GLUT_LEFT_BUTTON) {
+  if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+    arcball_on = true;
     last_mx = cur_mx = x;
     last_my = cur_my = y;
+  } else {
+    arcball_on = false;
   }
 }
 
 void onMotion(int x, int y) {
-  cur_mx = x;
-  cur_my = y;
+  if (arcball_on) {  // if left button is pressed
+    cur_mx = x;
+    cur_my = y;
+  }
 }
 
 void onReshape(int width, int height) {
