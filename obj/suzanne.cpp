@@ -30,6 +30,8 @@ GLint attribute_v_coord;
 GLint attribute_v_normal;
 GLint uniform_m, uniform_v, uniform_p;
 GLint uniform_m_3x3_inv_transp, uniform_v_inv;
+bool compute_arcball;
+int last_mx = 0, last_my = 0, cur_mx = 0, cur_my = 0;
 using namespace std;
 
 enum MODES { MODE_OBJECT, MODE_CAMERA, MODE_LIGHT, MODE_LAST } view_mode;
@@ -358,12 +360,36 @@ void onSpecialUp(int key, int x, int y) {
 }
 
 void idle() {
+  /* Handle keyboard-based transformations */
   int delta_t = glutGet(GLUT_ELAPSED_TIME) - last_ticks;
   last_ticks = glutGet(GLUT_ELAPSED_TIME);
   float delta_rotY = rotY_direction * delta_t / 1000.0 * 120;  // 120° per second
   float delta_rotX = rotX_direction * delta_t / 1000.0 * 120;  // 120° per second;
   float delta_transZ = transZ_direction * delta_t / 1000.0 * 5;  // 5 units per second;
   
+  /* Handle arcball */
+  if (cur_mx != last_mx || cur_my != last_my) {
+    glm::vec3 va = glm::vec3(1.0*last_mx/screen_width*2 - 1.0, 1 - 1.0*last_my/screen_height*2, 0);
+    glm::vec3 vb = glm::vec3(1.0* cur_mx/screen_width*2 - 1.0, 1 - 1.0* cur_my/screen_height*2, 0);
+    float Oa_square = va.x * va.x + va.y * va.y;
+    if (Oa_square <= 1)
+      va.z = sqrt(1*1 - Oa_square);
+    else
+      va = glm::normalize(va);
+    float Ob_square = vb.x * vb.x + vb.y * vb.y;  vb.z = (Ob_square > 1) ? 0 : sqrt(1*1 - Ob_square);
+    if (Ob_square <= 1)
+      vb.z = sqrt(1*1 - Ob_square);
+    else
+      vb = glm::normalize(vb);
+    float angle = glm::degrees(acos(min(glm::dot(va, vb), 1.0f)));
+    glm::vec3 axis_camera = glm::cross(va, vb);
+    glm::vec3 axis_object = glm::vec3(glm::inverse(transforms[MODE_CAMERA] * mesh.object2world)
+				      * glm::vec4(axis_camera.x, axis_camera.y, axis_camera.z, 0));
+    mesh.object2world = glm::rotate(mesh.object2world, angle, axis_object);
+    last_mx = cur_mx;
+    last_my = cur_my;
+  }
+
   if (view_mode == MODE_OBJECT) {
     mesh.object2world = glm::rotate(mesh.object2world, delta_rotY, glm::vec3(0.0, 1.0, 0.0));
     mesh.object2world = glm::rotate(mesh.object2world, delta_rotX, glm::vec3(1.0, 0.0, 0.0));
@@ -482,12 +508,24 @@ void display()
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_light_bbox_elements);
   glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, 0);
-  glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, (GLvoid*)4);
-  glDrawElements(GL_LINES, 8, GL_UNSIGNED_SHORT, (GLvoid*)8);
+  glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, (GLvoid*)(4*sizeof(GLushort)));
+  glDrawElements(GL_LINES, 8, GL_UNSIGNED_SHORT, (GLvoid*)(8*sizeof(GLushort)));
 
 
   glDisableVertexAttribArray(attribute_v_coord);
   glutSwapBuffers();
+}
+
+void onMouse(int button, int state, int x, int y) {
+  if (button == GLUT_LEFT_BUTTON) {
+    last_mx = cur_mx = x;
+    last_my = cur_my = y;
+  }
+}
+
+void onMotion(int x, int y) {
+  cur_mx = x;
+  cur_my = y;
 }
 
 void onReshape(int width, int height) {
@@ -529,6 +567,8 @@ int main(int argc, char* argv[]) {
     glutDisplayFunc(display);
     glutSpecialFunc(onSpecial);
     glutSpecialUpFunc(onSpecialUp);
+    glutMouseFunc(onMouse);
+    glutMotionFunc(onMotion);
     glutReshapeFunc(onReshape);
     glutIdleFunc(idle);
     glEnable(GL_BLEND);
