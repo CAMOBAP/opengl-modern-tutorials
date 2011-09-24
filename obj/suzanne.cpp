@@ -387,19 +387,6 @@ void idle() {
   float delta_rotX = rotX_direction * delta_t / 1000.0 * 120;  // 120° per second;
   float delta_transZ = transZ_direction * delta_t / 1000.0 * 5;  // 5 units per second;
   
-  /* Handle arcball */
-  if (cur_mx != last_mx || cur_my != last_my) {
-    glm::vec3 va = get_arcball_vector(last_mx, last_my);
-    glm::vec3 vb = get_arcball_vector( cur_mx,  cur_my);
-    float angle = acos(min(1.0f, glm::dot(va, vb)));
-    glm::vec3 axis_in_camera_coord = glm::cross(va, vb);
-    glm::mat3 camera2object = glm::inverse(glm::mat3(transforms[MODE_CAMERA]) * glm::mat3(mesh.object2world));
-    glm::vec3 axis_in_object_coord = camera2object * axis_in_camera_coord;
-    mesh.object2world = glm::rotate(mesh.object2world, glm::degrees(angle), axis_in_object_coord);
-    last_mx = cur_mx;
-    last_my = cur_my;
-  }
-
   if (view_mode == MODE_OBJECT) {
     mesh.object2world = glm::rotate(mesh.object2world, delta_rotY, glm::vec3(0.0, 1.0, 0.0));
     mesh.object2world = glm::rotate(mesh.object2world, delta_rotX, glm::vec3(1.0, 0.0, 0.0));
@@ -412,6 +399,19 @@ void idle() {
     transforms[MODE_CAMERA] = glm::rotate(glm::mat4(1.0), -delta_rotY, glm::vec3(0.0, 1.0, 0.0)) * transforms[MODE_CAMERA];
     transforms[MODE_CAMERA] = glm::rotate(glm::mat4(1.0), delta_rotX, glm::vec3(1.0, 0.0, 0.0)) * transforms[MODE_CAMERA];
     transforms[MODE_CAMERA] = glm::translate(glm::mat4(1.0), glm::vec3(0.0, 0.0, delta_transZ)) * transforms[MODE_CAMERA];
+  }
+
+  /* Handle arcball */
+  if (cur_mx != last_mx || cur_my != last_my) {
+    glm::vec3 va = get_arcball_vector(last_mx, last_my);
+    glm::vec3 vb = get_arcball_vector( cur_mx,  cur_my);
+    float angle = acos(min(1.0f, glm::dot(va, vb)));
+    glm::vec3 axis_in_camera_coord = glm::cross(va, vb);
+    glm::mat3 camera2object = glm::inverse(glm::mat3(transforms[MODE_CAMERA]) * glm::mat3(mesh.object2world));
+    glm::vec3 axis_in_object_coord = camera2object * axis_in_camera_coord;
+    mesh.object2world = glm::rotate(mesh.object2world, glm::degrees(angle), axis_in_object_coord);
+    last_mx = cur_mx;
+    last_my = cur_my;
   }
 
   // Model
