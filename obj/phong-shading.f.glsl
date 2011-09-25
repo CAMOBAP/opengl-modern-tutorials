@@ -36,7 +36,7 @@ lightSource light1 = lightSource(
     vec3(0.0, 1.0, 0.0)
 );
 vec4 scene_ambient = vec4(0.2, 0.2, 0.2, 1.0);
- 
+
 struct material
 {
   vec4 ambient;

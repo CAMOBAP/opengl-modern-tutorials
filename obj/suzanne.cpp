@@ -174,7 +174,6 @@ void load_obj(const char* filename, struct mesh* mesh) {
 	mesh->normals[cur_v].z = mesh->normals[cur_v].z * (1.0 - 1.0/nb_seen[cur_v]) + normal.z * 1.0/nb_seen[cur_v];
 	mesh->normals[cur_v] = glm::normalize(mesh->normals[cur_v]);
       }
-      cout << glm::length(mesh->normals[cur_v]) << endl;
     }
   }
 }
