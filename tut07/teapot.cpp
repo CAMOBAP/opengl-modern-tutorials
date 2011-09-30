@@ -16,8 +16,8 @@
 #include <glm/gtc/type_ptr.hpp>
 
 int screen_width=800, screen_height=600;
-GLuint vbo_teapot_vertices, vbo_teapot_colors, vbo_teapot_elements,
-  vbo_teapot_cp_vertices, vbo_teapot_cp_colors, vbo_teapot_cp_elements;
+GLuint vbo_teapot_vertices, vbo_teapot_colors, ibo_teapot_elements,
+  vbo_teapot_cp_vertices, vbo_teapot_cp_colors, ibo_teapot_cp_elements;
 GLuint program;
 GLint attribute_coord3d, attribute_v_color;
 GLint uniform_mvp;
@@ -544,8 +544,8 @@ int init_resources()
   glBindBuffer(GL_ARRAY_BUFFER, vbo_teapot_colors);
   glBufferData(GL_ARRAY_BUFFER, sizeof(teapot_colors), teapot_colors, GL_STATIC_DRAW);
 
-  glGenBuffers(1, &vbo_teapot_elements);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_teapot_elements);
+  glGenBuffers(1, &ibo_teapot_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_teapot_elements);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(teapot_elements), teapot_elements, GL_STATIC_DRAW);
 
   glGenBuffers(1, &vbo_teapot_cp_vertices);
@@ -556,8 +556,8 @@ int init_resources()
   glBindBuffer(GL_ARRAY_BUFFER, vbo_teapot_cp_colors);
   glBufferData(GL_ARRAY_BUFFER, sizeof(teapot_cp_colors), teapot_cp_colors, GL_STATIC_DRAW);
 
-  glGenBuffers(1, &vbo_teapot_cp_elements);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_teapot_cp_elements);
+  glGenBuffers(1, &ibo_teapot_cp_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_teapot_cp_elements);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(teapot_cp_elements), teapot_cp_elements, GL_STATIC_DRAW);
 
   GLint link_ok = GL_FALSE;
@@ -630,7 +630,7 @@ void display()
     0,                 // no extra data between each position
     0                  // offset of first element
   );
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_teapot_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_teapot_elements);
   glDrawElements(GL_TRIANGLES, sizeof(teapot_elements)/sizeof(teapot_elements[0]), GL_UNSIGNED_SHORT, 0);
 
 
@@ -654,7 +654,7 @@ void display()
     0,                 // no extra data between each position
     0                  // offset of first element
   );
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_teapot_cp_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_teapot_cp_elements);
   GLushort offset = 0;
   for (int p = 0; p < TEAPOT_NB_PATCHES; p++)
     for (int i = 0; i < ORDER+1; i++, offset += (ORDER+1)*sizeof(GLushort))
@@ -694,10 +694,10 @@ void free_resources()
   glDeleteProgram(program);
   glDeleteBuffers(1, &vbo_teapot_vertices);
   glDeleteBuffers(1, &vbo_teapot_colors);
-  glDeleteBuffers(1, &vbo_teapot_elements);
+  glDeleteBuffers(1, &ibo_teapot_elements);
   glDeleteBuffers(1, &vbo_teapot_cp_vertices);
   glDeleteBuffers(1, &vbo_teapot_cp_colors);
-  glDeleteBuffers(1, &vbo_teapot_cp_elements);
+  glDeleteBuffers(1, &ibo_teapot_cp_elements);
 }
 
 

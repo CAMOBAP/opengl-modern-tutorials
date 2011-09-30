@@ -22,9 +22,9 @@
 #define GROUND_SIZE 20
 
 int screen_width=800, screen_height=600;
-GLuint vbo_mesh_vertices, vbo_mesh_normals, vbo_mesh_elements,
+GLuint vbo_mesh_vertices, vbo_mesh_normals, ibo_mesh_elements,
   vbo_ground_vertices, vbo_ground_normals,
-  vbo_light_bbox_vertices, vbo_light_bbox_elements;
+  vbo_light_bbox_vertices, ibo_light_bbox_elements;
 GLuint program;
 GLint attribute_v_coord;
 GLint attribute_v_normal;
@@ -192,8 +192,8 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
   glBufferData(GL_ARRAY_BUFFER, mesh.normals.size() * sizeof(mesh.normals[0]),
 	       mesh.normals.data(), GL_STATIC_DRAW);
 
-  glGenBuffers(1, &vbo_mesh_elements);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_mesh_elements);
+  glGenBuffers(1, &ibo_mesh_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_mesh_elements);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.elements.size() * sizeof(mesh.elements[0]),
 	       mesh.elements.data(), GL_STATIC_DRAW);
 
@@ -245,8 +245,8 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
   glBufferData(GL_ARRAY_BUFFER, light_bbox_vertices.size() * sizeof(light_bbox_vertices[0]),
 	       light_bbox_vertices.data(), GL_STATIC_DRAW);
 
-  glGenBuffers(1, &vbo_light_bbox_elements);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_light_bbox_elements);
+  glGenBuffers(1, &ibo_light_bbox_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_light_bbox_elements);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(light_bbox_elements),
 	       light_bbox_elements, GL_STATIC_DRAW);
   
@@ -486,7 +486,7 @@ void display()
   glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
 
   /* Push each element in buffer_vertices to the vertex shader */
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_mesh_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_mesh_elements);
   int size;  glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);  
   glDrawElements(GL_TRIANGLES, size/sizeof(GLushort), GL_UNSIGNED_SHORT, 0);
 
@@ -532,7 +532,7 @@ void display()
   m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(1.0)));
   glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
 
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_light_bbox_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_light_bbox_elements);
   glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, 0);
   glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, (GLvoid*)(4*sizeof(GLushort)));
   glDrawElements(GL_LINES, 8, GL_UNSIGNED_SHORT, (GLvoid*)(8*sizeof(GLushort)));

@@ -19,7 +19,7 @@
 
 int screen_width=800, screen_height=600;
 GLuint vbo_cube_vertices, vbo_cube_texcoords;
-GLuint vbo_cube_elements;
+GLuint ibo_cube_elements;
 GLuint program;
 GLuint texture_id;
 GLint attribute_coord3d, attribute_texcoord;
@@ -178,8 +178,8 @@ int init_resources()
     20, 21, 22,
     22, 23, 20,
   };
-  glGenBuffers(1, &vbo_cube_elements);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_cube_elements);
+  glGenBuffers(1, &ibo_cube_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_elements), cube_elements, GL_STATIC_DRAW);
 
   glActiveTexture(GL_TEXTURE0);
@@ -275,7 +275,7 @@ void display()
   );
 
   /* Push each element in buffer_vertices to the vertex shader */
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_cube_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
   int size;  glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
   glDrawElements(GL_TRIANGLES, size/sizeof(GLushort), GL_UNSIGNED_SHORT, 0);
 
@@ -311,7 +311,7 @@ void free_resources()
   glDeleteProgram(program);
   glDeleteBuffers(1, &vbo_cube_vertices);
   glDeleteBuffers(1, &vbo_cube_texcoords);
-  glDeleteBuffers(1, &vbo_cube_elements);
+  glDeleteBuffers(1, &ibo_cube_elements);
 }
 
 

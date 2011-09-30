@@ -17,7 +17,7 @@
 
 int screen_width=800, screen_height=600;
 GLuint vbo_cube_vertices, vbo_cube_colors;
-GLuint vbo_cube_elements;
+GLuint ibo_cube_elements;
 GLuint program;
 GLint attribute_coord3d, attribute_v_color;
 GLint uniform_mvp;
@@ -158,8 +158,8 @@ int init_resources()
     3, 2, 6,
     6, 7, 3,
   };
-  glGenBuffers(1, &vbo_cube_elements);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_cube_elements);
+  glGenBuffers(1, &ibo_cube_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_elements), cube_elements, GL_STATIC_DRAW);
 
   GLint link_ok = GL_FALSE;
@@ -232,7 +232,7 @@ void display()
   );
 
   /* Push each element in buffer_vertices to the vertex shader */
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_cube_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
   int size;  glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
   glDrawElements(GL_TRIANGLES, size/sizeof(GLushort), GL_UNSIGNED_SHORT, 0);
 
@@ -267,7 +267,7 @@ void free_resources()
   glDeleteProgram(program);
   glDeleteBuffers(1, &vbo_cube_vertices);
   glDeleteBuffers(1, &vbo_cube_colors);
-  glDeleteBuffers(1, &vbo_cube_elements);
+  glDeleteBuffers(1, &ibo_cube_elements);
 }
 
 
