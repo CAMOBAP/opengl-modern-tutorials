@@ -279,7 +279,7 @@ void display()
   glm::mat4 view = glm::lookAt(glm::vec3(0.0, -2.0, 2.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
   glm::mat4 projection = glm::perspective(45.0f, 1.0f*640/480, 0.1f, 10.0f);
 
-  glm::mat4 vertex_transform = projection * view * model * glm::mat4(1.0f);
+  glm::mat4 vertex_transform = projection * view * model;
   glm::mat4 texture_transform = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(scale, scale, 1)), glm::vec3(offset_x, offset_y, 0));
 
   glUniformMatrix4fv(uniform_vertex_transform, 1, GL_FALSE, glm::value_ptr(vertex_transform));
