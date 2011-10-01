@@ -18,7 +18,7 @@ GLuint texture_id;
 GLint uniform_mytexture;
 
 float offset_x = 0.0;
-float scale_x = 20.48;
+float scale_x = 1.0;
 
 bool interpolate = false;
 bool clamp = false;
@@ -266,15 +266,13 @@ void special(int key, int x, int y)
 			break;
 		case GLUT_KEY_UP:
 			scale_x *= 1.5;
-			offset_x *= 1.5;
 			break;
 		case GLUT_KEY_DOWN:
 			scale_x /= 1.5;
-			offset_x /= 1.5;
 			break;
 		case GLUT_KEY_HOME:
 			offset_x = 0.0;
-			scale_x = 20.48;
+			scale_x = 1.0;
 			break;
 	}
 
