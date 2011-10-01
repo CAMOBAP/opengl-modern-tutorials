@@ -2,10 +2,10 @@
 
 uniform sampler2D mytexture;
 varying vec4 f_color;
-uniform bool sprite;
+uniform float sprite;
 
 void main(void) {
-  if(sprite)
+  if(sprite > 1)
     gl_FragColor = texture2D(mytexture, gl_PointCoord) * f_color;
   else
     gl_FragColor = f_color;

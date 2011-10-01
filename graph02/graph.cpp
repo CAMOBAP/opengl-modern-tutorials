@@ -185,6 +185,9 @@ int init_resources()
   // Tell OpenGL to copy our array to the buffer object
   glBufferData(GL_ARRAY_BUFFER, sizeof line, line, GL_STATIC_DRAW);
 
+  // Enable point size control in vertex shader
+  glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+
   return 1;
 }
 
@@ -223,10 +226,8 @@ void display()
   glDrawArrays(GL_LINE_STRIP, 0, 101);
 
   /* Draw points as well, if requested */
-  if(showpoints) {
-    glPointSize(5);
+  if(showpoints)
     glDrawArrays(GL_POINTS, 0, 101);
-  }
 
   /* Stop using the vertex buffer object */
   glDisableVertexAttribArray(attribute_coord1d);

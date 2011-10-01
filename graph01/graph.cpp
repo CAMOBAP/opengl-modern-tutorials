@@ -159,10 +159,13 @@ int init_resources()
     return 0;
   }
 
-  /* Prepare blending and point sprites */
+  /* Enable blending */
   glEnable(GL_BLEND);
-  glEnable(GL_POINT_SPRITE);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  /* Enable point sprites (not necessary for true OpenGL ES 2.0) */
+  glEnable(GL_POINT_SPRITE);
+  glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
   /* Upload the texture for our point sprites */
   glActiveTexture(GL_TEXTURE0);
@@ -227,17 +230,15 @@ void display()
   /* Push each element in buffer_vertices to the vertex shader */
   switch(mode) {
     case 0:
-      glUniform1i(uniform_sprite, 0);
+      glUniform1f(uniform_sprite, 0);
       glDrawArrays(GL_LINE_STRIP, 0, 2000);
       break;
     case 1:
-      glUniform1i(uniform_sprite, 0);
-      glPointSize(1);
+      glUniform1f(uniform_sprite, 1);
       glDrawArrays(GL_POINTS, 0, 2000);
       break;
     case 2:
-      glUniform1i(uniform_sprite, 1);
-      glPointSize(res_texture.width);
+      glUniform1f(uniform_sprite, res_texture.width);
       glDrawArrays(GL_POINTS, 0, 2000);
       break;
   }
