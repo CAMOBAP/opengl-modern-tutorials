@@ -122,6 +122,13 @@ GLint create_shader(const char* filename, GLenum type)
 
 int init_resources()
 {
+  int vertex_texture_units;
+  glGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, &vertex_texture_units);
+  if(!vertex_texture_units) {
+    fprintf(stderr, "Your graphics cards does not support texture lookups in the vertex shader!\n");
+    return 0;
+  }
+
   GLint link_ok = GL_FALSE;
 
   GLuint vs, fs;
