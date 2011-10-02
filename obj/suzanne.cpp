@@ -33,6 +33,11 @@ GLint uniform_m_3x3_inv_transp, uniform_v_inv;
 bool compute_arcball;
 int last_mx = 0, last_my = 0, cur_mx = 0, cur_my = 0;
 int arcball_on = false;
+
+GLuint fbo, fbo_texture;
+GLuint vbo_fbo_vertices;
+GLuint program_postproc, attribute_v_coord_postproc, uniform_fbo_texture;
+
 using namespace std;
 
 enum MODES { MODE_OBJECT, MODE_CAMERA, MODE_LIGHT, MODE_LAST } view_mode;
@@ -46,6 +51,7 @@ struct mesh {
   vector<GLushort> elements;
   glm::mat4 object2world;
 } mesh;
+
 
 /**
  * Store all the file's contents in memory, useful to pass shaders
@@ -251,7 +257,54 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
 	       light_bbox_elements, GL_STATIC_DRAW);
   
 
+
+  /* Create back-buffer, used for post-processing */
+
+  /* Texture */
+  glActiveTexture(GL_TEXTURE0);
+  glGenTextures(1, &fbo_texture);
+  glBindTexture(GL_TEXTURE_2D, fbo_texture);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_width, screen_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  /* Depth buffer */
+  GLuint rbo;
+  glGenRenderbuffers(1, &rbo);
+  glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, screen_width, screen_height);
+  glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+  /* Framebuffer to link everything together */
+  glGenFramebuffers(1, &fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo_texture, 0);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
+  GLenum status;
+  if ((status = glCheckFramebufferStatus(GL_FRAMEBUFFER)) != GL_FRAMEBUFFER_COMPLETE) {
+    fprintf(stderr, "glCheckFramebufferStatus: error %p", status);
+    return 0;
+  }
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+  GLfloat fbo_vertices[] = {
+    -1, -1,
+     1, -1,
+    -1,  1,
+     1,  1,
+  };
+  glGenBuffers(1, &vbo_fbo_vertices);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_fbo_vertices);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(fbo_vertices), fbo_vertices, GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+
+  /* Compile and link shaders */
   GLint link_ok = GL_FALSE;
+  GLint validate_ok = GL_FALSE;
 
   GLuint vs, fs;
   if ((vs = create_shader(vshader_filename, GL_VERTEX_SHADER))   == 0) return 0;
@@ -266,6 +319,12 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
     fprintf(stderr, "glLinkProgram:");
     print_log(program);
     return 0;
+  }
+  glValidateProgram(program);
+  glGetProgramiv(program, GL_VALIDATE_STATUS, &validate_ok);
+  if (!validate_ok) {
+    fprintf(stderr, "glValidateProgram:");
+    print_log(program);
   }
 
   const char* attribute_name;
@@ -309,6 +368,42 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
   uniform_name = "v_inv";
   uniform_v_inv = glGetUniformLocation(program, uniform_name);
   if (uniform_v_inv == -1) {
+    fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
+    return 0;
+  }
+
+
+  /* Post-processing */
+  if ((vs = create_shader("postproc.v.glsl", GL_VERTEX_SHADER))   == 0) return 0;
+  if ((fs = create_shader("postproc.f.glsl", GL_FRAGMENT_SHADER)) == 0) return 0;
+
+  program_postproc = glCreateProgram();
+  glAttachShader(program_postproc, vs);
+  glAttachShader(program_postproc, fs);
+  glLinkProgram(program_postproc);
+  glGetProgramiv(program_postproc, GL_LINK_STATUS, &link_ok);
+  if (!link_ok) {
+    fprintf(stderr, "glLinkProgram:");
+    print_log(program_postproc);
+    return 0;
+  }
+  glValidateProgram(program_postproc);
+  glGetProgramiv(program_postproc, GL_VALIDATE_STATUS, &validate_ok);
+  if (!validate_ok) {
+    fprintf(stderr, "glValidateProgram:");
+    print_log(program_postproc);
+  }
+
+  attribute_name = "v_coord";
+  attribute_v_coord_postproc = glGetAttribLocation(program_postproc, attribute_name);
+  if (attribute_v_coord_postproc == -1) {
+    fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
+    return 0;
+  }
+
+  uniform_name = "fbo_texture";
+  uniform_fbo_texture = glGetUniformLocation(program_postproc, uniform_name);
+  if (uniform_fbo_texture == -1) {
     fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
     return 0;
   }
@@ -439,6 +534,7 @@ void idle() {
   // Projection
   glm::mat4 camera2screen = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 100.0f);
 
+  glUseProgram(program);
   glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(world2camera));
   glUniformMatrix4fv(uniform_p, 1, GL_FALSE, glm::value_ptr(camera2screen));
 
@@ -451,11 +547,11 @@ void display()
 {
   glm::mat3 m_3x3_inv_transp;
 
-  glUseProgram(program);
-
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
   glClearColor(0.45, 0.45, 0.45, 1.0);
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
+  glUseProgram(program);
   glEnableVertexAttribArray(attribute_v_coord);
   glEnableVertexAttribArray(attribute_v_normal);
 
@@ -537,8 +633,30 @@ void display()
   glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, (GLvoid*)(4*sizeof(GLushort)));
   glDrawElements(GL_LINES, 8, GL_UNSIGNED_SHORT, (GLvoid*)(8*sizeof(GLushort)));
 
-
   glDisableVertexAttribArray(attribute_v_coord);
+
+
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glClearColor(0.0, 0.0, 0.0, 1.0);
+  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+  glUseProgram(program_postproc);
+  glBindTexture(GL_TEXTURE_2D, fbo_texture);
+  glUniform1i(uniform_fbo_texture, /*GL_TEXTURE*/0);
+  glEnableVertexAttribArray(attribute_v_coord_postproc);
+
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_fbo_vertices);
+  glVertexAttribPointer(
+    attribute_v_coord_postproc,  // attribute
+    2,                  // number of elements per vertex, here (x,y)
+    GL_FLOAT,           // the type of each element
+    GL_FALSE,           // take our values as-is
+    0,                  // no extra data between each position
+    0                   // offset of first element
+  );
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  glDisableVertexAttribArray(attribute_v_coord_postproc);
+
   glutSwapBuffers();
 }
 
@@ -568,6 +686,7 @@ void onReshape(int width, int height) {
 void free_resources()
 {
   glDeleteProgram(program);
+  glDeleteProgram(program_postproc);
 }
 
 
