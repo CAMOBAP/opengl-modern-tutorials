@@ -36,7 +36,7 @@ int arcball_on = false;
 
 GLuint fbo, fbo_texture;
 GLuint vbo_fbo_vertices;
-GLuint program_postproc, attribute_v_coord_postproc, uniform_fbo_texture;
+GLuint program_postproc, attribute_v_coord_postproc, uniform_fbo_texture, uniform_offset;
 
 using namespace std;
 
@@ -408,6 +408,13 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
     return 0;
   }
 
+  uniform_name = "offset";
+  uniform_offset = glGetUniformLocation(program_postproc, uniform_name);
+  if (uniform_offset == -1) {
+    fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
+    return 0;
+  }
+
   return 1;
 }
 
@@ -540,6 +547,11 @@ void idle() {
 
   glm::mat4 v_inv = glm::inverse(world2camera);
   glUniformMatrix4fv(uniform_v_inv, 1, GL_FALSE, glm::value_ptr(v_inv));
+
+  glUseProgram(program_postproc);
+  GLfloat move = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 2*3.14159 * .75;  // 3/4 of a wave cycle per second
+  glUniform1f(uniform_offset, move);
+
   glutPostRedisplay();
 }
 
