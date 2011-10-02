@@ -243,14 +243,30 @@ int init_resources()
   return 1;
 }
 
+void idle() {
+  float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 15;  // base 15° per second
+  glm::mat4 anim = \
+    glm::rotate(glm::mat4(1.0f), angle*3.0f, glm::vec3(1, 0, 0)) *  // X axis
+    glm::rotate(glm::mat4(1.0f), angle*2.0f, glm::vec3(0, 1, 0)) *  // Y axis
+    glm::rotate(glm::mat4(1.0f), angle*4.0f, glm::vec3(0, 0, 1));   // Z axis
+
+  glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -4.0));
+  glm::mat4 view = glm::lookAt(glm::vec3(0.0, 2.0, 0.0), glm::vec3(0.0, 0.0, -4.0), glm::vec3(0.0, 1.0, 0.0));
+  glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 10.0f);
+
+  glm::mat4 mvp = projection * view * model * anim;
+  glUseProgram(program);
+  glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
+  glutPostRedisplay();
+}
+
 void display()
 {
-  glUseProgram(program);
-  glUniform1i(uniform_mytexture, /*GL_TEXTURE*/0);
-
   glClearColor(1.0, 1.0, 1.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
+  glUseProgram(program);
+  glUniform1i(uniform_mytexture, /*GL_TEXTURE*/0);
   glEnableVertexAttribArray(attribute_coord3d);
   // Describe our vertices array to OpenGL (it can't guess its format automatically)
   glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_vertices);
@@ -282,22 +298,6 @@ void display()
   glDisableVertexAttribArray(attribute_coord3d);
   glDisableVertexAttribArray(attribute_texcoord);
   glutSwapBuffers();
-}
-
-void idle() {
-  float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 15;  // base 15° per second
-  glm::mat4 anim = \
-    glm::rotate(glm::mat4(1.0f), angle*3.0f, glm::vec3(1, 0, 0)) *  // X axis
-    glm::rotate(glm::mat4(1.0f), angle*2.0f, glm::vec3(0, 1, 0)) *  // Y axis
-    glm::rotate(glm::mat4(1.0f), angle*4.0f, glm::vec3(0, 0, 1));   // Z axis
-
-  glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -4.0));
-  glm::mat4 view = glm::lookAt(glm::vec3(0.0, 2.0, 0.0), glm::vec3(0.0, 0.0, -4.0), glm::vec3(0.0, 1.0, 0.0));
-  glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 10.0f);
-
-  glm::mat4 mvp = projection * view * model * anim;
-  glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
-  glutPostRedisplay();
 }
 
 void onReshape(int width, int height) {

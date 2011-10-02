@@ -69,10 +69,10 @@ int init_resources()
 
 void display()
 {
-  glUseProgram(program);
   glClearColor(1.0, 1.0, 1.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT);
 
+  glUseProgram(program);
   glEnableVertexAttribArray(attribute_coord2d);
   GLfloat triangle_vertices[] = {
      0.0,  0.8,

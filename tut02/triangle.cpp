@@ -135,10 +135,10 @@ int init_resources()
 
 void display()
 {
-  glUseProgram(program);
   glClearColor(1.0, 1.0, 1.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT);
 
+  glUseProgram(program);
   glEnableVertexAttribArray(attribute_coord2d);
   /* Describe our vertices array to OpenGL (it can't guess its format automatically) */
   glBindBuffer(GL_ARRAY_BUFFER, vbo_triangle);

@@ -155,15 +155,28 @@ int init_resources()
     fprintf(stderr, "Could not bind uniform_fade %s\n", uniform_name);
     return 0;
   }
+
   return 1;
+}
+
+void idle() {
+  float move = sinf(glutGet(GLUT_ELAPSED_TIME) / 1000.0 * (2*3.14) / 5); // -1<->+1 every 5 seconds
+  float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 45;  // 45° per second
+  glm::vec3 axis_z(0, 0, 1);
+  glm::mat4 m_transform = glm::translate(glm::mat4(1.0f), glm::vec3(move, 0.0, 0.0))
+    * glm::rotate(glm::mat4(1.0f), angle, axis_z);
+
+  glUseProgram(program);
+  glUniformMatrix4fv(uniform_m_transform, 1, GL_FALSE, glm::value_ptr(m_transform));
+  glutPostRedisplay();
 }
 
 void display()
 {
-  glUseProgram(program);
   glClearColor(1.0, 1.0, 1.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT);
   
+  glUseProgram(program);
   glEnableVertexAttribArray(attribute_coord3d);
   glEnableVertexAttribArray(attribute_v_color);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_triangle);
@@ -191,17 +204,6 @@ void display()
   glDisableVertexAttribArray(attribute_coord3d);
   glDisableVertexAttribArray(attribute_v_color);
   glutSwapBuffers();
-}
-
-void idle() {
-  float move = sinf(glutGet(GLUT_ELAPSED_TIME) / 1000.0 * (2*3.14) / 5); // -1<->+1 every 5 seconds
-  float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 45;  // 45° per second
-  glm::vec3 axis_z(0, 0, 1);
-  glm::mat4 m_transform = glm::translate(glm::mat4(1.0f), glm::vec3(move, 0.0, 0.0))
-    * glm::rotate(glm::mat4(1.0f), angle, axis_z);
-
-  glUniformMatrix4fv(uniform_m_transform, 1, GL_FALSE, glm::value_ptr(m_transform));
-  glutPostRedisplay();
 }
 
 void free_resources()

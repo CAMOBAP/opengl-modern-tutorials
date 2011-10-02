@@ -601,13 +601,32 @@ int init_resources()
   return 1;
 }
 
+void idle() {
+  float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 15;  // 15° per second
+  glm::mat4 anim =
+    glm::rotate(glm::mat4(1.0f), 1*angle, glm::vec3(1, 0, 0)) *
+    glm::rotate(glm::mat4(1.0f), 2*angle, glm::vec3(0, 1, 0)) *
+    glm::rotate(glm::mat4(1.0f), 3*angle, glm::vec3(0, 0, 1)) *
+    glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -1.5));
+
+  glm::mat4 model = glm::mat4(1.0f);
+  glm::mat4 view = glm::lookAt(glm::vec3(0.0, 0.0, 8.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+  glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 10.0f);
+
+  glm::mat4 mvp = projection * view * model * anim;
+
+  glUseProgram(program);
+  glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
+  glutPostRedisplay();
+}
+
 void display()
 {
-  glUseProgram(program);
   glClearColor(1.0, 1.0, 1.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
   // Draw Teapot
+  glUseProgram(program);
   glEnableVertexAttribArray(attribute_coord3d);
   // Describe our vertices array to OpenGL (it can't guess its format automatically)
   glBindBuffer(GL_ARRAY_BUFFER, vbo_teapot_vertices);
@@ -663,24 +682,6 @@ void display()
   glDisableVertexAttribArray(attribute_coord3d);
   glDisableVertexAttribArray(attribute_v_color);
   glutSwapBuffers();
-}
-
-void idle() {
-  float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 15;  // 15° per second
-  glm::mat4 anim = 
-    glm::rotate(glm::mat4(1.0f), 1*angle, glm::vec3(1, 0, 0)) *
-    glm::rotate(glm::mat4(1.0f), 2*angle, glm::vec3(0, 1, 0)) *
-    glm::rotate(glm::mat4(1.0f), 3*angle, glm::vec3(0, 0, 1)) *
-    glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -1.5));
-
-  glm::mat4 model = glm::mat4(1.0f);
-  glm::mat4 view = glm::lookAt(glm::vec3(0.0, 0.0, 8.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
-  glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 10.0f);
-
-  glm::mat4 mvp = projection * view * model * anim;
-
-  glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
-  glutPostRedisplay();
 }
 
 void onReshape(int width, int height) {

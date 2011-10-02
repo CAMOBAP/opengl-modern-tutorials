@@ -175,14 +175,23 @@ int init_resources()
     fprintf(stderr, "Could not bind uniform_fade %s\n", uniform_name);
     return 0;
   }
+
   return 1;
+}
+
+void idle() {
+  float cur_fade = sinf(glutGet(GLUT_ELAPSED_TIME) / 1000.0 * (2*3.14) / 5) / 2 + 0.5; // 0->1->0 every 5 seconds
+  glUseProgram(program);
+  glUniform1f(uniform_fade, cur_fade);
+  glutPostRedisplay();
 }
 
 void display()
 {
-  glUseProgram(program);
   glClearColor(1.0, 1.0, 1.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT);
+
+  glUseProgram(program);
 
   /*
   glEnableVertexAttribArray(attribute_coord2d);
@@ -236,12 +245,6 @@ void display()
   glDisableVertexAttribArray(attribute_coord2d);
   glDisableVertexAttribArray(attribute_v_color);
   glutSwapBuffers();
-}
-
-void idle() {
-  float cur_fade = sinf(glutGet(GLUT_ELAPSED_TIME) / 1000.0 * (2*3.14) / 5) / 2 + 0.5; // 0->1->0 every 5 seconds
-  glUniform1f(uniform_fade, cur_fade);
-  glutPostRedisplay();
 }
 
 void free_resources()
