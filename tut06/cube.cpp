@@ -312,6 +312,7 @@ void free_resources()
   glDeleteBuffers(1, &vbo_cube_vertices);
   glDeleteBuffers(1, &vbo_cube_texcoords);
   glDeleteBuffers(1, &ibo_cube_elements);
+  glDeleteTextures(1, &texture_id);
 }
 
 
