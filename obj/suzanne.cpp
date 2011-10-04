@@ -22,9 +22,6 @@
 #define GROUND_SIZE 20
 
 int screen_width=800, screen_height=600;
-GLuint vbo_mesh_vertices, vbo_mesh_normals, ibo_mesh_elements,
-  vbo_ground_vertices, vbo_ground_normals,
-  vbo_light_bbox_vertices, ibo_light_bbox_elements;
 GLuint program;
 GLint attribute_v_coord;
 GLint attribute_v_normal;
@@ -50,7 +47,9 @@ struct mesh {
   vector<glm::vec3> normals;
   vector<GLushort> elements;
   glm::mat4 object2world;
-} mesh;
+  GLuint vbo_vertices, vbo_normals, ibo_elements;
+};
+struct mesh ground, mesh, light_bbox;
 
 
 /**
@@ -184,78 +183,68 @@ void load_obj(const char* filename, struct mesh* mesh) {
   }
 }
 
+void upload_mesh(struct mesh* mesh) {
+  if (mesh->vertices.size() > 0) {
+    glGenBuffers(1, &mesh->vbo_vertices);
+    glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo_vertices);
+    glBufferData(GL_ARRAY_BUFFER, mesh->vertices.size() * sizeof(mesh->vertices[0]),
+		 mesh->vertices.data(), GL_STATIC_DRAW);
+  }
+  
+  if (mesh->normals.size() > 0) {
+    glGenBuffers(1, &mesh->vbo_normals);
+    glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo_normals);
+    glBufferData(GL_ARRAY_BUFFER, mesh->normals.size() * sizeof(mesh->normals[0]),
+		 mesh->normals.data(), GL_STATIC_DRAW);
+  }
+
+  if (mesh->elements.size() > 0) {
+    glGenBuffers(1, &mesh->ibo_elements);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->ibo_elements);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->elements.size() * sizeof(mesh->elements[0]),
+		 mesh->elements.data(), GL_STATIC_DRAW);
+  }
+}
+
 int init_resources(char* model_filename, char* vshader_filename, char* fshader_filename)
 {
   load_obj(model_filename, &mesh);
 
-  glGenBuffers(1, &vbo_mesh_vertices);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_mesh_vertices);
-  glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(mesh.vertices[0]),
-	       mesh.vertices.data(), GL_STATIC_DRAW);
-  
-  glGenBuffers(1, &vbo_mesh_normals);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_mesh_normals);
-  glBufferData(GL_ARRAY_BUFFER, mesh.normals.size() * sizeof(mesh.normals[0]),
-	       mesh.normals.data(), GL_STATIC_DRAW);
-
-  glGenBuffers(1, &ibo_mesh_elements);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_mesh_elements);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.elements.size() * sizeof(mesh.elements[0]),
-	       mesh.elements.data(), GL_STATIC_DRAW);
-
-
-  vector<glm::vec4> ground_vertices;
-  vector<glm::vec3> ground_normals;
   for (int i = -GROUND_SIZE/2; i < GROUND_SIZE/2; i++) {
     for (int j = -GROUND_SIZE/2; j < GROUND_SIZE/2; j++) {
-      ground_vertices.push_back(glm::vec4(i,   0.0,  j+1, 1.0));
-      ground_vertices.push_back(glm::vec4(i+1, 0.0,  j+1, 1.0));
-      ground_vertices.push_back(glm::vec4(i,   0.0,  j,   1.0));
-      ground_vertices.push_back(glm::vec4(i,   0.0,  j,   1.0));
-      ground_vertices.push_back(glm::vec4(i+1, 0.0,  j+1, 1.0));
-      ground_vertices.push_back(glm::vec4(i+1, 0.0,  j,   1.0));
+      ground.vertices.push_back(glm::vec4(i,   0.0,  j+1, 1.0));
+      ground.vertices.push_back(glm::vec4(i+1, 0.0,  j+1, 1.0));
+      ground.vertices.push_back(glm::vec4(i,   0.0,  j,   1.0));
+      ground.vertices.push_back(glm::vec4(i,   0.0,  j,   1.0));
+      ground.vertices.push_back(glm::vec4(i+1, 0.0,  j+1, 1.0));
+      ground.vertices.push_back(glm::vec4(i+1, 0.0,  j,   1.0));
       for (int k = 0; k < 6; k++)
-	ground_normals.push_back(glm::vec3(0.0, 1.0, 0.0));
+	ground.normals.push_back(glm::vec3(0.0, 1.0, 0.0));
     }
   }
 
-  glGenBuffers(1, &vbo_ground_vertices);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_ground_vertices);
-  glBufferData(GL_ARRAY_BUFFER, ground_vertices.size() * sizeof(ground_vertices[0]),
-	       ground_vertices.data(), GL_STATIC_DRAW);
-  
-  glGenBuffers(1, &vbo_ground_normals);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_ground_normals);
-  glBufferData(GL_ARRAY_BUFFER, ground_normals.size() * sizeof(ground_normals[0]),
-	       ground_normals.data(), GL_STATIC_DRAW);
-
   glm::vec4 light_position = glm::vec4(0.0,  1.0,  2.0, 1.0);
-  vector<glm::vec4> light_bbox_vertices;
-  light_bbox_vertices.push_back(light_position - glm::vec4(-0.1, -0.1, -0.1, 0.0));
-  light_bbox_vertices.push_back(light_position - glm::vec4( 0.1, -0.1, -0.1, 0.0));
-  light_bbox_vertices.push_back(light_position - glm::vec4( 0.1,  0.1, -0.1, 0.0));
-  light_bbox_vertices.push_back(light_position - glm::vec4(-0.1,  0.1, -0.1, 0.0));
-  light_bbox_vertices.push_back(light_position - glm::vec4(-0.1, -0.1,  0.1, 0.0));
-  light_bbox_vertices.push_back(light_position - glm::vec4( 0.1, -0.1,  0.1, 0.0));
-  light_bbox_vertices.push_back(light_position - glm::vec4( 0.1,  0.1,  0.1, 0.0));
-  light_bbox_vertices.push_back(light_position - glm::vec4(-0.1,  0.1,  0.1, 0.0));
+  light_bbox.vertices.push_back(light_position - glm::vec4(-0.1, -0.1, -0.1, 0.0));
+  light_bbox.vertices.push_back(light_position - glm::vec4( 0.1, -0.1, -0.1, 0.0));
+  light_bbox.vertices.push_back(light_position - glm::vec4( 0.1,  0.1, -0.1, 0.0));
+  light_bbox.vertices.push_back(light_position - glm::vec4(-0.1,  0.1, -0.1, 0.0));
+  light_bbox.vertices.push_back(light_position - glm::vec4(-0.1, -0.1,  0.1, 0.0));
+  light_bbox.vertices.push_back(light_position - glm::vec4( 0.1, -0.1,  0.1, 0.0));
+  light_bbox.vertices.push_back(light_position - glm::vec4( 0.1,  0.1,  0.1, 0.0));
+  light_bbox.vertices.push_back(light_position - glm::vec4(-0.1,  0.1,  0.1, 0.0));
 
   GLushort light_bbox_elements[] = {
     0, 1, 2, 3,
     4, 5, 6, 7,
     0, 4, 1, 5, 2, 6, 3, 7
   };
+  for (int i = 0; i < sizeof(light_bbox_elements)/sizeof(light_bbox_elements[0]); i++)
+    light_bbox.elements.push_back(light_bbox_elements[i]);
 
-  glGenBuffers(1, &vbo_light_bbox_vertices);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_light_bbox_vertices);
-  glBufferData(GL_ARRAY_BUFFER, light_bbox_vertices.size() * sizeof(light_bbox_vertices[0]),
-	       light_bbox_vertices.data(), GL_STATIC_DRAW);
-
-  glGenBuffers(1, &ibo_light_bbox_elements);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_light_bbox_elements);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(light_bbox_elements),
-	       light_bbox_elements, GL_STATIC_DRAW);
-  
+  upload_mesh(&mesh);
+  upload_mesh(&ground);
+  upload_mesh(&light_bbox);
+ 
 
 
   /* Create back-buffer, used for post-processing */
@@ -555,20 +544,12 @@ void idle() {
   glutPostRedisplay();
 }
 
-void display()
-{
-  glm::mat3 m_3x3_inv_transp;
-
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-  glClearColor(0.45, 0.45, 0.45, 1.0);
-  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-
-  glUseProgram(program);
+void draw_mesh(struct mesh* mesh) {
+  // Describe our vertices array to OpenGL (it can't guess its format automatically)
   glEnableVertexAttribArray(attribute_v_coord);
   glEnableVertexAttribArray(attribute_v_normal);
 
-  // Describe our vertices array to OpenGL (it can't guess its format automatically)
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_mesh_vertices);
+  glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo_vertices);
   glVertexAttribPointer(
     attribute_v_coord,  // attribute
     4,                  // number of elements per vertex, here (x,y,z,w)
@@ -578,7 +559,7 @@ void display()
     0                   // offset of first element
   );
 
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_mesh_normals);
+  glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo_normals);
   glVertexAttribPointer(
     attribute_v_normal, // attribute
     3,                  // number of elements per vertex, here (x,y,z)
@@ -589,44 +570,26 @@ void display()
   );
 
   /* Apply object's transformation matrix */
-  glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(mesh.object2world));
-  m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(mesh.object2world)));
+  glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(mesh->object2world));
+  glm::mat3 m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(mesh->object2world)));
   glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
 
   /* Push each element in buffer_vertices to the vertex shader */
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_mesh_elements);
-  int size;  glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);  
-  glDrawElements(GL_TRIANGLES, size/sizeof(GLushort), GL_UNSIGNED_SHORT, 0);
+  if (mesh->ibo_elements != 0) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->ibo_elements);
+    int size;  glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
+    glDrawElements(GL_TRIANGLES, size/sizeof(GLushort), GL_UNSIGNED_SHORT, 0);
+  } else {
+    glDrawArrays(GL_TRIANGLES, 0, mesh->vertices.size());
+  }
 
-
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_ground_vertices);
-  glVertexAttribPointer(
-    attribute_v_coord,  // attribute
-    4,                  // number of elements per vertex, here (x,y,z,w)
-    GL_FLOAT,           // the type of each element
-    GL_FALSE,           // take our values as-is
-    0,                  // no extra data between each position
-    0                   // offset of first element
-  );
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_ground_normals);
-  glVertexAttribPointer(
-    attribute_v_normal, // attribute
-    3,                  // number of elements per vertex, here (x,y,z)
-    GL_FLOAT,           // the type of each element
-    GL_FALSE,           // take our values as-is
-    0,                  // no extra data between each position
-    0                   // offset of first element
-  );
-
-  glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0)));
-  m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(1.0)));
-  glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
-
-  glDrawArrays(GL_TRIANGLES, 0, 6*GROUND_SIZE*GROUND_SIZE);
-
-
+  glDisableVertexAttribArray(attribute_v_coord);
   glDisableVertexAttribArray(attribute_v_normal);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_light_bbox_vertices);
+}
+
+void draw_light_bbox() {
+  glEnableVertexAttribArray(attribute_v_coord);
+  glBindBuffer(GL_ARRAY_BUFFER, light_bbox.vbo_vertices);
   glVertexAttribPointer(
     attribute_v_coord,  // attribute
     4,                  // number of elements per vertex, here (x,y,z,w)
@@ -637,17 +600,32 @@ void display()
   );
 
   glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0)));
-  m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(1.0)));
+  glm::mat3 m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(1.0)));
   glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
 
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_light_bbox_elements);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, light_bbox.ibo_elements);
   glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, 0);
   glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, (GLvoid*)(4*sizeof(GLushort)));
   glDrawElements(GL_LINES, 8, GL_UNSIGNED_SHORT, (GLvoid*)(8*sizeof(GLushort)));
 
   glDisableVertexAttribArray(attribute_v_coord);
+}
+
+void display()
+{
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glClearColor(0.45, 0.45, 0.45, 1.0);
+  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+  glUseProgram(program);
 
 
+  draw_mesh(&mesh);
+  draw_mesh(&ground);
+  draw_light_bbox();
+
+
+  /* Post-processing */
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
