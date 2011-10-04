@@ -683,6 +683,7 @@ void free_resources()
   glDeleteBuffers(1, &ground.vbo_normals);
   glDeleteBuffers(1, &mesh.ibo_elements);
   glDeleteBuffers(1, &light_bbox.ibo_elements);
+  glDeleteBuffers(1, &vbo_fbo_vertices);
   glDeleteRenderbuffers(1, &rbo);
   glDeleteTextures(1, &fbo_texture);
   glDeleteFramebuffers(1, &fbo);
