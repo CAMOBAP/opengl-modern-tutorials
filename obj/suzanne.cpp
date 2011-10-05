@@ -670,6 +670,15 @@ void onReshape(int width, int height) {
   screen_width = width;
   screen_height = height;
   glViewport(0, 0, screen_width, screen_height);
+
+  // Rescale FBO and RBO as well
+  glBindTexture(GL_TEXTURE_2D, fbo_texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_width, screen_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, screen_width, screen_height);
+  glBindRenderbuffer(GL_RENDERBUFFER, 0);
 }
 
 void free_resources()
