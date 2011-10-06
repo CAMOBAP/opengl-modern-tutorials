@@ -31,7 +31,7 @@ bool compute_arcball;
 int last_mx = 0, last_my = 0, cur_mx = 0, cur_my = 0;
 int arcball_on = false;
 
-GLuint fbo, fbo_texture, rbo;
+GLuint fbo, fbo_texture, rbo_depth;
 GLuint vbo_fbo_vertices;
 GLuint program_postproc, attribute_v_coord_postproc, uniform_fbo_texture, uniform_offset;
 
@@ -261,8 +261,8 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
   glBindTexture(GL_TEXTURE_2D, 0);
 
   /* Depth buffer */
-  glGenRenderbuffers(1, &rbo);
-  glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+  glGenRenderbuffers(1, &rbo_depth);
+  glBindRenderbuffer(GL_RENDERBUFFER, rbo_depth);
   glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, screen_width, screen_height);
   glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
@@ -270,7 +270,7 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
   glGenFramebuffers(1, &fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo_texture, 0);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo_depth);
   GLenum status;
   if ((status = glCheckFramebufferStatus(GL_FRAMEBUFFER)) != GL_FRAMEBUFFER_COMPLETE) {
     fprintf(stderr, "glCheckFramebufferStatus: error %p", status);
@@ -676,7 +676,7 @@ void onReshape(int width, int height) {
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_width, screen_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
   glBindTexture(GL_TEXTURE_2D, 0);
 
-  glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+  glBindRenderbuffer(GL_RENDERBUFFER, rbo_depth);
   glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, screen_width, screen_height);
   glBindRenderbuffer(GL_RENDERBUFFER, 0);
 }
@@ -693,7 +693,7 @@ void free_resources()
   glDeleteBuffers(1, &mesh.ibo_elements);
   glDeleteBuffers(1, &light_bbox.ibo_elements);
   glDeleteBuffers(1, &vbo_fbo_vertices);
-  glDeleteRenderbuffers(1, &rbo);
+  glDeleteRenderbuffers(1, &rbo_depth);
   glDeleteTextures(1, &fbo_texture);
   glDeleteFramebuffers(1, &fbo);
 }
