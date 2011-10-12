@@ -1,1 +1,1 @@
-See the 'obj' directory.
+See the 'obj-viewer' directory.
