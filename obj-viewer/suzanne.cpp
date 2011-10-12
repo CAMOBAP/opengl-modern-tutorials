@@ -38,7 +38,7 @@ GLuint program_postproc, attribute_v_coord_postproc, uniform_fbo_texture, unifor
 using namespace std;
 
 enum MODES { MODE_OBJECT, MODE_CAMERA, MODE_LIGHT, MODE_LAST } view_mode;
-int rotY_direction = 0, rotX_direction = 0, transZ_direction = 0;
+int rotY_direction = 0, rotX_direction = 0, transZ_direction = 0, strife = 0;
 glm::mat4 transforms[MODE_LAST];
 int last_ticks = 0;
 
@@ -158,7 +158,7 @@ void load_obj(const char* filename, struct mesh* mesh) {
 
   mesh->normals.resize(mesh->vertices.size(), glm::vec3(0.0, 0.0, 0.0));
   nb_seen.resize(mesh->vertices.size(), 0);
-  for (int i = 0; i < mesh->elements.size(); i+=3) {
+  for (unsigned int i = 0; i < mesh->elements.size(); i+=3) {
     GLushort ia = mesh->elements[i];
     GLushort ib = mesh->elements[i+1];
     GLushort ic = mesh->elements[i+2];
@@ -209,6 +209,7 @@ void upload_mesh(struct mesh* mesh) {
 int init_resources(char* model_filename, char* vshader_filename, char* fshader_filename)
 {
   load_obj(model_filename, &mesh);
+  // mesh position initialized in init_view()
 
   for (int i = -GROUND_SIZE/2; i < GROUND_SIZE/2; i++) {
     for (int j = -GROUND_SIZE/2; j < GROUND_SIZE/2; j++) {
@@ -218,7 +219,7 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
       ground.vertices.push_back(glm::vec4(i,   0.0,  j,   1.0));
       ground.vertices.push_back(glm::vec4(i+1, 0.0,  j+1, 1.0));
       ground.vertices.push_back(glm::vec4(i+1, 0.0,  j,   1.0));
-      for (int k = 0; k < 6; k++)
+      for (unsigned int k = 0; k < 6; k++)
 	ground.normals.push_back(glm::vec3(0.0, 1.0, 0.0));
     }
   }
@@ -238,7 +239,7 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
     4, 5, 6, 7,
     0, 4, 1, 5, 2, 6, 3, 7
   };
-  for (int i = 0; i < sizeof(light_bbox_elements)/sizeof(light_bbox_elements[0]); i++)
+  for (unsigned int i = 0; i < sizeof(light_bbox_elements)/sizeof(light_bbox_elements[0]); i++)
     light_bbox.elements.push_back(light_bbox_elements[i]);
 
   upload_mesh(&mesh);
@@ -273,7 +274,7 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo_depth);
   GLenum status;
   if ((status = glCheckFramebufferStatus(GL_FRAMEBUFFER)) != GL_FRAMEBUFFER_COMPLETE) {
-    fprintf(stderr, "glCheckFramebufferStatus: error %p", status);
+    fprintf(stderr, "glCheckFramebufferStatus: error 0x%x", status);
     return 0;
   }
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -407,14 +408,18 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
 }
 
 void init_view() {
-  mesh.object2world = glm::mat4(1.0);
+  mesh.object2world = glm::mat4(1);
   transforms[MODE_CAMERA] = glm::lookAt(
-    glm::vec3(0.0,  2.0, 4.0),   // eye
+    glm::vec3(0.0,  0.0, 4.0),   // eye
     glm::vec3(0.0,  0.0, 0.0),   // direction
     glm::vec3(0.0,  1.0, 0.0));  // up
 }
 
 void onSpecial(int key, int x, int y) {
+  if (glutGetModifiers() == GLUT_ACTIVE_ALT)
+    strife = 1;
+  else
+    strife = 0;
   switch (key) {
   case GLUT_KEY_F1:
     view_mode = MODE_OBJECT;
@@ -489,9 +494,16 @@ void idle() {
   /* Handle keyboard-based transformations */
   int delta_t = glutGet(GLUT_ELAPSED_TIME) - last_ticks;
   last_ticks = glutGet(GLUT_ELAPSED_TIME);
-  float delta_rotY = rotY_direction * delta_t / 1000.0 * 120;  // 120° per second
-  float delta_rotX = rotX_direction * delta_t / 1000.0 * 120;  // 120° per second;
-  float delta_transZ = transZ_direction * delta_t / 1000.0 * 5;  // 5 units per second;
+
+  float delta_transZ = transZ_direction * delta_t / 1000.0 * 5;  // 5 units per second
+  float delta_transX = 0, delta_transY = 0, delta_rotY = 0, delta_rotX = 0;
+  if (strife) {
+    delta_transX = rotY_direction * delta_t / 1000.0 * 3;  // 3 units per second
+    delta_transY = rotX_direction * delta_t / 1000.0 * 3;  // 3 units per second
+  } else {
+    delta_rotY =  rotY_direction * delta_t / 1000.0 * 120;  // 120° per second
+    delta_rotX = -rotX_direction * delta_t / 1000.0 * 120;  // 120° per second
+  }
   
   if (view_mode == MODE_OBJECT) {
     mesh.object2world = glm::rotate(mesh.object2world, delta_rotY, glm::vec3(0.0, 1.0, 0.0));
@@ -502,9 +514,19 @@ void idle() {
     // Plus, the View matrix is the inverse of the camera2world (it's
     // world->camera), so we'll reverse the transformations.
     // Alternatively, imagine that you transform the world, instead of positioning the camera.
-    transforms[MODE_CAMERA] = glm::rotate(glm::mat4(1.0), -delta_rotY, glm::vec3(0.0, 1.0, 0.0)) * transforms[MODE_CAMERA];
-    transforms[MODE_CAMERA] = glm::rotate(glm::mat4(1.0), delta_rotX, glm::vec3(1.0, 0.0, 0.0)) * transforms[MODE_CAMERA];
-    transforms[MODE_CAMERA] = glm::translate(glm::mat4(1.0), glm::vec3(0.0, 0.0, delta_transZ)) * transforms[MODE_CAMERA];
+    if (strife) {
+      transforms[MODE_CAMERA] = glm::translate(glm::mat4(1.0), glm::vec3(delta_transX, 0.0, 0.0)) * transforms[MODE_CAMERA];
+    } else {
+      glm::vec3 y_axis_world = glm::mat3(transforms[MODE_CAMERA]) * glm::vec3(0.0, 1.0, 0.0);
+      transforms[MODE_CAMERA] = glm::rotate(glm::mat4(1.0), -delta_rotY, y_axis_world) * transforms[MODE_CAMERA];
+    }
+
+    if (strife)
+      transforms[MODE_CAMERA] = glm::translate(glm::mat4(1.0), glm::vec3(0.0, delta_transY, 0.0)) * transforms[MODE_CAMERA];
+    else
+      transforms[MODE_CAMERA] = glm::translate(glm::mat4(1.0), glm::vec3(0.0, 0.0, delta_transZ)) * transforms[MODE_CAMERA];
+
+     transforms[MODE_CAMERA] = glm::rotate(glm::mat4(1.0), delta_rotX, glm::vec3(1.0, 0.0, 0.0)) * transforms[MODE_CAMERA];
   }
 
   /* Handle arcball */
@@ -544,29 +566,31 @@ void idle() {
 }
 
 void draw_mesh(struct mesh* mesh) {
-  // Describe our vertices array to OpenGL (it can't guess its format automatically)
-  glEnableVertexAttribArray(attribute_v_coord);
-  glEnableVertexAttribArray(attribute_v_normal);
+  if (mesh->vbo_vertices != 0) {
+    glEnableVertexAttribArray(attribute_v_coord);
+    glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo_vertices);
+    glVertexAttribPointer(
+      attribute_v_coord,  // attribute
+      4,                  // number of elements per vertex, here (x,y,z,w)
+      GL_FLOAT,           // the type of each element
+      GL_FALSE,           // take our values as-is
+      0,                  // no extra data between each position
+      0                   // offset of first element
+    );
+  }
 
-  glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo_vertices);
-  glVertexAttribPointer(
-    attribute_v_coord,  // attribute
-    4,                  // number of elements per vertex, here (x,y,z,w)
-    GL_FLOAT,           // the type of each element
-    GL_FALSE,           // take our values as-is
-    0,                  // no extra data between each position
-    0                   // offset of first element
-  );
-
-  glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo_normals);
-  glVertexAttribPointer(
-    attribute_v_normal, // attribute
-    3,                  // number of elements per vertex, here (x,y,z)
-    GL_FLOAT,           // the type of each element
-    GL_FALSE,           // take our values as-is
-    0,                  // no extra data between each position
-    0                   // offset of first element
-  );
+  if (mesh->vbo_normals != 0) {
+    glEnableVertexAttribArray(attribute_v_normal);
+    glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo_normals);
+    glVertexAttribPointer(
+      attribute_v_normal, // attribute
+      3,                  // number of elements per vertex, here (x,y,z)
+      GL_FLOAT,           // the type of each element
+      GL_FALSE,           // take our values as-is
+      0,                  // no extra data between each position
+      0                   // offset of first element
+    );
+  }
 
   /* Apply object's transformation matrix */
   glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(mesh->object2world));
@@ -582,7 +606,8 @@ void draw_mesh(struct mesh* mesh) {
     glDrawArrays(GL_TRIANGLES, 0, mesh->vertices.size());
   }
 
-  glDisableVertexAttribArray(attribute_v_coord);
+  if (mesh->vbo_normals != 0)
+    glDisableVertexAttribArray(attribute_v_coord);
   glDisableVertexAttribArray(attribute_v_normal);
 }
 
@@ -622,7 +647,6 @@ void display()
   draw_mesh(&mesh);
   draw_mesh(&ground);
   draw_light_bbox();
-
 
   /* Post-processing */
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -716,12 +740,18 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
+  char* obj_filename = (char*) "suzanne.obj";
+  char* v_shader_filename = (char*) "phong-shading.v.glsl";
+  char* f_shader_filename = (char*) "phong-shading.f.glsl";
   if (argc != 4) {
     fprintf(stderr, "Usage: %s model.obj vertex_shader.v.glsl fragment_shader.f.glsl\n", argv[0]);
-    exit(0);
+  } else {
+    obj_filename = argv[1];
+    v_shader_filename = argv[2];
+    f_shader_filename = argv[3];
   }
 
-  if (init_resources(argv[1], argv[2], argv[3])) {
+  if (init_resources(obj_filename, v_shader_filename, f_shader_filename)) {
     init_view();
     glutDisplayFunc(display);
     glutSpecialFunc(onSpecial);
@@ -731,8 +761,8 @@ int main(int argc, char* argv[]) {
     glutReshapeFunc(onReshape);
     glutIdleFunc(idle);
     glEnable(GL_BLEND);
-    glEnable(GL_DEPTH_TEST);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_DEPTH_TEST);
     last_ticks = glutGet(GLUT_ELAPSED_TIME);
     glutMainLoop();
   }
