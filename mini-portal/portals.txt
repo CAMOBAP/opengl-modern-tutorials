@@ -28,9 +28,14 @@ Notes:
   read (backup) the stencil buffer, so we have to rebuild it each
   time we come back from a sub-rendering process.
 
-- [/] View through portal
+- Camera frustrum makes it possible to see behind the portal before
+  crossing it (i.e. overwrite the portal contents with what's behind).
+  Solution: make the portal thick, with thickness ~= zNear (from
+  glm::perspective).
+
+- [X] View through portal
   - [X] Stencil in rectangle
-  - [ ] Stencil in plane intersection - strife through portals - avoid flicker when traversing portals
+  - [X] Stencil in plane intersection - strife through portals - avoid flicker when traversing portals
 - [X] Collision detection
 - [X] Warp
 - [/] Infinite/recursive portals display (portals facing each others)

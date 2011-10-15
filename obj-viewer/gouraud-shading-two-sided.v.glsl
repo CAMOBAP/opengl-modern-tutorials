@@ -21,7 +21,7 @@ struct lightSource
   vec3 spotDirection;
 };
 lightSource light0 = lightSource(
-  vec4(0.0,  1.0,  2.0, 1.0),
+  vec4(0.0,  3.0,  0.0, 1.0),
   vec4(1.0,  1.0,  1.0, 1.0),
   vec4(1.0,  1.0,  1.0, 1.0),
   0.0, 1.0, 0.0,

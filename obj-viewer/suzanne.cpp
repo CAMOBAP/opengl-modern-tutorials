@@ -43,6 +43,9 @@ float speed_factor = 1;
 glm::mat4 transforms[MODE_LAST];
 int last_ticks = 0;
 
+static unsigned int fps_start = glutGet(GLUT_ELAPSED_TIME);
+static unsigned int fps_frames = 0;
+
 class Mesh {
 private:
   GLuint vbo_vertices, vbo_normals, ibo_elements;
@@ -52,7 +55,7 @@ public:
   vector<GLushort> elements;
   glm::mat4 object2world;
 
-  Mesh() : vbo_vertices(0), vbo_normals(0), ibo_elements(0) {}
+  Mesh() : vbo_vertices(0), vbo_normals(0), ibo_elements(0), object2world(glm::mat4(1)) {}
   ~Mesh() {
     if (vbo_vertices != 0)
       glDeleteBuffers(1, &vbo_vertices);
@@ -149,12 +152,12 @@ public:
     // Cube 1x1x1, centered on origin
     GLfloat vertices[] = {
       -0.5, -0.5, -0.5, 1.0,
-      0.5, -0.5, -0.5, 1.0,
-      0.5,  0.5, -0.5, 1.0,
+       0.5, -0.5, -0.5, 1.0,
+       0.5,  0.5, -0.5, 1.0,
       -0.5,  0.5, -0.5, 1.0,
       -0.5, -0.5,  0.5, 1.0,
-      0.5, -0.5,  0.5, 1.0,
-      0.5,  0.5,  0.5, 1.0,
+       0.5, -0.5,  0.5, 1.0,
+       0.5,  0.5,  0.5, 1.0,
       -0.5,  0.5,  0.5, 1.0,
     };
     GLuint vbo_vertices;
@@ -222,9 +225,6 @@ public:
   }
 };
 Mesh ground, main_object, light_bbox;
-
-static unsigned int fps_start = glutGet(GLUT_ELAPSED_TIME);
-static unsigned int fps_frames = 0;
 
 
 /**

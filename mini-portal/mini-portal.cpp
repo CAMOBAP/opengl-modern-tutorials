@@ -9,6 +9,7 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 /* Use glew.h instead of gl.h to get all the GL prototypes declared */
 #include <GL/glew.h>
 /* Using the GLUT library for the base windowing setup */
@@ -39,6 +40,12 @@ float speed_factor = 1;
 glm::mat4 transforms[MODE_LAST];
 int last_ticks = 0;
 
+static unsigned int fps_start = 0;
+static unsigned int fps_frames = 0;
+
+static float zNear = 0.01;
+static float fovy = 45;
+
 class Mesh {
 private:
   GLuint vbo_vertices, vbo_normals, ibo_elements;
@@ -48,7 +55,7 @@ public:
   vector<GLushort> elements;
   glm::mat4 object2world;
 
-  Mesh() : vbo_vertices(0), vbo_normals(0), ibo_elements(0) {}
+  Mesh() : vbo_vertices(0), vbo_normals(0), ibo_elements(0), object2world(glm::mat4(1)) {}
   ~Mesh() {
     if (vbo_vertices != 0)
       glDeleteBuffers(1, &vbo_vertices);
@@ -145,12 +152,12 @@ public:
     // Cube 1x1x1, centered on origin
     GLfloat vertices[] = {
       -0.5, -0.5, -0.5, 1.0,
-      0.5, -0.5, -0.5, 1.0,
-      0.5,  0.5, -0.5, 1.0,
+       0.5, -0.5, -0.5, 1.0,
+       0.5,  0.5, -0.5, 1.0,
       -0.5,  0.5, -0.5, 1.0,
       -0.5, -0.5,  0.5, 1.0,
-      0.5, -0.5,  0.5, 1.0,
-      0.5,  0.5,  0.5, 1.0,
+       0.5, -0.5,  0.5, 1.0,
+       0.5,  0.5,  0.5, 1.0,
       -0.5,  0.5,  0.5, 1.0,
     };
     GLuint vbo_vertices;
@@ -219,9 +226,6 @@ public:
 };
 Mesh ground, main_object, light_bbox;
 Mesh portals[2];
-
-static unsigned int fps_start = 0;
-static unsigned int fps_frames = 0;
 
 
 void draw_scene(vector<glm::mat4> view_stack, int rec, int outer_portal);
@@ -387,25 +391,48 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
   light_bbox.vertices.push_back(glm::vec4(-0.1,  0.1,  0.1, 0.0));
   light_bbox.object2world = glm::translate(glm::mat4(1), light_position);
 
+  float aspect = 1.0 * screen_width / screen_height;
+  float fovy_rad = fovy * M_PI / 180;
+  float fovx_rad = fovy_rad / aspect;
+  float dz = max(zNear/cos(fovx_rad), zNear/cos(fovy_rad));
+  float dx = tan(fovx_rad) * dz;
+  float dy = tan(fovy_rad) * dz;
   glm::vec4 portal_vertices[] = {
     glm::vec4(-1, -1, 0, 1),
     glm::vec4( 1, -1, 0, 1),
     glm::vec4(-1,  1, 0, 1),
-    glm::vec4(-1,  1, 0, 1),
-    glm::vec4( 1, -1, 0, 1),
     glm::vec4( 1,  1, 0, 1),
+
+    glm::vec4(-(1+dx), -(1+dy), 0-dz, 1),
+    glm::vec4( (1+dx), -(1+dy), 0-dz, 1),
+    glm::vec4(-(1+dx),  (1+dy), 0-dz, 1),
+    glm::vec4( (1+dx),  (1+dy), 0-dz, 1),
   };
   for (unsigned int i = 0; i < sizeof(portal_vertices)/sizeof(portal_vertices[0]); i++) {
     portals[0].vertices.push_back(portal_vertices[i]);
     portals[1].vertices.push_back(portal_vertices[i]);
   }
-  portals[0].object2world = glm::translate(glm::mat4(1), glm::vec3(-2, 0, 0))
-    * glm::translate(glm::mat4(1), glm::vec3(0, 1, 0))
-    * glm::rotate(glm::mat4(1), 80.0f, glm::vec3(0, 1, 0));
-  portals[1].object2world = glm::translate(glm::mat4(1), glm::vec3(2, 0, 0))
-    * glm::translate(glm::mat4(1), glm::vec3(0, 1, 0))
-    * glm::rotate(glm::mat4(1), -80.0f, glm::vec3(0, 1, 0));
+  GLushort portal_elements[] = {
+    0,1,2, 2,1,3,
+    4,5,6, 6,5,7,
+    0,4,2, 2,4,6,
+    5,1,7, 7,1,3,
+  };
+  for (unsigned int i = 0; i < sizeof(portal_elements)/sizeof(portal_elements[0]); i++) {
+    portals[0].elements.push_back(portal_elements[i]);
+    portals[1].elements.push_back(portal_elements[i]);
+  }
 
+  // portals[0].object2world = glm::translate(glm::mat4(1), glm::vec3(-2, 0, 0))
+  //   * glm::translate(glm::mat4(1), glm::vec3(0, 1, 0))
+  //   * glm::rotate(glm::mat4(1), 80.0f, glm::vec3(0, 1, 0));
+  // portals[1].object2world = glm::translate(glm::mat4(1), glm::vec3(2, 0, 0))
+  //   * glm::translate(glm::mat4(1), glm::vec3(0, 1, 0))
+  //   * glm::rotate(glm::mat4(1), -80.0f, glm::vec3(0, 1, 0));
+  // portals[1].object2world = glm::translate(glm::mat4(1), glm::vec3(0, 3,  0))
+  //   * glm::rotate(glm::mat4(1), 90.0f, glm::vec3(1, 0, 0));
+  portals[0].object2world = glm::translate(glm::mat4(1), glm::vec3(0, 1, -2));
+  portals[1].object2world = glm::rotate(glm::mat4(1), -90.0f, glm::vec3(0, 1, 0)) * glm::translate(glm::mat4(1), glm::vec3(0, 1.2, -2));
   main_object.upload();
   ground.upload();
   light_bbox.upload();
@@ -490,8 +517,8 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
 }
 
 void init_view() {
-  main_object.object2world = glm::translate(glm::mat4(1), glm::vec3(0, 1, -1.5));
-  //* glm::rotate(glm::mat4(1), 180.0f, glm::vec3(0, 1, 0));
+  main_object.object2world = glm::translate(glm::mat4(1), glm::vec3(-2, 1, 0))
+    * glm::rotate(glm::mat4(1), 90.0f, glm::vec3(0, 1, 0));
   transforms[MODE_CAMERA] = glm::lookAt(
     glm::vec3(0.0,  1.0, 6.0),   // eye
     glm::vec3(0.0,  1.0, 0.0),   // direction
@@ -587,13 +614,13 @@ glm::vec3 get_arcball_vector(int x, int y) {
 
 int portal_intersection(glm::vec4 la, glm::vec4 lb, Mesh* portal) {
   if (la != lb) {  // camera moved
-    // Check for intersection with each of the portal's 2 triangles
+    // Check for intersection with each of the portal's 2 front triangles
     for (int i = 0; i < 2; i++) {
       // Portal coordinates in world view
       glm::vec4
-	p0 = portal->object2world * portal->vertices[i*3+0],
-	p1 = portal->object2world * portal->vertices[i*3+1],
-	p2 = portal->object2world * portal->vertices[i*3+2];
+	p0 = portal->object2world * portal->vertices[portal->elements[i*3+0]],
+	p1 = portal->object2world * portal->vertices[portal->elements[i*3+1]],
+	p2 = portal->object2world * portal->vertices[portal->elements[i*3+2]];
       // Solve line-plane intersection using parametric form
       glm::vec3 tuv =
 	glm::inverse(glm::mat3(glm::vec3(la.x - lb.x, la.y - lb.y, la.z - lb.z),
@@ -602,8 +629,8 @@ int portal_intersection(glm::vec4 la, glm::vec4 lb, Mesh* portal) {
 	* glm::vec3(la.x - p0.x, la.y - p0.y, la.z - p0.z);
       float t = tuv.x, u = tuv.y, v = tuv.z;
       //cout << t << "," << u << "," << v << endl;
-      if (t >= 0 && t <= 1) {  // intersection with the plane
-	if (u >= 0 && u <= 1 && v >= 0 && v <= 1 && (u + v) <= 1) {  // intersection with the triangle
+      if (t >= 0-1e-6 && t <= 1+1e-6) {  // intersection with the plane
+	if (u >= 0-1e-6 && u <= 1+1e-6 && v >= 0-1e-6 && v <= 1+1e-6 && (u + v) <= 1+1e-6) {  // intersection with the triangle
 	  return 1;
 	}
       }
@@ -707,7 +734,7 @@ void idle() {
   glm::mat4 world2camera = transforms[MODE_CAMERA];
 
   // Projection
-  glm::mat4 camera2screen = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 100.0f);
+  glm::mat4 camera2screen = glm::perspective(fovy, 1.0f*screen_width/screen_height, zNear, 100.0f);
 
   glUseProgram(program);
   glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(world2camera));
@@ -760,15 +787,18 @@ void draw_portal_bbox(Mesh* portal) {
   for (int i = 0; i < portal_bbox.vertices.size(); i++)
     portal_bbox.normals.push_back(glm::vec3(0,0,1));
 
+  portal_bbox.upload();
+
   /* Apply object's transformation matrix */
   portal_bbox.object2world = portal->object2world;
-
-  portal_bbox.upload();
+  portal_bbox.draw();
+  portal_bbox.object2world = portal->object2world * 
+    glm::rotate(glm::mat4(1), 180.0f, glm::vec3(0, 1, 0));
   portal_bbox.draw();
 }
 
 /**
- * Draw a frame around the portal.
+ * Fill screen with a black square aligned with the perspective
  */
 void fill_screen() {
   GLfloat vertices[] = {
@@ -786,7 +816,7 @@ void fill_screen() {
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   /* Apply object's transformation matrix */
-  glm::mat4 m = glm::inverse(glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 100.0f) * transforms[MODE_CAMERA]);
+  glm::mat4 m = glm::inverse(glm::perspective(fovy, 1.0f*screen_width/screen_height, zNear, 100.0f));
   glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(m));
 
   // Save current view matrix - useful since we're going to
@@ -798,7 +828,7 @@ void fill_screen() {
   glGetUniformfv(cur_program, uniform_v, save_v);
   glGetUniformfv(cur_program, uniform_v_inv, save_v_inv);
 
-  glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(transforms[MODE_CAMERA]));
+  glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0)));
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
   glEnableVertexAttribArray(attribute_v_coord);
@@ -823,43 +853,144 @@ void fill_screen() {
   glUniformMatrix4fv(uniform_v_inv, 1, GL_FALSE, save_v_inv);
 }
 
+void draw_camera() {
+  GLfloat vertices[] = {
+    -1, -1, 0, 1,
+     1, -1, 0, 1,
+     1, -1, 0, 1,
+    -1,  1, 0, 1,
+    -1,  1, 0, 1,
+    -1, -1, 0, 1,
+
+    -1,  1, 0, 1,
+     1, -1, 0, 1,
+     1, -1, 0, 1,
+     1,  1, 0, 1,
+     1,  1, 0, 1,
+    -1,  1, 0, 1,
+  };
+  GLuint vbo_vertices;
+  glGenBuffers(1, &vbo_vertices);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  /* Apply object's transformation matrix */
+  //glm::mat4 m = glm::inverse(glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 100.0f) * transforms[MODE_CAMERA]);
+  glm::mat4 m = glm::inverse(transforms[MODE_CAMERA]);
+  glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(m));
+
+  // Save current view matrix - useful since we're going to
+  // recursively draw the scene from different points of View
+  GLuint cur_program;
+  GLfloat save_v[16];
+  GLfloat save_v_inv[16];
+  glGetIntegerv(GL_CURRENT_PROGRAM, (GLint*)&cur_program);
+  glGetUniformfv(cur_program, uniform_v, save_v);
+  glGetUniformfv(cur_program, uniform_v_inv, save_v_inv);
+
+  // glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(transforms[MODE_CAMERA]));
+
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
+  glEnableVertexAttribArray(attribute_v_coord);
+  glVertexAttribPointer(
+    attribute_v_coord,  // attribute
+    4,                  // number of elements per vertex, here (x,y,z,w)
+    GL_FLOAT,           // the type of each element
+    GL_FALSE,           // take our values as-is
+    0,                  // no extra data between each position
+    0                   // offset of first element
+  );
+
+  glDrawArrays(GL_LINES, 0, sizeof(vertices)/sizeof(vertices[0]));
+
+  glDisableVertexAttribArray(attribute_v_coord);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  glDeleteBuffers(1, &vbo_vertices);
+
+  // Restore view matrix
+  glUniformMatrix4fv(uniform_v, 1, GL_FALSE, save_v);
+  glUniformMatrix4fv(uniform_v_inv, 1, GL_FALSE, save_v_inv);
+}
+
 void draw_portal_stencil(vector<glm::mat4> view_stack, Mesh* portal) {
   GLboolean save_color_mask[4];
   GLboolean save_depth_mask;
   glGetBooleanv(GL_COLOR_WRITEMASK, save_color_mask);
   glGetBooleanv(GL_DEPTH_WRITEMASK, &save_depth_mask);
 
+  //bool debug = (view_stack.size() == 4);
+  bool debug = false;
+
   glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
   glDepthMask(GL_FALSE);
   glStencilMask(0xFF);
-  glStencilFunc(GL_NEVER, 1, 1);
-  glStencilOp(GL_REPLACE, GL_KEEP, GL_KEEP);  // draw 1s on test fail (always)
+  glStencilFunc(GL_ALWAYS, 0, 0xFF);
+  glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);  // draw 1s on test fail (always)
   // draw stencil pattern
   glClear(GL_STENCIL_BUFFER_BIT);  // needs mask=0xFF
   glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(view_stack[0]));
   portal->draw();
+  if (debug) {
+      glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+      glClear(GL_COLOR_BUFFER_BIT);
+      glStencilMask(0x00);
+      glStencilFunc(GL_LEQUAL, 1, 0xFF);
+      fill_screen();
+      glutSwapBuffers();
+      cout << "swap" << endl;
+      sleep(1);
+      glStencilMask(0xFF);
+      glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    }
   for (unsigned int i = 1; i < view_stack.size() - 1; i++) {  // -1 to ignore last view
     // Increment intersection for current portal
-    glStencilFunc(GL_GEQUAL, 0, 1);
-    glStencilOp(GL_INCR, GL_KEEP, GL_KEEP);  // draw 1s on test fail (always)
+    glStencilFunc(GL_LEQUAL, 1, 0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);  // draw 1s on test fail (always)
     glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(view_stack[i]));
     portal->draw();
+    if (debug) {
+      glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+      glClear(GL_COLOR_BUFFER_BIT);
+      glStencilMask(0x00);
+      glStencilFunc(GL_LEQUAL, 1, 0xFF);
+      glDisable(GL_STENCIL_TEST);
+      portal->draw();
+      glEnable(GL_STENCIL_TEST);
+      //fill_screen();
+      glutSwapBuffers();
+      cout << "swap" << endl;
+      sleep(1);
+      glStencilMask(0xFF);
+      glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    }
     // Decremental outer portal -> only sub-portal intersection remains
-    glStencilFunc(GL_NEVER, 1, 1);
-    glStencilOp(GL_DECR, GL_KEEP, GL_KEEP);  // draw 1s on test fail (always)
+    glStencilFunc(GL_ALWAYS, 1, 0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_DECR);  // draw 1s on test fail (always)
     glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(view_stack[i-1]));
     portal->draw();
+    if (debug) {
+      glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+      glClear(GL_COLOR_BUFFER_BIT);
+      glStencilMask(0x00);
+      glStencilFunc(GL_EQUAL, 2, 0xFF);
+      fill_screen();
+      glutSwapBuffers();
+      cout << "swap" << endl;
+      sleep(1);
+      glStencilMask(0xFF);
+      glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    }
   }
 
   //glColorMask(GL_TRUE, GL_TRUE, GL_FALSE, GL_TRUE);  // blue-ish filter if drawing on white or grey
   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
   glDepthMask(GL_TRUE);
   glStencilMask(0x00);
-  /* Fill 0s */
-  glStencilFunc(GL_EQUAL, 0, 1);
-  // <nothing to fill>
-  /* Fill 1s */
-  glStencilFunc(GL_EQUAL, 1, 1);
+  glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+  /* Fill 1 or more */
+  glStencilFunc(GL_LEQUAL, 1, 0xFF);
   // glutSwapBuffers();
   // cout << "rec=" << rec << ", i=" << i << endl;
   // sleep(1);
@@ -939,11 +1070,13 @@ void draw_scene(vector<glm::mat4> view_stack, int rec, int outer_portal = -1) {
   // Draw portals frames after the stencil buffer is set
   for (int i = 0; i < 2; i++)
     draw_portal_bbox(&portals[i]);
+    //portals[i].draw_bbox();
 
   /* Draw scene */
   //light_bbox.draw_bbox();
   main_object.draw();
   ground.draw();
+  //portals[0].draw();
 
   // Restore view matrix
   view_stack.pop_back();
@@ -951,6 +1084,10 @@ void draw_scene(vector<glm::mat4> view_stack, int rec, int outer_portal = -1) {
     glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(view_stack.back()));
     glUniformMatrix4fv(uniform_v_inv, 1, GL_FALSE, glm::value_ptr(glm::inverse(view_stack.back())));
   }
+
+  // glutSwapBuffers();
+  // cout << "rec=" << rec << endl;
+  // sleep(2);
 }
 
 void display()
@@ -964,9 +1101,20 @@ void display()
 
   vector<glm::mat4> view_stack;
   view_stack.push_back(transforms[MODE_CAMERA]);
-  draw_scene(view_stack, 1);
-  //fill_screen();
 
+  glViewport(0, 0, screen_width, screen_height);
+  draw_scene(view_stack, 1);
+
+  glViewport(2*screen_width/3, 0, screen_width/3, screen_height/3);
+  glClear(GL_DEPTH_BUFFER_BIT);
+  view_stack.clear();
+  view_stack.push_back(glm::lookAt(
+    glm::vec3(0.0,  9.0,-2.0),   // eye
+    glm::vec3(0.0,  0.0,-2.0),   // direction
+    glm::vec3(0.0,  0.0,-1.0))   // up
+  );
+  draw_scene(view_stack, 4);
+  draw_camera();
 
   glutSwapBuffers();
 }
