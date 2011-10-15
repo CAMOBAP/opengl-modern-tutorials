@@ -30,7 +30,8 @@ Notes:
 
 - Camera frustrum makes it possible to see behind the portal before
   crossing it (i.e. overwrite the portal contents with what's behind).
-  Solution: make the portal thick, with thickness ~= zNear (from
+
+  One solution: make the portal thick, with thickness ~= zNear (from
   glm::perspective).
 
   - Additional issue when drawing the stencil buffer: instead of a
@@ -44,9 +45,16 @@ Notes:
     depth buffer between each step of the algorithm.  We didn't try,
     but it sounds unlikely to get good performances.
 
-- [X] View through portal
+  Another solution: teleport ahead of time.  Need to support two
+  teleport planes parallel to the portal, each one-way only.
+  Anticipate issues with collision detections and the like, since the
+  player will technically be teleported slightly _behind_ the other
+  portal.
+
+- [/] View through portal
   - [X] Stencil in rectangle
-  - [X] Stencil in plane intersection - strife through portals - avoid flicker when traversing portals
+  - [/] Stencil in plane intersection - strife through portals - avoid flicker when traversing portals
+    - [ ] Recreate portal shape on window resize
 - [X] Collision detection
 - [X] Warp
 - [/] Infinite/recursive portals display (portals facing each others)

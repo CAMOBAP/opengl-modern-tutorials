@@ -423,16 +423,18 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
     portals[1].elements.push_back(portal_elements[i]);
   }
 
+  // Face to face
   // portals[0].object2world = glm::translate(glm::mat4(1), glm::vec3(-2, 0, 0))
   //   * glm::translate(glm::mat4(1), glm::vec3(0, 1, 0))
-  //   * glm::rotate(glm::mat4(1), 80.0f, glm::vec3(0, 1, 0));
+  //   * glm::rotate(glm::mat4(1), 90.0f, glm::vec3(0, 1, 0));
   // portals[1].object2world = glm::translate(glm::mat4(1), glm::vec3(2, 0, 0))
   //   * glm::translate(glm::mat4(1), glm::vec3(0, 1, 0))
-  //   * glm::rotate(glm::mat4(1), -80.0f, glm::vec3(0, 1, 0));
-  // portals[1].object2world = glm::translate(glm::mat4(1), glm::vec3(0, 3,  0))
-  //   * glm::rotate(glm::mat4(1), 90.0f, glm::vec3(1, 0, 0));
+  //   * glm::rotate(glm::mat4(1), -90.0f, glm::vec3(0, 1, 0));
+
+  // 90° angle + slightly higher
   portals[0].object2world = glm::translate(glm::mat4(1), glm::vec3(0, 1, -2));
   portals[1].object2world = glm::rotate(glm::mat4(1), -90.0f, glm::vec3(0, 1, 0)) * glm::translate(glm::mat4(1), glm::vec3(0, 1.2, -2));
+
   main_object.upload();
   ground.upload();
   light_bbox.upload();
