@@ -925,7 +925,6 @@ void draw_portal_stencil(vector<glm::mat4> view_stack, Mesh* portal) {
 
   glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
   glDepthMask(GL_FALSE);
-  glStencilMask(0xFF);
   glStencilFunc(GL_NEVER, 0, 0xFF);
   glStencilOp(GL_INCR, GL_KEEP, GL_KEEP);  // draw 1s on test fail (always)
   // draw stencil pattern
@@ -936,7 +935,7 @@ void draw_portal_stencil(vector<glm::mat4> view_stack, Mesh* portal) {
       glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
       glClear(GL_COLOR_BUFFER_BIT);
       glStencilMask(0x00);
-      glStencilFunc(GL_LEQUAL, 1, 0xFF);
+      glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
       fill_screen();
       glutSwapBuffers();
       cout << "swap" << endl;
@@ -974,7 +973,7 @@ void draw_portal_stencil(vector<glm::mat4> view_stack, Mesh* portal) {
       glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
       glClear(GL_COLOR_BUFFER_BIT);
       glStencilMask(0x00);
-      glStencilFunc(GL_EQUAL, 2, 0xFF);
+      glStencilFunc(GL_LEQUAL, 1, 0xFF);
       fill_screen();
       glutSwapBuffers();
       cout << "swap" << endl;
@@ -987,7 +986,6 @@ void draw_portal_stencil(vector<glm::mat4> view_stack, Mesh* portal) {
   //glColorMask(GL_TRUE, GL_TRUE, GL_FALSE, GL_TRUE);  // blue-ish filter if drawing on white or grey
   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
   glDepthMask(GL_TRUE);
-  glStencilMask(0x00);
   glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
   /* Fill 1 or more */
   glStencilFunc(GL_LEQUAL, 1, 0xFF);
@@ -1092,9 +1090,7 @@ void draw_scene(vector<glm::mat4> view_stack, int rec, int outer_portal = -1) {
 
 void display()
 {
-  //glBindFramebuffer(GL_FRAMEBUFFER, fbo);
   glClearColor(0.45, 0.45, 0.45, 1.0);
-  glStencilMask(0xFF);
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 
   glUseProgram(program);

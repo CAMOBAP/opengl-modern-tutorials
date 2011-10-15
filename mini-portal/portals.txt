@@ -33,6 +33,17 @@ Notes:
   Solution: make the portal thick, with thickness ~= zNear (from
   glm::perspective).
 
+  - Additional issue when drawing the stencil buffer: instead of a
+    single plane, we now draw a volumetric object, composed a several
+    superposed layers.  Some parts of the stencil buffer will be drawn
+    twice, which means our stencil test function need to be even more
+    carefully designed.
+
+    We could use the depth buffer to try and avoid multiple writes.
+    However this means we have to order the faces, and also clear the
+    depth buffer between each step of the algorithm.  We didn't try,
+    but it sounds unlikely to get good performances.
+
 - [X] View through portal
   - [X] Stencil in rectangle
   - [X] Stencil in plane intersection - strife through portals - avoid flicker when traversing portals
