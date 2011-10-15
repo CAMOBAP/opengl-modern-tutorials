@@ -39,6 +39,7 @@ using namespace std;
 
 enum MODES { MODE_OBJECT, MODE_CAMERA, MODE_LIGHT, MODE_LAST } view_mode;
 int rotY_direction = 0, rotX_direction = 0, transZ_direction = 0, strife = 0;
+float speed_factor = 1;
 glm::mat4 transforms[MODE_LAST];
 int last_ticks = 0;
 
@@ -50,6 +51,9 @@ struct mesh {
   GLuint vbo_vertices, vbo_normals, ibo_elements;
 };
 struct mesh ground, mesh, light_bbox;
+
+static unsigned int fps_start = glutGet(GLUT_ELAPSED_TIME);
+static unsigned int fps_frames = 0;
 
 
 /**
@@ -404,6 +408,8 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
     return 0;
   }
 
+  fps_start = glutGet(GLUT_ELAPSED_TIME);
+
   return 1;
 }
 
@@ -416,10 +422,17 @@ void init_view() {
 }
 
 void onSpecial(int key, int x, int y) {
-  if (glutGetModifiers() == GLUT_ACTIVE_ALT)
+  int modifiers = glutGetModifiers();
+  if ((modifiers & GLUT_ACTIVE_ALT) == GLUT_ACTIVE_ALT)
     strife = 1;
   else
     strife = 0;
+
+  if ((modifiers & GLUT_ACTIVE_SHIFT) == GLUT_ACTIVE_SHIFT)
+    speed_factor = 0.1;
+  else
+    speed_factor = 1;
+
   switch (key) {
   case GLUT_KEY_F1:
     view_mode = MODE_OBJECT;
@@ -491,18 +504,29 @@ glm::vec3 get_arcball_vector(int x, int y) {
 }
 
 void idle() {
+  /* FPS count */
+  {
+    fps_frames++;
+    int delta_t = glutGet(GLUT_ELAPSED_TIME) - fps_start;
+    if (delta_t > 1000) {
+      cout << 1000.0 * fps_frames / delta_t << endl;
+      fps_frames = 0;
+      fps_start = glutGet(GLUT_ELAPSED_TIME);
+    }
+  }
+
   /* Handle keyboard-based transformations */
   int delta_t = glutGet(GLUT_ELAPSED_TIME) - last_ticks;
   last_ticks = glutGet(GLUT_ELAPSED_TIME);
 
-  float delta_transZ = transZ_direction * delta_t / 1000.0 * 5;  // 5 units per second
+  float delta_transZ = transZ_direction * delta_t / 1000.0 * 5 * speed_factor;  // 5 units per second
   float delta_transX = 0, delta_transY = 0, delta_rotY = 0, delta_rotX = 0;
   if (strife) {
-    delta_transX = rotY_direction * delta_t / 1000.0 * 3;  // 3 units per second
-    delta_transY = rotX_direction * delta_t / 1000.0 * 3;  // 3 units per second
+    delta_transX = rotY_direction * delta_t / 1000.0 * 3 * speed_factor;  // 3 units per second
+    delta_transY = rotX_direction * delta_t / 1000.0 * 3 * speed_factor;  // 3 units per second
   } else {
-    delta_rotY =  rotY_direction * delta_t / 1000.0 * 120;  // 120° per second
-    delta_rotX = -rotX_direction * delta_t / 1000.0 * 120;  // 120° per second
+    delta_rotY =  rotY_direction * delta_t / 1000.0 * 120 * speed_factor;  // 120° per second
+    delta_rotX = -rotX_direction * delta_t / 1000.0 * 120 * speed_factor;  // 120° per second
   }
   
   if (view_mode == MODE_OBJECT) {
@@ -763,6 +787,8 @@ int main(int argc, char* argv[]) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_DEPTH_TEST);
+    //glDepthFunc(GL_LEQUAL);
+    //glDepthRange(1, 0);
     last_ticks = glutGet(GLUT_ELAPSED_TIME);
     glutMainLoop();
   }
