@@ -926,8 +926,8 @@ void draw_portal_stencil(vector<glm::mat4> view_stack, Mesh* portal) {
   glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
   glDepthMask(GL_FALSE);
   glStencilMask(0xFF);
-  glStencilFunc(GL_ALWAYS, 0, 0xFF);
-  glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);  // draw 1s on test fail (always)
+  glStencilFunc(GL_NEVER, 0, 0xFF);
+  glStencilOp(GL_INCR, GL_KEEP, GL_KEEP);  // draw 1s on test fail (always)
   // draw stencil pattern
   glClear(GL_STENCIL_BUFFER_BIT);  // needs mask=0xFF
   glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(view_stack[0]));
@@ -946,8 +946,8 @@ void draw_portal_stencil(vector<glm::mat4> view_stack, Mesh* portal) {
     }
   for (unsigned int i = 1; i < view_stack.size() - 1; i++) {  // -1 to ignore last view
     // Increment intersection for current portal
-    glStencilFunc(GL_LEQUAL, 1, 0xFF);
-    glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);  // draw 1s on test fail (always)
+    glStencilFunc(GL_EQUAL, 0, 0xFF);
+    glStencilOp(GL_INCR, GL_KEEP, GL_KEEP);  // draw 1s on test fail (always)
     glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(view_stack[i]));
     portal->draw();
     if (debug) {
@@ -966,8 +966,8 @@ void draw_portal_stencil(vector<glm::mat4> view_stack, Mesh* portal) {
       glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
     }
     // Decremental outer portal -> only sub-portal intersection remains
-    glStencilFunc(GL_ALWAYS, 1, 0xFF);
-    glStencilOp(GL_KEEP, GL_KEEP, GL_DECR);  // draw 1s on test fail (always)
+    glStencilFunc(GL_NEVER, 0, 0xFF);
+    glStencilOp(GL_DECR, GL_KEEP, GL_KEEP);  // draw 1s on test fail (always)
     glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(view_stack[i-1]));
     portal->draw();
     if (debug) {
