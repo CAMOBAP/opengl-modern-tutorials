@@ -1,0 +1,41 @@
+Notes:
+
+- Not using textures because textures are distorted to map the object
+  on which they are attached.  Typically they would look like a flat
+  TV screen - but we're talking about PORTALS here!
+
+- Do not confuse with (quad-? oc-?)tree portals.
+
+- Concept: scene is rendered twice
+  - Once as if the player were already teleported, clipped to the portal's boundaries
+  - Once normally
+
+- First one-way (portal1->portal2) display, then two-ways
+  (portal1<->portal2)
+
+- Portal collision detection using:
+  http://en.wikipedia.org/wiki/Line-plane_intersection
+
+  Matrix initialization: each glm::vec3 is a _column_ vector, so the
+  values are rotated compared to the mathematic notation.
+
+  It's tempting to work in View coordinates, but if you want to
+  teleport objects later on (a cube?...), you'll need to work in
+  object coordinates anyway.
+
+- Recursive portals: restoring the stencil buffer after a sub-portal
+  has cleared it is difficult: OpenGL ES does not provide a way to
+  read (backup) the stencil buffer, so we have to rebuild it each
+  time we come back from a sub-rendering process.
+
+- [/] View through portal
+  - [X] Stencil in rectangle
+  - [ ] Stencil in plane intersection - strife through portals - avoid flicker when traversing portals
+- [X] Collision detection
+- [X] Warp
+- [/] Infinite/recursive portals display (portals facing each others)
+- [ ] Object at 2 locations at the same time (duplicate objects?)
+  - Solve problem with objects too close to the portal and the portal
+    displays facing culling artifacts
+- [ ] Optimisation (Clipping? Low-res rendering for recursive portals?)
+- [ ] (later) Physics
