@@ -31,9 +31,6 @@ bool compute_arcball;
 int last_mx = 0, last_my = 0, cur_mx = 0, cur_my = 0;
 int arcball_on = false;
 
-GLuint fbo, fbo_texture, rbo_depth, rbo_stencil;
-GLuint vbo_fbo_vertices;
-
 using namespace std;
 
 enum MODES { MODE_OBJECT, MODE_CAMERA, MODE_LIGHT, MODE_LAST } view_mode = MODE_CAMERA;
@@ -42,15 +39,186 @@ float speed_factor = 1;
 glm::mat4 transforms[MODE_LAST];
 int last_ticks = 0;
 
-struct mesh {
+class Mesh {
+private:
+  GLuint vbo_vertices, vbo_normals, ibo_elements;
+public:
   vector<glm::vec4> vertices;
   vector<glm::vec3> normals;
   vector<GLushort> elements;
   glm::mat4 object2world;
-  GLuint vbo_vertices, vbo_normals, ibo_elements;
+
+  Mesh() : vbo_vertices(0), vbo_normals(0), ibo_elements(0) {}
+  ~Mesh() {
+    if (vbo_vertices != 0)
+      glDeleteBuffers(1, &vbo_vertices);
+    if (vbo_normals != 0)
+      glDeleteBuffers(1, &vbo_normals);
+    if (ibo_elements != 0)
+      glDeleteBuffers(1, &ibo_elements);
+  }
+
+  /**
+   * Store object vertices, normals and/or elements in graphic card
+   * buffers
+   */
+  void upload() {
+    if (this->vertices.size() > 0) {
+      glGenBuffers(1, &this->vbo_vertices);
+      glBindBuffer(GL_ARRAY_BUFFER, this->vbo_vertices);
+      glBufferData(GL_ARRAY_BUFFER, this->vertices.size() * sizeof(this->vertices[0]),
+		   this->vertices.data(), GL_STATIC_DRAW);
+    }
+    
+    if (this->normals.size() > 0) {
+      glGenBuffers(1, &this->vbo_normals);
+      glBindBuffer(GL_ARRAY_BUFFER, this->vbo_normals);
+      glBufferData(GL_ARRAY_BUFFER, this->normals.size() * sizeof(this->normals[0]),
+		   this->normals.data(), GL_STATIC_DRAW);
+    }
+    
+    if (this->elements.size() > 0) {
+      glGenBuffers(1, &this->ibo_elements);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ibo_elements);
+      glBufferData(GL_ELEMENT_ARRAY_BUFFER, this->elements.size() * sizeof(this->elements[0]),
+		   this->elements.data(), GL_STATIC_DRAW);
+    }
+  }
+
+  /**
+   * Draw the object
+   */
+  void draw() {
+    if (this->vbo_vertices != 0) {
+      glEnableVertexAttribArray(attribute_v_coord);
+      glBindBuffer(GL_ARRAY_BUFFER, this->vbo_vertices);
+      glVertexAttribPointer(
+        attribute_v_coord,  // attribute
+        4,                  // number of elements per vertex, here (x,y,z,w)
+        GL_FLOAT,           // the type of each element
+        GL_FALSE,           // take our values as-is
+        0,                  // no extra data between each position
+        0                   // offset of first element
+      );
+    }
+
+    if (this->vbo_normals != 0) {
+      glEnableVertexAttribArray(attribute_v_normal);
+      glBindBuffer(GL_ARRAY_BUFFER, this->vbo_normals);
+      glVertexAttribPointer(
+        attribute_v_normal, // attribute
+        3,                  // number of elements per vertex, here (x,y,z)
+        GL_FLOAT,           // the type of each element
+        GL_FALSE,           // take our values as-is
+        0,                  // no extra data between each position
+        0                   // offset of first element
+      );
+    }
+    
+    /* Apply object's transformation matrix */
+    glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(this->object2world));
+    glm::mat3 m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(this->object2world)));
+    glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
+    
+    /* Push each element in buffer_vertices to the vertex shader */
+    if (this->ibo_elements != 0) {
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ibo_elements);
+      int size;  glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
+      glDrawElements(GL_TRIANGLES, size/sizeof(GLushort), GL_UNSIGNED_SHORT, 0);
+    } else {
+      glDrawArrays(GL_TRIANGLES, 0, this->vertices.size());
+    }
+
+    if (this->vbo_normals != 0)
+      glDisableVertexAttribArray(attribute_v_coord);
+    if (this->vbo_vertices != 0)
+      glDisableVertexAttribArray(attribute_v_normal);
+  }
+
+  /**
+   * Draw object bounding box
+   */
+  void draw_bbox() {
+    if (this->vertices.size() == 0)
+      return;
+    
+    // Cube 1x1x1, centered on origin
+    GLfloat vertices[] = {
+      -0.5, -0.5, -0.5, 1.0,
+      0.5, -0.5, -0.5, 1.0,
+      0.5,  0.5, -0.5, 1.0,
+      -0.5,  0.5, -0.5, 1.0,
+      -0.5, -0.5,  0.5, 1.0,
+      0.5, -0.5,  0.5, 1.0,
+      0.5,  0.5,  0.5, 1.0,
+      -0.5,  0.5,  0.5, 1.0,
+    };
+    GLuint vbo_vertices;
+    glGenBuffers(1, &vbo_vertices);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    GLushort elements[] = {
+      0, 1, 2, 3,
+      4, 5, 6, 7,
+      0, 4, 1, 5, 2, 6, 3, 7
+    };
+    GLuint ibo_elements;
+    glGenBuffers(1, &ibo_elements);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_elements);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    GLfloat
+      min_x, max_x,
+      min_y, max_y,
+      min_z, max_z;
+    min_x = max_x = this->vertices[0].x;
+    min_y = max_y = this->vertices[0].y;
+    min_z = max_z = this->vertices[0].z;
+    for (unsigned int i = 0; i < this->vertices.size(); i++) {
+      if (this->vertices[i].x < min_x) min_x = this->vertices[i].x;
+      if (this->vertices[i].x > max_x) max_x = this->vertices[i].x;
+      if (this->vertices[i].y < min_y) min_y = this->vertices[i].y;
+      if (this->vertices[i].y > max_y) max_y = this->vertices[i].y;
+      if (this->vertices[i].z < min_z) min_z = this->vertices[i].z;
+      if (this->vertices[i].z > max_z) max_z = this->vertices[i].z;
+    }
+    glm::vec3 size = glm::vec3(max_x-min_x, max_y-min_y, max_z-min_z);
+    glm::vec3 center = glm::vec3((min_x+max_x)/2, (min_y+max_y)/2, (min_z+max_z)/2);
+    glm::mat4 transform = glm::scale(glm::mat4(1), size) * glm::translate(glm::mat4(1), center);
+    
+    /* Apply object's transformation matrix */
+    glm::mat4 m = this->object2world * transform;
+    glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(m));
+    
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
+    glEnableVertexAttribArray(attribute_v_coord);
+    glVertexAttribPointer(
+      attribute_v_coord,  // attribute
+      4,                  // number of elements per vertex, here (x,y,z,w)
+      GL_FLOAT,           // the type of each element
+      GL_FALSE,           // take our values as-is
+      0,                  // no extra data between each position
+      0                   // offset of first element
+    );
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_elements);
+    glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, 0);
+    glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, (GLvoid*)(4*sizeof(GLushort)));
+    glDrawElements(GL_LINES, 8, GL_UNSIGNED_SHORT, (GLvoid*)(8*sizeof(GLushort)));
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    
+    glDisableVertexAttribArray(attribute_v_coord);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    
+    glDeleteBuffers(1, &vbo_vertices);
+    glDeleteBuffers(1, &ibo_elements);
+  }
 };
-struct mesh ground, mesh, light_bbox;
-struct mesh portals[2];
+Mesh ground, main_object, light_bbox;
+Mesh portals[2];
 
 static unsigned int fps_start = 0;
 static unsigned int fps_frames = 0;
@@ -141,7 +309,7 @@ GLint create_shader(const char* filename, GLenum type)
   return res;
 }
 
-void load_obj(const char* filename, struct mesh* mesh) {
+void load_obj(const char* filename, Mesh* mesh) {
   ifstream in(filename, ios::in);
   if (!in) { cerr << "Cannot open " << filename << endl; exit(1); }
   vector<int> nb_seen;
@@ -190,32 +358,9 @@ void load_obj(const char* filename, struct mesh* mesh) {
   }
 }
 
-void upload_mesh(struct mesh* mesh) {
-  if (mesh->vertices.size() > 0) {
-    glGenBuffers(1, &mesh->vbo_vertices);
-    glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo_vertices);
-    glBufferData(GL_ARRAY_BUFFER, mesh->vertices.size() * sizeof(mesh->vertices[0]),
-		 mesh->vertices.data(), GL_STATIC_DRAW);
-  }
-
-  if (mesh->normals.size() > 0) {
-    glGenBuffers(1, &mesh->vbo_normals);
-    glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo_normals);
-    glBufferData(GL_ARRAY_BUFFER, mesh->normals.size() * sizeof(mesh->normals[0]),
-		 mesh->normals.data(), GL_STATIC_DRAW);
-  }
-
-  if (mesh->elements.size() > 0) {
-    glGenBuffers(1, &mesh->ibo_elements);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->ibo_elements);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->elements.size() * sizeof(mesh->elements[0]),
-		 mesh->elements.data(), GL_STATIC_DRAW);
-  }
-}
-
 int init_resources(char* model_filename, char* vshader_filename, char* fshader_filename)
 {
-  load_obj(model_filename, &mesh);
+  load_obj(model_filename, &main_object);
   // mesh position initialized in init_view()
 
   for (int i = -GROUND_SIZE/2; i < GROUND_SIZE/2; i++) {
@@ -231,23 +376,16 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
     }
   }
 
-  glm::vec4 light_position = glm::vec4(0.0,  1.0,  2.0, 1.0);
-  light_bbox.vertices.push_back(light_position - glm::vec4(-0.1, -0.1, -0.1, 0.0));
-  light_bbox.vertices.push_back(light_position - glm::vec4( 0.1, -0.1, -0.1, 0.0));
-  light_bbox.vertices.push_back(light_position - glm::vec4( 0.1,  0.1, -0.1, 0.0));
-  light_bbox.vertices.push_back(light_position - glm::vec4(-0.1,  0.1, -0.1, 0.0));
-  light_bbox.vertices.push_back(light_position - glm::vec4(-0.1, -0.1,  0.1, 0.0));
-  light_bbox.vertices.push_back(light_position - glm::vec4( 0.1, -0.1,  0.1, 0.0));
-  light_bbox.vertices.push_back(light_position - glm::vec4( 0.1,  0.1,  0.1, 0.0));
-  light_bbox.vertices.push_back(light_position - glm::vec4(-0.1,  0.1,  0.1, 0.0));
-
-  GLushort light_bbox_elements[] = {
-    0, 1, 2, 3,
-    4, 5, 6, 7,
-    0, 4, 1, 5, 2, 6, 3, 7
-  };
-  for (unsigned int i = 0; i < sizeof(light_bbox_elements)/sizeof(light_bbox_elements[0]); i++)
-    light_bbox.elements.push_back(light_bbox_elements[i]);
+  glm::vec3 light_position = glm::vec3(0.0,  1.0,  2.0);
+  light_bbox.vertices.push_back(glm::vec4(-0.1, -0.1, -0.1, 0.0));
+  light_bbox.vertices.push_back(glm::vec4( 0.1, -0.1, -0.1, 0.0));
+  light_bbox.vertices.push_back(glm::vec4( 0.1,  0.1, -0.1, 0.0));
+  light_bbox.vertices.push_back(glm::vec4(-0.1,  0.1, -0.1, 0.0));
+  light_bbox.vertices.push_back(glm::vec4(-0.1, -0.1,  0.1, 0.0));
+  light_bbox.vertices.push_back(glm::vec4( 0.1, -0.1,  0.1, 0.0));
+  light_bbox.vertices.push_back(glm::vec4( 0.1,  0.1,  0.1, 0.0));
+  light_bbox.vertices.push_back(glm::vec4(-0.1,  0.1,  0.1, 0.0));
+  light_bbox.object2world = glm::translate(glm::mat4(1), light_position);
 
   glm::vec4 portal_vertices[] = {
     glm::vec4(-1, -1, 0, 1),
@@ -268,60 +406,12 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
     * glm::translate(glm::mat4(1), glm::vec3(0, 1, 0))
     * glm::rotate(glm::mat4(1), -80.0f, glm::vec3(0, 1, 0));
 
-  upload_mesh(&mesh);
-  upload_mesh(&ground);
-  upload_mesh(&light_bbox);
-  upload_mesh(&portals[0]);
-  upload_mesh(&portals[1]);
+  main_object.upload();
+  ground.upload();
+  light_bbox.upload();
+  portals[0].upload();
+  portals[1].upload();
 
-  /* Create back-buffer, used for post-processing */
-
-  /* Texture */
-  glActiveTexture(GL_TEXTURE0);
-  glGenTextures(1, &fbo_texture);
-  glBindTexture(GL_TEXTURE_2D, fbo_texture);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_width, screen_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-  /* Depth buffer */
-  glGenRenderbuffers(1, &rbo_depth);
-  glBindRenderbuffer(GL_RENDERBUFFER, rbo_depth);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, screen_width, screen_height);
-  glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-  /* Stencil buffer */
-  glGenRenderbuffers(1, &rbo_stencil);
-  glBindRenderbuffer(GL_RENDERBUFFER, rbo_stencil);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_STENCIL_INDEX8, screen_width, screen_height);
-  glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-  /* Framebuffer to link everything together */
-  glGenFramebuffers(1, &fbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo_texture, 0);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo_depth);
-  //glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo_stencil);
-  GLenum status;
-  if ((status = glCheckFramebufferStatus(GL_FRAMEBUFFER)) != GL_FRAMEBUFFER_COMPLETE) {
-    fprintf(stderr, "glCheckFramebufferStatus: error 0x%x", status);
-    return 0;
-  }
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-  GLfloat fbo_vertices[] = {
-    -1, -1,
-     1, -1,
-    -1,  1,
-     1,  1,
-  };
-  glGenBuffers(1, &vbo_fbo_vertices);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_fbo_vertices);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(fbo_vertices), fbo_vertices, GL_STATIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 
   /* Compile and link shaders */
@@ -400,7 +490,7 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
 }
 
 void init_view() {
-  mesh.object2world = glm::translate(glm::mat4(1), glm::vec3(0, 1, -1.5));
+  main_object.object2world = glm::translate(glm::mat4(1), glm::vec3(0, 1, -1.5));
   //* glm::rotate(glm::mat4(1), 180.0f, glm::vec3(0, 1, 0));
   transforms[MODE_CAMERA] = glm::lookAt(
     glm::vec3(0.0,  1.0, 6.0),   // eye
@@ -495,7 +585,7 @@ glm::vec3 get_arcball_vector(int x, int y) {
   return P;
 }
 
-int portal_intersection(glm::vec4 la, glm::vec4 lb, struct mesh* portal) {
+int portal_intersection(glm::vec4 la, glm::vec4 lb, Mesh* portal) {
   if (la != lb) {  // camera moved
     // Check for intersection with each of the portal's 2 triangles
     for (int i = 0; i < 2; i++) {
@@ -522,7 +612,7 @@ int portal_intersection(glm::vec4 la, glm::vec4 lb, struct mesh* portal) {
   return 0;
 }
 
-glm::mat4 portal_view(glm::mat4 orig_view, struct mesh* src, struct mesh* dst) {
+glm::mat4 portal_view(glm::mat4 orig_view, Mesh* src, Mesh* dst) {
   glm::mat4 mv = orig_view * src->object2world;
   glm::mat4 portal_cam =
     // transformation from source portal to the camera - it's ModelView:
@@ -565,9 +655,9 @@ void idle() {
   }
 
   if (view_mode == MODE_OBJECT) {
-    mesh.object2world = glm::rotate(mesh.object2world, delta_rotY, glm::vec3(0.0, 1.0, 0.0));
-    mesh.object2world = glm::rotate(mesh.object2world, delta_rotX, glm::vec3(1.0, 0.0, 0.0));
-    mesh.object2world = glm::translate(mesh.object2world, glm::vec3(0.0, 0.0, delta_transZ));
+    main_object.object2world = glm::rotate(main_object.object2world, delta_rotY, glm::vec3(0.0, 1.0, 0.0));
+    main_object.object2world = glm::rotate(main_object.object2world, delta_rotX, glm::vec3(1.0, 0.0, 0.0));
+    main_object.object2world = glm::translate(main_object.object2world, glm::vec3(0.0, 0.0, delta_transZ));
   } else if (view_mode == MODE_CAMERA) {
     // Camera is reverse-facing, so reverse Z translation and X rotation.
     // Plus, the View matrix is the inverse of the camera2world (it's
@@ -603,15 +693,15 @@ void idle() {
     glm::vec3 vb = get_arcball_vector( cur_mx,  cur_my);
     float angle = acos(min(1.0f, glm::dot(va, vb)));
     glm::vec3 axis_in_camera_coord = glm::cross(va, vb);
-    glm::mat3 camera2object = glm::inverse(glm::mat3(transforms[MODE_CAMERA]) * glm::mat3(mesh.object2world));
+    glm::mat3 camera2object = glm::inverse(glm::mat3(transforms[MODE_CAMERA]) * glm::mat3(main_object.object2world));
     glm::vec3 axis_in_object_coord = camera2object * axis_in_camera_coord;
-    mesh.object2world = glm::rotate(mesh.object2world, glm::degrees(angle), axis_in_object_coord);
+    main_object.object2world = glm::rotate(main_object.object2world, glm::degrees(angle), axis_in_object_coord);
     last_mx = cur_mx;
     last_my = cur_my;
   }
 
   // Model
-  // Set in onDisplay() - cf. mesh.object2world
+  // Set in onDisplay() - cf. main_object.object2world
 
   // View
   glm::mat4 world2camera = transforms[MODE_CAMERA];
@@ -629,160 +719,52 @@ void idle() {
   glutPostRedisplay();
 }
 
-void draw_bbox(struct mesh* mesh) {
-  if (mesh->vertices.size() == 0)
-    return;
-
-  // Cube 1x1x1, centered on origin
-  GLfloat vertices[] = {
-    -0.5, -0.5, -0.5, 1.0,
-     0.5, -0.5, -0.5, 1.0,
-     0.5,  0.5, -0.5, 1.0,
-    -0.5,  0.5, -0.5, 1.0,
-    -0.5, -0.5,  0.5, 1.0,
-     0.5, -0.5,  0.5, 1.0,
-     0.5,  0.5,  0.5, 1.0,
-    -0.5,  0.5,  0.5, 1.0,
-  };
-  GLuint vbo_vertices;
-  glGenBuffers(1, &vbo_vertices);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-  GLushort elements[] = {
-    0, 1, 2, 3,
-    4, 5, 6, 7,
-    0, 4, 1, 5, 2, 6, 3, 7
-  };
-  GLuint ibo_elements;
-  glGenBuffers(1, &ibo_elements);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_elements);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-
-  GLfloat
-    min_x, max_x,
-    min_y, max_y,
-    min_z, max_z;
-  min_x = max_x = mesh->vertices[0].x;
-  min_y = max_y = mesh->vertices[0].y;
-  min_z = max_z = mesh->vertices[0].z;
-  for (unsigned int i = 0; i < mesh->vertices.size(); i++) {
-    if (mesh->vertices[i].x < min_x) min_x = mesh->vertices[i].x;
-    if (mesh->vertices[i].x > max_x) max_x = mesh->vertices[i].x;
-    if (mesh->vertices[i].y < min_y) min_y = mesh->vertices[i].y;
-    if (mesh->vertices[i].y > max_y) max_y = mesh->vertices[i].y;
-    if (mesh->vertices[i].z < min_z) min_z = mesh->vertices[i].z;
-    if (mesh->vertices[i].z > max_z) max_z = mesh->vertices[i].z;
-  }
-  glm::vec3 size = glm::vec3(max_x-min_x, max_y-min_y, max_z-min_z);
-  glm::vec3 center = glm::vec3((min_x+max_x)/2, (min_y+max_y)/2, (min_z+max_z)/2);
-  glm::mat4 transform = glm::scale(glm::mat4(1), size) * glm::translate(glm::mat4(1), center);
-
-  /* Apply object's transformation matrix */
-  glm::mat4 m = mesh->object2world * transform;
-  glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(m));
-
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-  glEnableVertexAttribArray(attribute_v_coord);
-  glVertexAttribPointer(
-    attribute_v_coord,  // attribute
-    4,                  // number of elements per vertex, here (x,y,z,w)
-    GL_FLOAT,           // the type of each element
-    GL_FALSE,           // take our values as-is
-    0,                  // no extra data between each position
-    0                   // offset of first element
-  );
-
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_elements);
-  glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, 0);
-  glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, (GLvoid*)(4*sizeof(GLushort)));
-  glDrawElements(GL_LINES, 8, GL_UNSIGNED_SHORT, (GLvoid*)(8*sizeof(GLushort)));
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-  glDisableVertexAttribArray(attribute_v_coord);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-  glDeleteBuffers(1, &vbo_vertices);
-  glDeleteBuffers(1, &ibo_elements);
-}
-
 /**
  * Draw a frame around the portal.
  */
-void draw_portal_bbox(struct mesh* portal) {
-  // GLfloat vertices[] = {
-  //   -1.1, -1.1, 0, 1,
-  //    1.1, -1.1, 0, 1,
-  //   -1.1,  1.1, 0, 1,
-  //   -1.1,  1.1, 0, 1,
-  //    1.1, -1.1, 0, 1,
-  //    1.1,  1.1, 0, 1,
-  // };
+void draw_portal_bbox(Mesh* portal) {
+  // 0.05 frame around the portal
+  Mesh portal_bbox;
+  portal_bbox.vertices.push_back(glm::vec4(-1.00, -1.05, 0, 1));
+  portal_bbox.vertices.push_back(glm::vec4(-1.00,  1.05, 0, 1));
+  portal_bbox.vertices.push_back(glm::vec4(-1.05, -1.05, 0, 1));
 
-  // 0.1 frame around the portal
-  GLfloat vertices[] = {
-    -1.00, -1.05, 0, 1,
-    -1.00,  1.05, 0, 1,
-    -1.05, -1.05, 0, 1,
+  portal_bbox.vertices.push_back(glm::vec4(-1.05, -1.05, 0, 1));
+  portal_bbox.vertices.push_back(glm::vec4(-1.00,  1.05, 0, 1));
+  portal_bbox.vertices.push_back(glm::vec4(-1.05,  1.05, 0, 1));
 
-    -1.05, -1.05, 0, 1,
-    -1.00,  1.05, 0, 1,
-    -1.05,  1.05, 0, 1,
+  portal_bbox.vertices.push_back(glm::vec4( 1.05, -1.05, 0, 1));
+  portal_bbox.vertices.push_back(glm::vec4( 1.05,  1.05, 0, 1));
+  portal_bbox.vertices.push_back(glm::vec4( 1.00, -1.05, 0, 1));
 
-     1.05, -1.05, 0, 1,
-     1.05,  1.05, 0, 1,
-     1.00, -1.05, 0, 1,
+  portal_bbox.vertices.push_back(glm::vec4( 1.00, -1.05, 0, 1));
+  portal_bbox.vertices.push_back(glm::vec4( 1.05,  1.05, 0, 1));
+  portal_bbox.vertices.push_back(glm::vec4( 1.00,  1.05, 0, 1));
 
-     1.00, -1.05, 0, 1,
-     1.05,  1.05, 0, 1,
-     1.00,  1.05, 0, 1,
+  portal_bbox.vertices.push_back(glm::vec4(-1.00,  1.05, 0, 1));
+  portal_bbox.vertices.push_back(glm::vec4(-1.00,  1.00, 0, 1));
+  portal_bbox.vertices.push_back(glm::vec4( 1.00,  1.05, 0, 1));
 
-    -1.00,  1.05, 0, 1,
-    -1.00,  1.00, 0, 1,
-     1.00,  1.05, 0, 1,
+  portal_bbox.vertices.push_back(glm::vec4( 1.00,  1.05, 0, 1));
+  portal_bbox.vertices.push_back(glm::vec4(-1.00,  1.00, 0, 1));
+  portal_bbox.vertices.push_back(glm::vec4( 1.00,  1.00, 0, 1));
 
-     1.00,  1.05, 0, 1,
-    -1.00,  1.00, 0, 1,
-     1.00,  1.00, 0, 1,
+  portal_bbox.vertices.push_back(glm::vec4(-1.00, -1.00, 0, 1));
+  portal_bbox.vertices.push_back(glm::vec4(-1.00, -1.05, 0, 1));
+  portal_bbox.vertices.push_back(glm::vec4( 1.00, -1.00, 0, 1));
 
-    -1.00, -1.00, 0, 1,
-    -1.00, -1.05, 0, 1,
-     1.00, -1.00, 0, 1,
+  portal_bbox.vertices.push_back(glm::vec4( 1.00, -1.00, 0, 1));
+  portal_bbox.vertices.push_back(glm::vec4(-1.00, -1.05, 0, 1));
+  portal_bbox.vertices.push_back(glm::vec4( 1.00, -1.05, 0, 1));
 
-     1.00, -1.00, 0, 1,
-    -1.00, -1.05, 0, 1,
-     1.00, -1.05, 0, 1,
-  };
-  GLuint vbo_vertices;
-  glGenBuffers(1, &vbo_vertices);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  for (int i = 0; i < portal_bbox.vertices.size(); i++)
+    portal_bbox.normals.push_back(glm::vec3(0,0,1));
 
   /* Apply object's transformation matrix */
-  glm::mat4 m = portal->object2world;
-  glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(m));
+  portal_bbox.object2world = portal->object2world;
 
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-  glEnableVertexAttribArray(attribute_v_coord);
-  glVertexAttribPointer(
-    attribute_v_coord,  // attribute
-    4,                  // number of elements per vertex, here (x,y,z,w)
-    GL_FLOAT,           // the type of each element
-    GL_FALSE,           // take our values as-is
-    0,                  // no extra data between each position
-    0                   // offset of first element
-  );
-
-  glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices)/sizeof(vertices[0]));
-
-  glDisableVertexAttribArray(attribute_v_coord);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-  glDeleteBuffers(1, &vbo_vertices);
+  portal_bbox.upload();
+  portal_bbox.draw();
 }
 
 /**
@@ -841,77 +823,7 @@ void fill_screen() {
   glUniformMatrix4fv(uniform_v_inv, 1, GL_FALSE, save_v_inv);
 }
 
-void draw_mesh(struct mesh* mesh) {
-  if (mesh->vbo_vertices != 0) {
-    glEnableVertexAttribArray(attribute_v_coord);
-    glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo_vertices);
-    glVertexAttribPointer(
-      attribute_v_coord,  // attribute
-      4,                  // number of elements per vertex, here (x,y,z,w)
-      GL_FLOAT,           // the type of each element
-      GL_FALSE,           // take our values as-is
-      0,                  // no extra data between each position
-      0                   // offset of first element
-    );
-  }
-
-  if (mesh->vbo_normals != 0) {
-    glEnableVertexAttribArray(attribute_v_normal);
-    glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo_normals);
-    glVertexAttribPointer(
-      attribute_v_normal, // attribute
-      3,                  // number of elements per vertex, here (x,y,z)
-      GL_FLOAT,           // the type of each element
-      GL_FALSE,           // take our values as-is
-      0,                  // no extra data between each position
-      0                   // offset of first element
-    );
-  }
-
-  /* Apply object's transformation matrix */
-  glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(mesh->object2world));
-  glm::mat3 m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(mesh->object2world)));
-  glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
-
-  /* Push each element in buffer_vertices to the vertex shader */
-  if (mesh->ibo_elements != 0) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->ibo_elements);
-    int size;  glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
-    glDrawElements(GL_TRIANGLES, size/sizeof(GLushort), GL_UNSIGNED_SHORT, 0);
-  } else {
-    glDrawArrays(GL_TRIANGLES, 0, mesh->vertices.size());
-  }
-
-  if (mesh->vbo_normals != 0)
-    glDisableVertexAttribArray(attribute_v_coord);
-  glDisableVertexAttribArray(attribute_v_normal);
-}
-
-void draw_light_bbox() {
-  glEnableVertexAttribArray(attribute_v_coord);
-  glBindBuffer(GL_ARRAY_BUFFER, light_bbox.vbo_vertices);
-  glVertexAttribPointer(
-    attribute_v_coord,  // attribute
-    4,                  // number of elements per vertex, here (x,y,z,w)
-    GL_FLOAT,           // the type of each element
-    GL_FALSE,           // take our values as-is
-    0,                  // no extra data between each position
-    0                   // offset of first element
-  );
-
-  glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0)));
-  glm::mat3 m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(1.0)));
-  glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
-
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, light_bbox.ibo_elements);
-  glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, 0);
-  glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, (GLvoid*)(4*sizeof(GLushort)));
-  glDrawElements(GL_LINES, 8, GL_UNSIGNED_SHORT, (GLvoid*)(8*sizeof(GLushort)));
-
-  glDisableVertexAttribArray(attribute_v_coord);
-}
-
-void draw_portal_stencil(vector<glm::mat4> view_stack, struct mesh* portal) {
+void draw_portal_stencil(vector<glm::mat4> view_stack, Mesh* portal) {
   GLboolean save_color_mask[4];
   GLboolean save_depth_mask;
   glGetBooleanv(GL_COLOR_WRITEMASK, save_color_mask);
@@ -925,18 +837,18 @@ void draw_portal_stencil(vector<glm::mat4> view_stack, struct mesh* portal) {
   // draw stencil pattern
   glClear(GL_STENCIL_BUFFER_BIT);  // needs mask=0xFF
   glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(view_stack[0]));
-  draw_mesh(portal);
+  portal->draw();
   for (unsigned int i = 1; i < view_stack.size() - 1; i++) {  // -1 to ignore last view
     // Increment intersection for current portal
     glStencilFunc(GL_GEQUAL, 0, 1);
     glStencilOp(GL_INCR, GL_KEEP, GL_KEEP);  // draw 1s on test fail (always)
     glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(view_stack[i]));
-    draw_mesh(portal);
+    portal->draw();
     // Decremental outer portal -> only sub-portal intersection remains
     glStencilFunc(GL_NEVER, 1, 1);
     glStencilOp(GL_DECR, GL_KEEP, GL_KEEP);  // draw 1s on test fail (always)
     glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(view_stack[i-1]));
-    draw_mesh(portal);
+    portal->draw();
   }
 
   //glColorMask(GL_TRUE, GL_TRUE, GL_FALSE, GL_TRUE);  // blue-ish filter if drawing on white or grey
@@ -997,7 +909,7 @@ void draw_portals(vector<glm::mat4> view_stack, int rec, int outer_portal) {
   glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
   glDepthMask(GL_TRUE);
   for (int i = 0; i < 2; i++)
-    draw_mesh(&portals[i]);
+    portals[i].draw();
   glColorMask(save_color_mask[0], save_color_mask[1], save_color_mask[2], save_color_mask[3]);
   glDepthMask(save_depth_mask);
 }
@@ -1026,12 +938,12 @@ void draw_scene(vector<glm::mat4> view_stack, int rec, int outer_portal = -1) {
 
   // Draw portals frames after the stencil buffer is set
   for (int i = 0; i < 2; i++)
-    draw_bbox(&portals[i]);
+    draw_portal_bbox(&portals[i]);
 
   /* Draw scene */
-  //draw_light_bbox();
-  draw_mesh(&mesh);
-  draw_mesh(&ground);
+  //light_bbox.draw_bbox();
+  main_object.draw();
+  ground.draw();
 
   // Restore view matrix
   view_stack.pop_back();
@@ -1085,14 +997,6 @@ void onReshape(int width, int height) {
 void free_resources()
 {
   glDeleteProgram(program);
-  glDeleteBuffers(1, &mesh.vbo_vertices);
-  glDeleteBuffers(1, &ground.vbo_vertices);
-  glDeleteBuffers(1, &light_bbox.vbo_vertices);
-  glDeleteBuffers(1, &mesh.vbo_normals);
-  glDeleteBuffers(1, &ground.vbo_normals);
-  glDeleteBuffers(1, &mesh.ibo_elements);
-  glDeleteBuffers(1, &light_bbox.ibo_elements);
-  glDeleteBuffers(1, &vbo_fbo_vertices);
 }
 
 
