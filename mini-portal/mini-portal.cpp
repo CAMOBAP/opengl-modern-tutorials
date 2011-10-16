@@ -1000,6 +1000,48 @@ void draw_portal_stencil(vector<glm::mat4> view_stack, Mesh* portal) {
   // -Ready to draw main scene-
 }
 
+void clip_portal(vector<glm::mat4> view_stack, Mesh* outer_portal) {
+    glm::vec4 p[4];
+    glm::mat4 outer_view = view_stack[view_stack.size()-1-1];
+    for (int i = 0; i < 4; i++) {
+      p[i] = (glm::perspective(fovy, 1.0f*screen_width/screen_height, zNear, 100.0f)
+	      * outer_view
+	      * outer_portal->object2world)
+	* outer_portal->vertices[i];
+      if (p[i].w < 0) {
+	// TODO: I tried to deal with that case, but it's quite
+	// complex because this means the coordinate is projected from
+	// the back of the camera, and we should clip to the min or
+	// max of the screen.  I'l let the stencil buffer deal with it
+	// for now.
+	glDisable(GL_SCISSOR_TEST);
+	return;
+      } else {
+	p[i].x /= p[i].w;
+	p[i].y /= p[i].w;
+      }
+    }
+
+    glm::vec4 min_x, max_x, max_y, min_y;
+    min_x = max_x = min_y = max_y = p[0];
+    for (int i = 0; i < 4; i++) {
+      if (p[i].x < min_x.x) min_x = p[i];
+      if (p[i].x > max_x.x) max_x = p[i];
+      if (p[i].y < min_y.y) min_y = p[i];
+      if (p[i].y > max_y.y) max_y = p[i];
+    }
+
+    // if (min_x.w < 0) { min_x.x = max_x.x; max_x.x =  1; }
+    // if (max_x.w < 0) { max_x.x = min_x.x; min_x.x = -1; }
+
+    min_x.x = (max(-1.0f, min_x.x) + 1) / 2 * screen_width;
+    max_x.x = (min( 1.0f, max_x.x) + 1) / 2 * screen_width;
+    min_y.y = (max(-1.0f, min_y.y) + 1) / 2 * screen_height;
+    max_y.y = (min( 1.0f, max_y.y) + 1) / 2 * screen_height;
+
+    glScissor(min_x.x, min_y.y, max_x.x-min_x.x, max_y.y-min_y.y);
+}
+
 /**
  * Draw the active portals contents
  */
@@ -1011,6 +1053,7 @@ void draw_portals(vector<glm::mat4> view_stack, int rec, int outer_portal) {
   glGetBooleanv(GL_STENCIL_TEST, &save_stencil_test);
 
   glEnable(GL_STENCIL_TEST);
+  glEnable(GL_SCISSOR_TEST);
   for (int i = 0; i < 2; i++) {
     // Important: don't draw outer_portal's outgoing portal - only
     // draw the same portal when displaying a sub-portal (seen from
@@ -1027,8 +1070,10 @@ void draw_portals(vector<glm::mat4> view_stack, int rec, int outer_portal) {
       //glLineWidth(1);
     }
   }
-  if (!save_stencil_test)
+  if (!save_stencil_test) {
     glDisable(GL_STENCIL_TEST);
+    glDisable(GL_SCISSOR_TEST);
+  }
 
   // Draw portal in the depth buffer so they are not overwritten
   glClear(GL_DEPTH_BUFFER_BIT);
@@ -1062,15 +1107,20 @@ void draw_scene(vector<glm::mat4> view_stack, int rec, int outer_portal = -1) {
   draw_portals(view_stack, rec, outer_portal);
 
   if (outer_portal != -1) {
+    // clip the current view as much as possible, more efficient than
+    // using the stencil buffer
+    clip_portal(view_stack, &portals[outer_portal]);
+
     // draw the current stencil - or actually recreate it if we just
     // drew a sub-portal and hence messed the stencil buffer
     draw_portal_stencil(view_stack, &portals[outer_portal]);
   }
 
   // Draw portals frames after the stencil buffer is set
-  for (int i = 0; i < 2; i++)
+  for (int i = 0; i < 2; i++) {
     draw_portal_bbox(&portals[i]);
-    //portals[i].draw_bbox();
+    portals[i].draw_bbox();
+  }
 
   /* Draw scene */
   //light_bbox.draw_bbox();
