@@ -51,6 +51,12 @@ Notes:
   player will technically be teleported slightly _behind_ the other
   portal.
 
+- Optimization: clip the portal before using the stencil buffer (more
+  expensive).  One difficulty is clipping when the camera frustum
+  intersects with the plane, resulting in projection from the back of
+  the camera.  We can also clip recursively to get a chance to ditch
+  sub-portal rendering if it's not visible from the main portal.
+
 - [/] View through portal
   - [X] Stencil in rectangle
   - [/] Stencil in plane intersection - strife through portals - avoid flicker when traversing portals
@@ -61,5 +67,5 @@ Notes:
 - [ ] Object at 2 locations at the same time (duplicate objects?)
   - Solve problem with objects too close to the portal and the portal
     displays facing culling artifacts
-- [ ] Optimisation (Clipping? Low-res rendering for recursive portals?)
+- [X] Optimisation (Clipping? Low-res rendering for recursive portals?)
 - [ ] (later) Physics
