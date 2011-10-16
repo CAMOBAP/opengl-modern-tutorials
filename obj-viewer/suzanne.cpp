@@ -389,7 +389,7 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
 
   main_object.upload();
   ground.upload();
-  light_bbox.draw_bbox();
+  light_bbox.upload();
  
 
 
@@ -730,7 +730,7 @@ void idle() {
   glutPostRedisplay();
 }
 
-void display()
+void onDisplay()
 {
   glBindFramebuffer(GL_FRAMEBUFFER, fbo);
   glClearColor(0.45, 0.45, 0.45, 1.0);
@@ -841,7 +841,7 @@ int main(int argc, char* argv[]) {
 
   if (init_resources(obj_filename, v_shader_filename, f_shader_filename)) {
     init_view();
-    glutDisplayFunc(display);
+    glutDisplayFunc(onDisplay);
     glutSpecialFunc(onSpecial);
     glutSpecialUpFunc(onSpecialUp);
     glutMouseFunc(onMouse);

@@ -1186,7 +1186,7 @@ void draw_scene(vector<glm::mat4> view_stack, int rec, int outer_portal = -1) {
   // sleep(2);
 }
 
-void display()
+void onDisplay()
 {
   glClearColor(0.45, 0.45, 0.45, 1.0);
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
@@ -1272,7 +1272,7 @@ int main(int argc, char* argv[]) {
 
   if (init_resources(obj_filename, v_shader_filename, f_shader_filename)) {
     init_view();
-    glutDisplayFunc(display);
+    glutDisplayFunc(onDisplay);
     glutSpecialFunc(onSpecial);
     glutSpecialUpFunc(onSpecialUp);
     glutMouseFunc(onMouse);
