@@ -1000,25 +1000,29 @@ void draw_portal_stencil(vector<glm::mat4> view_stack, Mesh* portal) {
   // -Ready to draw main scene-
 }
 
-void clip_portal(vector<glm::mat4> view_stack, Mesh* outer_portal) {
+struct rect { int x,y,w,h; };
+bool clip_portal(vector<glm::mat4> view_stack, Mesh* outer_portal) {
+  rect scissor = { 0, 0, screen_width, screen_height };
+  for (unsigned int v = 0; v < view_stack.size() - 1; v++) {  // -1 to ignore last view
     glm::vec4 p[4];
-    glm::mat4 outer_view = view_stack[view_stack.size()-1-1];
-    for (int i = 0; i < 4; i++) {
-      p[i] = (glm::perspective(fovy, 1.0f*screen_width/screen_height, zNear, 100.0f)
-	      * outer_view
+    rect r;
+    for (int pi = 0; pi < 4; pi++) {
+      p[pi] = (glm::perspective(fovy, 1.0f*screen_width/screen_height, zNear, 100.0f)
+	      * view_stack[v]
 	      * outer_portal->object2world)
-	* outer_portal->vertices[i];
-      if (p[i].w < 0) {
+	* outer_portal->vertices[pi];
+      if (p[pi].w < 0) {
 	// TODO: I tried to deal with that case, but it's quite
 	// complex because this means the coordinate is projected from
 	// the back of the camera, and we should clip to the min or
 	// max of the screen.  I'l let the stencil buffer deal with it
 	// for now.
+	//cout << "w<0" << endl;
 	glDisable(GL_SCISSOR_TEST);
-	return;
+	return true;
       } else {
-	p[i].x /= p[i].w;
-	p[i].y /= p[i].w;
+	p[pi].x /= p[pi].w;
+	p[pi].y /= p[pi].w;
       }
     }
 
@@ -1031,6 +1035,7 @@ void clip_portal(vector<glm::mat4> view_stack, Mesh* outer_portal) {
       if (p[i].y > max_y.y) max_y = p[i];
     }
 
+    // (broken) attempt to deal with w < 0
     // if (min_x.w < 0) { min_x.x = max_x.x; max_x.x =  1; }
     // if (max_x.w < 0) { max_x.x = min_x.x; min_x.x = -1; }
 
@@ -1039,7 +1044,34 @@ void clip_portal(vector<glm::mat4> view_stack, Mesh* outer_portal) {
     min_y.y = (max(-1.0f, min_y.y) + 1) / 2 * screen_height;
     max_y.y = (min( 1.0f, max_y.y) + 1) / 2 * screen_height;
 
-    glScissor(min_x.x, min_y.y, max_x.x-min_x.x, max_y.y-min_y.y);
+    r.x = min_x.x;
+    r.y = min_y.y;
+    r.w = max_x.x-min_x.x;
+    r.h = max_y.y-min_y.y;
+
+    // intersection with previous rect
+    //cout << "+" << scissor.x << "," << scissor.y << "," << scissor.w << "," << scissor.h << endl;
+    //cout << "+" << r.x << "," << r.y << "," << r.w << "," << r.h << endl;
+    {
+      int r_min_x = max(r.x, scissor.x);
+      int r_max_x = min(r.x+r.w, scissor.x+scissor.w);
+      scissor.x = r_min_x;
+      scissor.w = r_max_x - scissor.x;
+      int r_min_y = max(r.y, scissor.y);
+      int r_max_y = min(r.y+r.h, scissor.y+scissor.h);
+      scissor.y = r_min_y;
+      scissor.h = r_max_y - scissor.y;
+    }
+    //cout << "=" << scissor.x << "," << scissor.y << "," << scissor.w << "," << scissor.h << endl;
+    if (scissor.w <= 0 || scissor.h <= 0) {
+      return false;
+    }
+  }
+  
+  glScissor(scissor.x, scissor.y, scissor.w, scissor.h);
+  //cout << scissor.x << "," << scissor.y << "," << scissor.w << "," << scissor.h << endl;
+  //cout << endl;
+  return true;
 }
 
 /**
@@ -1106,27 +1138,31 @@ void draw_scene(vector<glm::mat4> view_stack, int rec, int outer_portal = -1) {
   // Draw portals contents
   draw_portals(view_stack, rec, outer_portal);
 
+  bool draw = true;
   if (outer_portal != -1) {
     // clip the current view as much as possible, more efficient than
     // using the stencil buffer
-    clip_portal(view_stack, &portals[outer_portal]);
-
-    // draw the current stencil - or actually recreate it if we just
-    // drew a sub-portal and hence messed the stencil buffer
-    draw_portal_stencil(view_stack, &portals[outer_portal]);
+    draw = clip_portal(view_stack, &portals[outer_portal]);
   }
-
-  // Draw portals frames after the stencil buffer is set
-  for (int i = 0; i < 2; i++) {
-    draw_portal_bbox(&portals[i]);
-    portals[i].draw_bbox();
+  if (draw) {
+    if (outer_portal != -1) {
+      // draw the current stencil - or actually recreate it if we just
+      // drew a sub-portal and hence messed the stencil buffer
+      draw_portal_stencil(view_stack, &portals[outer_portal]);
+    }
+    
+    // Draw portals frames after the stencil buffer is set
+    for (int i = 0; i < 2; i++) {
+      draw_portal_bbox(&portals[i]);
+      portals[i].draw_bbox();
+    }
+    
+    /* Draw scene */
+    //light_bbox.draw_bbox();
+    main_object.draw();
+    ground.draw();
+    //portals[0].draw();
   }
-
-  /* Draw scene */
-  //light_bbox.draw_bbox();
-  main_object.draw();
-  ground.draw();
-  //portals[0].draw();
 
   // Restore view matrix
   view_stack.pop_back();
