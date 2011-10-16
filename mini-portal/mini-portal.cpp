@@ -34,6 +34,8 @@ int arcball_on = false;
 
 using namespace std;
 
+struct rect { int x,y,w,h; };
+
 enum MODES { MODE_OBJECT, MODE_CAMERA, MODE_LIGHT, MODE_LAST } view_mode = MODE_CAMERA;
 int rotY_direction = 0, rotX_direction = 0, transZ_direction = 0, strife = 0;
 float speed_factor = 1;
@@ -1000,9 +1002,11 @@ void draw_portal_stencil(vector<glm::mat4> view_stack, Mesh* portal) {
   // -Ready to draw main scene-
 }
 
-struct rect { int x,y,w,h; };
-bool clip_portal(vector<glm::mat4> view_stack, Mesh* outer_portal) {
-  rect scissor = { 0, 0, screen_width, screen_height };
+bool clip_portal(vector<glm::mat4> view_stack, Mesh* outer_portal, rect* scissor) {
+  scissor->x = 0;
+  scissor->y = 0;
+  scissor->w = screen_width;
+  scissor->h = screen_height;
   for (unsigned int v = 0; v < view_stack.size() - 1; v++) {  // -1 to ignore last view
     glm::vec4 p[4];
     rect r;
@@ -1050,26 +1054,25 @@ bool clip_portal(vector<glm::mat4> view_stack, Mesh* outer_portal) {
     r.h = max_y.y-min_y.y;
 
     // intersection with previous rect
-    //cout << "+" << scissor.x << "," << scissor.y << "," << scissor.w << "," << scissor.h << endl;
+    //cout << "+" << scissor->x << "," << scissor->y << "," << scissor->w << "," << scissor->h << endl;
     //cout << "+" << r.x << "," << r.y << "," << r.w << "," << r.h << endl;
     {
-      int r_min_x = max(r.x, scissor.x);
-      int r_max_x = min(r.x+r.w, scissor.x+scissor.w);
-      scissor.x = r_min_x;
-      scissor.w = r_max_x - scissor.x;
-      int r_min_y = max(r.y, scissor.y);
-      int r_max_y = min(r.y+r.h, scissor.y+scissor.h);
-      scissor.y = r_min_y;
-      scissor.h = r_max_y - scissor.y;
+      int r_min_x = max(r.x, scissor->x);
+      int r_max_x = min(r.x+r.w, scissor->x+scissor->w);
+      scissor->x = r_min_x;
+      scissor->w = r_max_x - scissor->x;
+      int r_min_y = max(r.y, scissor->y);
+      int r_max_y = min(r.y+r.h, scissor->y+scissor->h);
+      scissor->y = r_min_y;
+      scissor->h = r_max_y - scissor->y;
     }
-    //cout << "=" << scissor.x << "," << scissor.y << "," << scissor.w << "," << scissor.h << endl;
-    if (scissor.w <= 0 || scissor.h <= 0) {
+    //cout << "=" << scissor->x << "," << scissor->y << "," << scissor->w << "," << scissor->h << endl;
+    if (scissor->w <= 0 || scissor->h <= 0) {
       return false;
     }
   }
   
-  glScissor(scissor.x, scissor.y, scissor.w, scissor.h);
-  //cout << scissor.x << "," << scissor.y << "," << scissor.w << "," << scissor.h << endl;
+  //cout << scissor->x << "," << scissor->y << "," << scissor->w << "," << scissor->h << endl;
   //cout << endl;
   return true;
 }
@@ -1128,6 +1131,12 @@ void draw_scene(vector<glm::mat4> view_stack, int rec, int outer_portal = -1) {
     //draw_mesh(&portals[(outer_portal+1)%2]);
     return;
   }
+  rect scissor;
+  if (outer_portal != -1) {
+    // if basic clipping returns an empty rectangle, we can stop here
+    if (!clip_portal(view_stack, &portals[outer_portal], &scissor))
+      return;
+  }
 
   // Set view matrix
   glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(view_stack.back()));
@@ -1138,31 +1147,27 @@ void draw_scene(vector<glm::mat4> view_stack, int rec, int outer_portal = -1) {
   // Draw portals contents
   draw_portals(view_stack, rec, outer_portal);
 
-  bool draw = true;
   if (outer_portal != -1) {
     // clip the current view as much as possible, more efficient than
     // using the stencil buffer
-    draw = clip_portal(view_stack, &portals[outer_portal]);
+    glScissor(scissor.x, scissor.y, scissor.w, scissor.h);
+
+    // draw the current stencil - or actually recreate it if we just
+    // drew a sub-portal and hence messed the stencil buffer
+    draw_portal_stencil(view_stack, &portals[outer_portal]);
   }
-  if (draw) {
-    if (outer_portal != -1) {
-      // draw the current stencil - or actually recreate it if we just
-      // drew a sub-portal and hence messed the stencil buffer
-      draw_portal_stencil(view_stack, &portals[outer_portal]);
-    }
-    
-    // Draw portals frames after the stencil buffer is set
-    for (int i = 0; i < 2; i++) {
-      draw_portal_bbox(&portals[i]);
-      portals[i].draw_bbox();
-    }
-    
-    /* Draw scene */
-    //light_bbox.draw_bbox();
-    main_object.draw();
-    ground.draw();
-    //portals[0].draw();
+  
+  // Draw portals frames after the stencil buffer is set
+  for (int i = 0; i < 2; i++) {
+    draw_portal_bbox(&portals[i]);
+    //portals[i].draw_bbox();
   }
+  
+  /* Draw scene */
+  //light_bbox.draw_bbox();
+  main_object.draw();
+  ground.draw();
+  //portals[0].draw();
 
   // Restore view matrix
   view_stack.pop_back();
