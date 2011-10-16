@@ -1010,6 +1010,7 @@ bool clip_portal(vector<glm::mat4> view_stack, Mesh* outer_portal, rect* scissor
   for (unsigned int v = 0; v < view_stack.size() - 1; v++) {  // -1 to ignore last view
     glm::vec4 p[4];
     rect r;
+    bool found_negative_w = false;
     for (int pi = 0; pi < 4; pi++) {
       p[pi] = (glm::perspective(fovy, 1.0f*screen_width/screen_height, zNear, 100.0f)
 	      * view_stack[v]
@@ -1019,16 +1020,20 @@ bool clip_portal(vector<glm::mat4> view_stack, Mesh* outer_portal, rect* scissor
 	// TODO: I tried to deal with that case, but it's quite
 	// complex because this means the coordinate is projected from
 	// the back of the camera, and we should clip to the min or
-	// max of the screen.  I'l let the stencil buffer deal with it
-	// for now.
+	// max of the screen.  I'll let the stencil buffer deal with
+	// it for now.
+	// Possible fix: restrict the portal rectangle using its line
+	// intersection with the camera frustum.
 	//cout << "w<0" << endl;
-	glDisable(GL_SCISSOR_TEST);
-	return true;
+	//glDisable(GL_SCISSOR_TEST);
+	found_negative_w = true;
       } else {
 	p[pi].x /= p[pi].w;
 	p[pi].y /= p[pi].w;
       }
     }
+    if (found_negative_w)
+      continue;
 
     glm::vec4 min_x, max_x, max_y, min_y;
     min_x = max_x = min_y = max_y = p[0];
