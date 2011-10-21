@@ -845,7 +845,7 @@ void fill_screen() {
     0                   // offset of first element
   );
 
-  glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices)/sizeof(vertices[0]));
+  glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices)/sizeof(vertices[0])/4);
 
   glDisableVertexAttribArray(attribute_v_coord);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -880,20 +880,8 @@ void draw_camera() {
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   /* Apply object's transformation matrix */
-  //glm::mat4 m = glm::inverse(glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 100.0f) * transforms[MODE_CAMERA]);
   glm::mat4 m = glm::inverse(transforms[MODE_CAMERA]);
   glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(m));
-
-  // Save current view matrix - useful since we're going to
-  // recursively draw the scene from different points of View
-  GLuint cur_program;
-  GLfloat save_v[16];
-  GLfloat save_v_inv[16];
-  glGetIntegerv(GL_CURRENT_PROGRAM, (GLint*)&cur_program);
-  glGetUniformfv(cur_program, uniform_v, save_v);
-  glGetUniformfv(cur_program, uniform_v_inv, save_v_inv);
-
-  // glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(transforms[MODE_CAMERA]));
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
   glEnableVertexAttribArray(attribute_v_coord);
@@ -906,16 +894,14 @@ void draw_camera() {
     0                   // offset of first element
   );
 
-  glDrawArrays(GL_LINES, 0, sizeof(vertices)/sizeof(vertices[0]));
+  glLineWidth(10);
+  glDrawArrays(GL_LINES, 0, 6);
+  glDrawArrays(GL_LINES, 6, 12);
 
   glDisableVertexAttribArray(attribute_v_coord);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   glDeleteBuffers(1, &vbo_vertices);
-
-  // Restore view matrix
-  glUniformMatrix4fv(uniform_v, 1, GL_FALSE, save_v);
-  glUniformMatrix4fv(uniform_v_inv, 1, GL_FALSE, save_v_inv);
 }
 
 void draw_portal_stencil(vector<glm::mat4> view_stack, Mesh* portal) {

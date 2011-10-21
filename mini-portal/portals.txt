@@ -49,7 +49,9 @@ Notes:
   teleport planes parallel to the portal, each one-way only.
   Anticipate issues with collision detections and the like, since the
   player will technically be teleported slightly _behind_ the other
-  portal.
+  portal.  But above all, it wouldn't deal with strifing: the camera
+  frustum will intersect the portal at a point, and will see "behind"
+  no matter what.
 
 - Optimization: clip the portal before using the stencil buffer (more
   expensive).  One difficulty is clipping when the camera frustum
