@@ -435,7 +435,8 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
 
   // 90° angle + slightly higher
   portals[0].object2world = glm::translate(glm::mat4(1), glm::vec3(0, 1, -2));
-  portals[1].object2world = glm::rotate(glm::mat4(1), -90.0f, glm::vec3(0, 1, 0)) * glm::translate(glm::mat4(1), glm::vec3(0, 1.2, -2));
+  portals[1].object2world = glm::rotate(glm::mat4(1), -90.0f, glm::vec3(0, 1, 0))
+    * glm::translate(glm::mat4(1), glm::vec3(0, 1.2, -2));
 
   main_object.upload();
   ground.upload();
@@ -616,6 +617,10 @@ glm::vec3 get_arcball_vector(int x, int y) {
   return P;
 }
 
+/**
+ * Checks whether the line defined by two points la and lb intersects
+ * the portal.
+ */
 int portal_intersection(glm::vec4 la, glm::vec4 lb, Mesh* portal) {
   if (la != lb) {  // camera moved
     // Check for intersection with each of the portal's 2 front triangles
@@ -625,6 +630,7 @@ int portal_intersection(glm::vec4 la, glm::vec4 lb, Mesh* portal) {
 	p0 = portal->object2world * portal->vertices[portal->elements[i*3+0]],
 	p1 = portal->object2world * portal->vertices[portal->elements[i*3+1]],
 	p2 = portal->object2world * portal->vertices[portal->elements[i*3+2]];
+
       // Solve line-plane intersection using parametric form
       glm::vec3 tuv =
 	glm::inverse(glm::mat3(glm::vec3(la.x - lb.x, la.y - lb.y, la.z - lb.z),
@@ -632,9 +638,11 @@ int portal_intersection(glm::vec4 la, glm::vec4 lb, Mesh* portal) {
 			       glm::vec3(p2.x - p0.x, p2.y - p0.y, p2.z - p0.z)))
 	* glm::vec3(la.x - p0.x, la.y - p0.y, la.z - p0.z);
       float t = tuv.x, u = tuv.y, v = tuv.z;
-      //cout << t << "," << u << "," << v << endl;
-      if (t >= 0-1e-6 && t <= 1+1e-6) {  // intersection with the plane
-	if (u >= 0-1e-6 && u <= 1+1e-6 && v >= 0-1e-6 && v <= 1+1e-6 && (u + v) <= 1+1e-6) {  // intersection with the triangle
+
+      // intersection with the plane
+      if (t >= 0-1e-6 && t <= 1+1e-6) {
+	// intersection with the triangle
+	if (u >= 0-1e-6 && u <= 1+1e-6 && v >= 0-1e-6 && v <= 1+1e-6 && (u + v) <= 1+1e-6) {
 	  return 1;
 	}
       }
@@ -643,15 +651,21 @@ int portal_intersection(glm::vec4 la, glm::vec4 lb, Mesh* portal) {
   return 0;
 }
 
+/**
+ * Compute a world2camera view matrix to see from portal 'dst', given
+ * the original view and the 'src' portal position.
+ */
 glm::mat4 portal_view(glm::mat4 orig_view, Mesh* src, Mesh* dst) {
   glm::mat4 mv = orig_view * src->object2world;
   glm::mat4 portal_cam =
-    // transformation from source portal to the camera - it's ModelView:
+    // 3. transformation from source portal to the camera - it's the
+    //    first portal's ModelView matrix:
     mv
-    // object is front-facing, the camera is facing the other way:
+    // 2. object is front-facing, the camera is facing the other way:
     * glm::rotate(glm::mat4(1.0), 180.0f, glm::vec3(0.0,1.0,0.0))
-    // inverse, because camera transformations are reversed compared
-    // to object transformations:
+    // 1. go the destination portal; using inverse, because camera
+    //    transformations are reversed compared to object
+    //    transformations:
     * glm::inverse(dst->object2world)
     ;
   return portal_cam;
@@ -1244,7 +1258,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  char* obj_filename = (char*) "suzanne.obj";
+  char* obj_filename = (char*) "cube.obj";
   char* v_shader_filename = (char*) "phong-shading.v.glsl";
   char* f_shader_filename = (char*) "phong-shading.f.glsl";
   if (argc != 4) {

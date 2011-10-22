@@ -13,6 +13,8 @@ Notes:
 - First one-way (portal1->portal2) display, then two-ways
   (portal1<->portal2)
 
+- Enable back-face culling
+
 - Portal collision detection using:
   http://en.wikipedia.org/wiki/Line-plane_intersection
 
