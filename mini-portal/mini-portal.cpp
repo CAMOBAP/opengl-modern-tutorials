@@ -894,9 +894,8 @@ void draw_camera() {
     0                   // offset of first element
   );
 
-  glLineWidth(10);
   glDrawArrays(GL_LINES, 0, 6);
-  glDrawArrays(GL_LINES, 6, 12);
+  glDrawArrays(GL_LINES, 6, 6);
 
   glDisableVertexAttribArray(attribute_v_coord);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
