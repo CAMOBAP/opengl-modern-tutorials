@@ -67,7 +67,7 @@ int init_resources()
   return 1;
 }
 
-void display()
+void onDisplay()
 {
   glClearColor(1.0, 1.0, 1.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT);
@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (init_resources()) {
-    glutDisplayFunc(display);
+    glutDisplayFunc(onDisplay);
     glutMainLoop();
   }
 

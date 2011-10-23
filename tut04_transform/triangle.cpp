@@ -159,7 +159,7 @@ int init_resources()
   return 1;
 }
 
-void idle() {
+void onIdle() {
   float move = sinf(glutGet(GLUT_ELAPSED_TIME) / 1000.0 * (2*3.14) / 5); // -1<->+1 every 5 seconds
   float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 45;  // 45° per second
   glm::vec3 axis_z(0, 0, 1);
@@ -171,7 +171,7 @@ void idle() {
   glutPostRedisplay();
 }
 
-void display()
+void onDisplay()
 {
   glClearColor(1.0, 1.0, 1.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT);
@@ -231,8 +231,8 @@ int main(int argc, char* argv[]) {
   }
 
   if (init_resources()) {
-    glutDisplayFunc(display);
-    glutIdleFunc(idle);
+    glutDisplayFunc(onDisplay);
+    glutIdleFunc(onIdle);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glutMainLoop();

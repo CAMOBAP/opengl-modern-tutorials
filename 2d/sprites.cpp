@@ -191,7 +191,7 @@ int init_resources()
   return 1;
 }
 
-void display()
+void onDisplay()
 {
   glUseProgram(program);
   glUniform1i(uniform_mytexture, /*GL_TEXTURE*/0);
@@ -230,7 +230,7 @@ void display()
   glutSwapBuffers();
 }
 
-void idle() {
+void onIdle() {
   float scale = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * .2;  // 20% per second
   glm::mat4 projection = glm::ortho(0.0f, 1.0f*screen_width*scale, 1.0f*screen_height*scale, 0.0f);
 
@@ -277,9 +277,9 @@ int main(int argc, char* argv[]) {
   }
 
   if (init_resources()) {
-    glutDisplayFunc(display);
+    glutDisplayFunc(onDisplay);
     glutReshapeFunc(onReshape);
-    glutIdleFunc(idle);
+    glutIdleFunc(onIdle);
     glEnable(GL_BLEND);
     //glEnable(GL_DEPTH_TEST);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

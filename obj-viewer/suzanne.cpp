@@ -644,7 +644,7 @@ glm::vec3 get_arcball_vector(int x, int y) {
   return P;
 }
 
-void idle() {
+void onIdle() {
   /* FPS count */
   {
     fps_frames++;
@@ -847,7 +847,7 @@ int main(int argc, char* argv[]) {
     glutMouseFunc(onMouse);
     glutMotionFunc(onMotion);
     glutReshapeFunc(onReshape);
-    glutIdleFunc(idle);
+    glutIdleFunc(onIdle);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_DEPTH_TEST);

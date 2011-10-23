@@ -243,7 +243,7 @@ int init_resources()
   return 1;
 }
 
-void idle() {
+void onIdle() {
   float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 15;  // base 15° per second
   glm::mat4 anim = \
     glm::rotate(glm::mat4(1.0f), angle*3.0f, glm::vec3(1, 0, 0)) *  // X axis
@@ -260,7 +260,7 @@ void idle() {
   glutPostRedisplay();
 }
 
-void display()
+void onDisplay()
 {
   glClearColor(1.0, 1.0, 1.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -334,9 +334,9 @@ int main(int argc, char* argv[]) {
   }
 
   if (init_resources()) {
-    glutDisplayFunc(display);
+    glutDisplayFunc(onDisplay);
     glutReshapeFunc(onReshape);
-    glutIdleFunc(idle);
+    glutIdleFunc(onIdle);
     glEnable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

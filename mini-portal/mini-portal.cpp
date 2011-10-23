@@ -676,7 +676,7 @@ glm::mat4 portal_view(glm::mat4 orig_view, Mesh* src, Mesh* dst) {
   return portal_cam;
 }
 
-void idle() {
+void onIdle() {
   /* FPS count */
   {
     fps_frames++;
@@ -1284,7 +1284,7 @@ int main(int argc, char* argv[]) {
     glutMouseFunc(onMouse);
     glutMotionFunc(onMotion);
     glutReshapeFunc(onReshape);
-    glutIdleFunc(idle);
+    glutIdleFunc(onIdle);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_DEPTH_TEST);

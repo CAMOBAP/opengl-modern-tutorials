@@ -179,14 +179,14 @@ int init_resources()
   return 1;
 }
 
-void idle() {
+void onIdle() {
   float cur_fade = sinf(glutGet(GLUT_ELAPSED_TIME) / 1000.0 * (2*3.14) / 5) / 2 + 0.5; // 0->1->0 every 5 seconds
   glUseProgram(program);
   glUniform1f(uniform_fade, cur_fade);
   glutPostRedisplay();
 }
 
-void display()
+void onDisplay()
 {
   glClearColor(1.0, 1.0, 1.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT);
@@ -273,8 +273,8 @@ int main(int argc, char* argv[]) {
   }
 
   if (init_resources()) {
-    glutDisplayFunc(display);
-    glutIdleFunc(idle);
+    glutDisplayFunc(onDisplay);
+    glutIdleFunc(onIdle);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glutMainLoop();
