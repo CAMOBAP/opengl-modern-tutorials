@@ -364,6 +364,41 @@ void load_obj(const char* filename, Mesh* mesh) {
   }
 }
 
+void create_portal(Mesh* portal, int screen_width, int screen_height, float zNear, float fovy) {
+  portal->vertices.clear();
+  portal->elements.clear();
+
+  float aspect = 1.0 * screen_width / screen_height;
+  float fovy_rad = fovy * M_PI / 180;
+  float fovx_rad = fovy_rad / aspect;
+  float dz = max(zNear/cos(fovx_rad), zNear/cos(fovy_rad));
+  float dx = tan(fovx_rad) * dz;
+  float dy = tan(fovy_rad) * dz;
+  glm::vec4 portal_vertices[] = {
+    glm::vec4(-1, -1, 0, 1),
+    glm::vec4( 1, -1, 0, 1),
+    glm::vec4(-1,  1, 0, 1),
+    glm::vec4( 1,  1, 0, 1),
+
+    glm::vec4(-(1+dx), -(1+dy), 0-dz, 1),
+    glm::vec4( (1+dx), -(1+dy), 0-dz, 1),
+    glm::vec4(-(1+dx),  (1+dy), 0-dz, 1),
+    glm::vec4( (1+dx),  (1+dy), 0-dz, 1),
+  };
+  for (unsigned int i = 0; i < sizeof(portal_vertices)/sizeof(portal_vertices[0]); i++) {
+    portal->vertices.push_back(portal_vertices[i]);
+  }
+  GLushort portal_elements[] = {
+    0,1,2, 2,1,3,
+    4,5,6, 6,5,7,
+    0,4,2, 2,4,6,
+    5,1,7, 7,1,3,
+  };
+  for (unsigned int i = 0; i < sizeof(portal_elements)/sizeof(portal_elements[0]); i++) {
+    portal->elements.push_back(portal_elements[i]);
+  }
+}
+
 int init_resources(char* model_filename, char* vshader_filename, char* fshader_filename)
 {
   load_obj(model_filename, &main_object);
@@ -393,37 +428,8 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
   light_bbox.vertices.push_back(glm::vec4(-0.1,  0.1,  0.1, 0.0));
   light_bbox.object2world = glm::translate(glm::mat4(1), light_position);
 
-  float aspect = 1.0 * screen_width / screen_height;
-  float fovy_rad = fovy * M_PI / 180;
-  float fovx_rad = fovy_rad / aspect;
-  float dz = max(zNear/cos(fovx_rad), zNear/cos(fovy_rad));
-  float dx = tan(fovx_rad) * dz;
-  float dy = tan(fovy_rad) * dz;
-  glm::vec4 portal_vertices[] = {
-    glm::vec4(-1, -1, 0, 1),
-    glm::vec4( 1, -1, 0, 1),
-    glm::vec4(-1,  1, 0, 1),
-    glm::vec4( 1,  1, 0, 1),
-
-    glm::vec4(-(1+dx), -(1+dy), 0-dz, 1),
-    glm::vec4( (1+dx), -(1+dy), 0-dz, 1),
-    glm::vec4(-(1+dx),  (1+dy), 0-dz, 1),
-    glm::vec4( (1+dx),  (1+dy), 0-dz, 1),
-  };
-  for (unsigned int i = 0; i < sizeof(portal_vertices)/sizeof(portal_vertices[0]); i++) {
-    portals[0].vertices.push_back(portal_vertices[i]);
-    portals[1].vertices.push_back(portal_vertices[i]);
-  }
-  GLushort portal_elements[] = {
-    0,1,2, 2,1,3,
-    4,5,6, 6,5,7,
-    0,4,2, 2,4,6,
-    5,1,7, 7,1,3,
-  };
-  for (unsigned int i = 0; i < sizeof(portal_elements)/sizeof(portal_elements[0]); i++) {
-    portals[0].elements.push_back(portal_elements[i]);
-    portals[1].elements.push_back(portal_elements[i]);
-  }
+  create_portal(&portals[0], screen_width, screen_height, zNear, fovy);
+  create_portal(&portals[1], screen_width, screen_height, zNear, fovy);
 
   // Face to face
   // portals[0].object2world = glm::translate(glm::mat4(1), glm::vec3(-2, 0, 0))
@@ -443,7 +449,6 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
   light_bbox.upload();
   portals[0].upload();
   portals[1].upload();
-
 
 
   /* Compile and link shaders */
@@ -1233,6 +1238,8 @@ void onReshape(int width, int height) {
   screen_width = width;
   screen_height = height;
   glViewport(0, 0, screen_width, screen_height);
+  create_portal(&portals[0], screen_width, screen_height, zNear, fovy);
+  create_portal(&portals[1], screen_width, screen_height, zNear, fovy);
 }
 
 void free_resources()
