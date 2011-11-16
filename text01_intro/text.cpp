@@ -13,7 +13,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
+/* Using FreeType 2 for rendering fonts */
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
@@ -263,35 +263,34 @@ void display()
 	GLfloat red[4] = {1, 0, 0, 1};
 	GLfloat transparent_green[4] = {0, 1, 0, 0.5};
 
-	/* Set font size to 48 pixels */
+	/* Set font size to 48 pixels, color to black */
 	FT_Set_Pixel_Sizes(face, 0, 48);
-
 	glUniform4fv(uniform_color, 1, black);
 
 	/* Effects of alignment */
-	render_text("The Quick Brown Fox Jumps Over The Lazy Dog",        -1 + 8 * sx, 1 - 50 * sy, sx, sy);
-	render_text("The Misaligned Fox Jumps Over The Lazy Dog",         -1 + 8.5 * sx, 1 - 100.5 * sy, sx, sy);
+	render_text("The Quick Brown Fox Jumps Over The Lazy Dog",          -1 + 8 * sx,   1 - 50 * sy,    sx, sy);
+	render_text("The Misaligned Fox Jumps Over The Lazy Dog",           -1 + 8.5 * sx, 1 - 100.5 * sy, sx, sy);
 
 	/* Scaling the texture versus changing the font size */
-	render_text("The Small Texture Scaled Fox Jumps Over The Lazy Dog", -1 + 8 * sx, 1 - 175 * sy, sx * 0.5, sy * 0.5);
+	render_text("The Small Texture Scaled Fox Jumps Over The Lazy Dog", -1 + 8 * sx,   1 - 175 * sy,   sx * 0.5, sy * 0.5);
 	FT_Set_Pixel_Sizes(face, 0, 24);
-	render_text("The Small Font Sized Fox Jumps Over The Lazy Dog",        -1 + 8 * sx, 1 - 200 * sy, sx, sy);
+	render_text("The Small Font Sized Fox Jumps Over The Lazy Dog",     -1 + 8 * sx,   1 - 200 * sy,   sx, sy);
 	FT_Set_Pixel_Sizes(face, 0, 48);
-	render_text("The Tiny Texture Scaled Fox Jumps Over The Lazy Dog",         -1 + 8 * sx, 1 - 225 * sy, sx * 0.25, sy * 0.25);
+	render_text("The Tiny Texture Scaled Fox Jumps Over The Lazy Dog",  -1 + 8 * sx,   1 - 235 * sy,   sx * 0.25, sy * 0.25);
 	FT_Set_Pixel_Sizes(face, 0, 12);
-	render_text("The Tiny Font Sized Fox Jumps Over The Lazy Dog",         -1 + 8 * sx, 1 - 250 * sy, sx, sy);
+	render_text("The Tiny Font Sized Fox Jumps Over The Lazy Dog",      -1 + 8 * sx,   1 - 250 * sy,   sx, sy);
 	FT_Set_Pixel_Sizes(face, 0, 48);
 
 	/* Colors and transparency */
-	render_text("The Solid Black Fox Jumps Over The Lazy Dog",        -1 + 8 * sx, 1 - 430 * sy, sx, sy);
+	render_text("The Solid Black Fox Jumps Over The Lazy Dog",          -1 + 8 * sx,   1 - 430 * sy,   sx, sy);
 
 	glUniform4fv(uniform_color, 1, red);
-	render_text("The Solid Red Fox Jumps Over The Lazy Dog",          -1 + 8 * sx, 1 - 330 * sy, sx, sy);
-	render_text("The Solid Red Fox Jumps Over The Lazy Dog",          -1 + 28 * sx, 1 - 450 * sy, sx, sy);
+	render_text("The Solid Red Fox Jumps Over The Lazy Dog",            -1 + 8 * sx,   1 - 330 * sy,   sx, sy);
+	render_text("The Solid Red Fox Jumps Over The Lazy Dog",            -1 + 28 * sx,  1 - 450 * sy,   sx, sy);
 
 	glUniform4fv(uniform_color, 1, transparent_green);
-	render_text("The Transparent Green Fox Jumps Over The Lazy Dog",  -1 + 8 * sx, 1 - 380 * sy, sx, sy);
-	render_text("The Transparent Green Fox Jumps Over The Lazy Dog",  -1 + 18 * sx, 1 - 440 * sy, sx, sy);
+	render_text("The Transparent Green Fox Jumps Over The Lazy Dog",    -1 + 8 * sx,   1 - 380 * sy,   sx, sy);
+	render_text("The Transparent Green Fox Jumps Over The Lazy Dog",    -1 + 18 * sx,  1 - 440 * sy,   sx, sy);
 
 	glutSwapBuffers();
 }
@@ -305,7 +304,7 @@ int main(int argc, char* argv[]) {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE);
 	glutInitWindowSize(640, 480);
-	glutCreateWindow("My Graph");
+	glutCreateWindow("Basic Text");
 
 #ifndef NOGLEW
 	GLenum glew_status = glewInit();
