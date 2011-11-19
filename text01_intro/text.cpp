@@ -34,6 +34,8 @@ GLuint vbo;
 FT_Library ft;
 FT_Face face;
 
+const char *fontfilename;
+
 /**
  * Store all the file's contents in memory, useful to pass shaders
  * source code to OpenGL
@@ -121,13 +123,13 @@ int init_resources()
 	/* Initialize the FreeType2 library */
 	if(FT_Init_FreeType(&ft)) {
 		fprintf(stderr, "Could not init freetype library\n");
-		return 1;
+		return 0;
 	}
 
 	/* Load a font */
-	if(FT_New_Face(ft, "../font/FreeSans.ttf", 0, &face)) {
-		fprintf(stderr, "Could not open font\n");
-		return 1;
+	if(FT_New_Face(ft, fontfilename, 0, &face)) {
+		fprintf(stderr, "Could not open font %s\n", fontfilename);
+		return 0;
 	}
 
 	/* Compile and link the shader program */
@@ -305,6 +307,11 @@ int main(int argc, char* argv[]) {
 	glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE);
 	glutInitWindowSize(640, 480);
 	glutCreateWindow("Basic Text");
+
+	if(argc > 1)
+		fontfilename = argv[1];
+	else
+		fontfilename = "../font/FreeSans.ttf";
 
 #ifndef NOGLEW
 	GLenum glew_status = glewInit();
