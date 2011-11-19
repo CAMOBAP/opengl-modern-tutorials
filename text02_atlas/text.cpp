@@ -396,7 +396,7 @@ int main(int argc, char* argv[]) {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE);
 	glutInitWindowSize(640, 480);
-	glutCreateWindow("Basic Text");
+	glutCreateWindow("Texture atlas text");
 
 	if(argc > 1)
 		fontfilename = argv[1];
