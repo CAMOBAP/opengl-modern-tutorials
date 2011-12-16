@@ -62,15 +62,7 @@ static const char *blocknames[16] = {
 	"water", "glass", "brick", "ore", "woodrings", "white", "black", "x-y"
 };
 
-struct byte4 {
-	GLbyte x;
-	GLbyte y;
-	GLbyte z;
-	GLbyte t;
-
-	byte4() {}
-	byte4(GLbyte x, GLbyte y, GLbyte z, GLbyte t): x(x), y(y), z(z), t(t) {}
-};
+typedef glm::detail::tvec4<GLbyte> byte4;
 
 static struct chunk *chunk_slot[CHUNKSLOTS] = {0};
 
@@ -260,7 +252,7 @@ struct chunk {
 	}
 
 	void update() {
-		byte4 vertex[14739 * 6];
+		byte4 vertex[CX * CY * CZ * 18];
 		int i = 0;
 		int merged = 0;
 		bool vis = false;;
