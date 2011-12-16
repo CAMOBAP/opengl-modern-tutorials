@@ -603,6 +603,7 @@ struct superchunk {
 	}
 
 	void render(const glm::mat4 &pv) {
+		float ud;
 		int ux = -1;
 		int uy = -1;
 		int uz = -1;
@@ -610,10 +611,29 @@ struct superchunk {
 		for(int x = 0; x < SCX; x++) {
 			for(int y = 0; y < SCY; y++) {
 				for(int z = 0; z < SCZ; z++) {
+					glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(1.0/8, 1.0/8, 1.0/8)), glm::vec3(c[x][y][z]->ax * CX, c[x][y][z]->ay * CY, c[x][y][z]->az * CZ));
+					glm::mat4 mvp = pv * model;
+
+					// Is this chunk on the screen?
+					glm::vec4 center = mvp * glm::vec4(CX / 2, CY / 2, CZ / 2, 1);
+
+					float d = glm::length(center);
+					center.x /= center.w;
+					center.y /= center.w;
+
+					// If it is behind the camera, don't bother drawing it
+					if(center.z < -1)
+						continue;
+
+					// If it is outside the screen, don't bother drawing it
+					if(fabsf(center.x) > 1 + fabsf(CY / 2 / center.w) || fabsf(center.y) > 1 + fabsf(CY / 2 / center.w))
+						continue;
+
 					// If this chunk is not initialized, skip it
 					if(!c[x][y][z]->initialized) {
-						// But if it is the closest to the center, mark it for initialization
-						if(ux < 0 || hypotf(x - 16, z - 16) + y < hypotf(ux - 16, uz - 16) + uy) {
+						// But if it is the closest to the camera, mark it for initialization
+						if(ux < 0 || d < ud) {
+							ud = d;
 							ux = x;
 							uy = y;
 							uz = z;
@@ -621,8 +641,6 @@ struct superchunk {
 						continue;
 					}
 
-					glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(1.0/8, 1.0/8, 1.0/8)), glm::vec3(c[x][y][z]->ax * CX, c[x][y][z]->ay * CY, c[x][y][z]->az * CZ));
-					glm::mat4 mvp = pv * model;
 					glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
 
 					c[x][y][z]->render();
