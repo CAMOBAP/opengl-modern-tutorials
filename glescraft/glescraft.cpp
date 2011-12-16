@@ -18,24 +18,24 @@
 #include "noise.cpp"
 #include "textures.c"
 
-GLuint program;
-GLint attribute_coord;
-GLint uniform_mvp;
-GLuint texture;
-GLint uniform_texture;
-GLuint ground_vbo;
-GLuint cursor_vbo;
+static GLuint program;
+static GLint attribute_coord;
+static GLint uniform_mvp;
+static GLuint texture;
+static GLint uniform_texture;
+static GLuint ground_vbo;
+static GLuint cursor_vbo;
 
-glm::vec3 position;
-glm::vec3 forward;
-glm::vec3 right;
-glm::vec3 lookat;
-glm::vec3 angle;
+static glm::vec3 position;
+static glm::vec3 forward;
+static glm::vec3 right;
+static glm::vec3 lookat;
+static glm::vec3 angle;
 
-int ww, wh;
-int mx, my, mz;
-int face;
-uint8_t buildtype = 1;
+static int ww, wh;
+static int mx, my, mz;
+static int face;
+static uint8_t buildtype = 1;
 
 static time_t now;
 static unsigned int keys;
@@ -649,13 +649,13 @@ struct superchunk {
 	}
 };
 
-superchunk *world;
+static superchunk *world;
 
 /**
  * Store all the file's contents in memory, useful to pass shaders
  * source code to OpenGL
  */
-char* file_read(const char* filename) {
+static char* file_read(const char* filename) {
 	FILE* in = fopen(filename, "rb");
 	if (in == NULL) return NULL;
 
@@ -684,7 +684,7 @@ char* file_read(const char* filename) {
 /**
  * Display compilation errors from the OpenGL shader compiler
  */
-void print_log(GLuint object) {
+static void print_log(GLuint object) {
 	GLint log_length = 0;
 	if (glIsShader(object))
 		glGetShaderiv(object, GL_INFO_LOG_LENGTH, &log_length);
@@ -709,7 +709,7 @@ void print_log(GLuint object) {
 /**
  * Compile the shader from file 'filename', with error handling
  */
-GLint create_shader(const char* filename, GLenum type) {
+static GLint create_shader(const char* filename, GLenum type) {
 	const GLchar* source = file_read(filename);
 	if (source == NULL) {
 		fprintf(stderr, "Error opening %s: ", filename); perror("");
@@ -733,7 +733,7 @@ GLint create_shader(const char* filename, GLenum type) {
 }
 
 // Calculate the forward, right and lookat vectors from the angle vector
-void update_vectors() {
+static void update_vectors() {
 	forward.x = sinf(angle.x);
 	forward.y = 0;
 	forward.z = cosf(angle.x);
@@ -747,7 +747,7 @@ void update_vectors() {
 	lookat.z = cosf(angle.x) * cosf(angle.y);
 }
 
-int init_resources() {
+static int init_resources() {
 	int vertex_texture_units;
 	glGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, &vertex_texture_units);
 	if(!vertex_texture_units) {
@@ -816,14 +816,14 @@ int init_resources() {
 	return 1;
 }
 
-void reshape(int w, int h) {
+static void reshape(int w, int h) {
 	ww = w;
 	wh = h;
 	glViewport(0, 0, w, h);
 }
 
 // Not really GLSL fract(), but the absolute distance to the nearest integer value
-float fract(float value) {
+static float fract(float value) {
 	float f = value - floorf(value);
 	if(f > 0.5)
 		return 1 - f;
@@ -831,7 +831,7 @@ float fract(float value) {
 		return f;
 }
 
-void display() {
+static void display() {
 	glUseProgram(program);
 	glUniform1i(uniform_texture, 0);
 
@@ -982,7 +982,7 @@ void display() {
 	glutSwapBuffers();
 }
 
-void special(int key, int x, int y) {
+static void special(int key, int x, int y) {
 	switch(key) {
 		case GLUT_KEY_LEFT:
 			keys |= 1;
@@ -1015,7 +1015,7 @@ void special(int key, int x, int y) {
 	}
 }
 
-void specialup(int key, int x, int y) {
+static void specialup(int key, int x, int y) {
 	switch(key) {
 		case GLUT_KEY_LEFT:
 			keys &= ~1;
@@ -1038,7 +1038,7 @@ void specialup(int key, int x, int y) {
 	}
 }
 
-void idle() {
+static void idle() {
 	static int pt = 0;
 	static const float movespeed = 1;
 
@@ -1063,7 +1063,7 @@ void idle() {
 	glutPostRedisplay();
 }
 
-void motion(int x, int y) {
+static void motion(int x, int y) {
 	static bool warp = false;
 	static const float mousespeed = 0.001;
 
@@ -1091,7 +1091,7 @@ void motion(int x, int y) {
 	}
 }
 
-void mouse(int button, int state, int x, int y) {
+static void mouse(int button, int state, int x, int y) {
 	if(state != GLUT_DOWN)
 		return;
 
@@ -1128,7 +1128,7 @@ void mouse(int button, int state, int x, int y) {
 	}
 }
 
-void free_resources() {
+static void free_resources() {
 	glDeleteProgram(program);
 }
 
