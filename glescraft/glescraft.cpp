@@ -142,6 +142,7 @@ struct chunk {
 	}
 
 	void set(int x, int y, int z, uint8_t type) {
+		// If coordinates are outside this chunk, find the right one.
 		if(x < 0) {
 			if(left)
 				left->set(x + CX, y, z, type);
@@ -172,8 +173,25 @@ struct chunk {
 				back->set(x, y, z - CZ, type);
 			return;
 		}
+
+		// Change the block
 		blk[x][y][z] = type;
 		changed = true;
+
+		// When updating blocks at the edge of this chunk,
+		// visibility of blocks in the neighbouring chunk might change.
+		if(x == 0 && left)
+			left->changed = true;
+		if(x == CX - 1 && right)
+			right->changed = true;
+		if(y == 0 && below)
+			below->changed = true;
+		if(y == CY - 1 && above)
+			above->changed = true;
+		if(z == 0 && front)
+			front->changed = true;
+		if(z == CZ - 1 && back)
+			back->changed = true;
 	}
 
 	void perlin(int seed) {
