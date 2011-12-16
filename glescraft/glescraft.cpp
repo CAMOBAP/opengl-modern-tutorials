@@ -489,7 +489,7 @@ struct chunk {
 						vertex[i - 1] = byte4(x + 1, y + 1, z + 1, side);
 						merged++;
 					} else {
-						vertex[i++] = byte4(x, y, z + 1, blk[x][y][z]);
+						vertex[i++] = byte4(x, y, z + 1, side);
 						vertex[i++] = byte4(x + 1, y, z + 1, side);
 						vertex[i++] = byte4(x, y + 1, z + 1, side);
 						vertex[i++] = byte4(x, y + 1, z + 1, side);
