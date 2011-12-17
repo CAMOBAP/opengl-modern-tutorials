@@ -4,7 +4,7 @@ varying vec4 texcoord;
 uniform sampler2D texture;
 
 const vec4 fogcolor = vec4(0.6, 0.8, 1.0, 1.0);
-const float fogdensity = .002;
+const float fogdensity = .00003;
 
 void main(void) {
 	vec2 coord2d;
