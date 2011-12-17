@@ -611,7 +611,7 @@ struct superchunk {
 		for(int x = 0; x < SCX; x++) {
 			for(int y = 0; y < SCY; y++) {
 				for(int z = 0; z < SCZ; z++) {
-					glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(1.0/8, 1.0/8, 1.0/8)), glm::vec3(c[x][y][z]->ax * CX, c[x][y][z]->ay * CY, c[x][y][z]->az * CZ));
+					glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(c[x][y][z]->ax * CX, c[x][y][z]->ay * CY, c[x][y][z]->az * CZ));
 					glm::mat4 mvp = pv * model;
 
 					// Is this chunk on the screen?
@@ -622,11 +622,11 @@ struct superchunk {
 					center.y /= center.w;
 
 					// If it is behind the camera, don't bother drawing it
-					if(center.z < -1)
+					if(center.z < -CY / 2)
 						continue;
 
 					// If it is outside the screen, don't bother drawing it
-					if(fabsf(center.x) > 1 + fabsf(CY / 2 / center.w) || fabsf(center.y) > 1 + fabsf(CY / 2 / center.w))
+					if(fabsf(center.x) > 1 + fabsf(CY * 2 / center.w) || fabsf(center.y) > 1 + fabsf(CY * 2 / center.w))
 						continue;
 
 					// If this chunk is not initialized, skip it
@@ -814,16 +814,16 @@ static int init_resources() {
 
 	world = new superchunk;
 
-	position = glm::vec3(0, 4, 0);
+	position = glm::vec3(0, CY + 1, 0);
 	angle = glm::vec3(0, -0.5, 0);
 	update_vectors();
 
 	glGenBuffers(1, &ground_vbo);
 	float ground[4][4] = {
-		{-256, 0, -256, 1 - 128},
-		{-256, 0, +256, 1 - 128},
-		{+256, 0, +256, 1 - 128},
-		{+256, 0, -256, 1 - 128},
+		{-CX * SCX / 2, 0, -CZ * SCZ / 2, 1 - 128},
+		{-CX * SCX / 2, 0, +CZ * SCZ / 2, 1 - 128},
+		{+CX * SCX / 2, 0, +CZ * SCZ / 2, 1 - 128},
+		{+CX * SCX / 2, 0, -CZ * SCZ / 2, 1 - 128},
 	};
 
 	glBindBuffer(GL_ARRAY_BUFFER, ground_vbo);
@@ -853,11 +853,10 @@ static void display() {
 	glUseProgram(program);
 	glUniform1i(uniform_texture, 0);
 
-	glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(1.0/8, 1.0/8, 1.0/8));
 	glm::mat4 view = glm::lookAt(position, position + lookat, glm::vec3(0.0, 1.0, 0.0));
-	glm::mat4 projection = glm::perspective(45.0f, 1.0f*ww/wh, 0.01f, 100.0f);
+	glm::mat4 projection = glm::perspective(45.0f, 1.0f*ww/wh, 0.01f, 1000.0f);
 
-	glm::mat4 mvp = projection * view * model;
+	glm::mat4 mvp = projection * view;
 
 	glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
 
@@ -891,7 +890,7 @@ static void display() {
 
 	/* Then draw chunks */
 
-	world->render(projection * view);
+	world->render(mvp);
 
 	/* Find out coordinates of the center pixel */
 
@@ -901,7 +900,6 @@ static void display() {
 	glm::vec4 viewport = glm::vec4(0, 0, ww, wh);
 	glm::vec3 wincoord = glm::vec3(ww / 2, wh / 2, depth);
 	glm::vec3 objcoord = glm::unProject(wincoord, view, projection, viewport);
-	objcoord *= 8;
 
 	/* Find out which block it belongs to */
 
@@ -1021,12 +1019,12 @@ static void special(int key, int x, int y) {
 			keys |= 32;
 			break;
 		case GLUT_KEY_HOME:
-			position = glm::vec3(0, 2, 0);
-			angle = glm::vec3(0, 0, 0);
+			position = glm::vec3(0, CY + 1, 0);
+			angle = glm::vec3(0, -0.5, 0);
 			update_vectors();
 			break;
 		case GLUT_KEY_END:
-			position = glm::vec3(0, 80, 0);
+			position = glm::vec3(0, CX * SCX, 0);
 			angle = glm::vec3(0, -M_PI * 0.49, 0);
 			update_vectors();
 			break;
@@ -1058,7 +1056,7 @@ static void specialup(int key, int x, int y) {
 
 static void idle() {
 	static int pt = 0;
-	static const float movespeed = 1;
+	static const float movespeed = 10;
 
 	now = time(0);
 	int t = glutGet(GLUT_ELAPSED_TIME);
