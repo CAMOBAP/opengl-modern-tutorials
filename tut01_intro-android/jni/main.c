@@ -225,6 +225,8 @@ struct android_app* state;
 void android_main(struct android_app* state_param) {
   LOGI("android_main");
   state = state_param;
+  // Quick'n'dirty way to read the pre-copied shaders
+  chdir("/data/data/org.wikibooks.OpenGL/");
   // Call user's main
   main();
 }
