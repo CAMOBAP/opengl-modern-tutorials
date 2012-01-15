@@ -66,7 +66,8 @@ Notes:
   - [/] Stencil in plane intersection - strife through portals - avoid flicker when traversing portals
     - [ ] Recreate portal shape on window resize
 - [X] Collision detection
-- [X] Warp
+- [/] Warp
+  - [ ] Reposition body/head so the controls (turn left/right...) work on the right axis again
 - [/] Infinite/recursive portals display (portals facing each others)
 - [ ] Object at 2 locations at the same time (duplicate objects?)
   - Solve problem with objects too close to the portal and the portal
