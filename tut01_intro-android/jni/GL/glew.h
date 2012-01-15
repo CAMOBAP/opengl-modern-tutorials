@@ -89,6 +89,21 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
+#define GLEW_VERSION_1_1 1
+#define GLEW_VERSION_1_2 1
+#define GLEW_VERSION_1_2_1 1
+#define GLEW_VERSION_1_3 1
+#define GLEW_VERSION_1_4 1
+#define GLEW_VERSION_1_5 1
+#define GLEW_VERSION_2_0 1
+#define GLEW_VERSION_2_1 0
+#define GLEW_VERSION_3_0 0
+#define GLEW_VERSION_3_1 0
+#define GLEW_VERSION_3_2 0
+#define GLEW_VERSION_3_3 0
+#define GLEW_VERSION_4_0 0
+#define GLEW_VERSION_4_1 0
+
 /* ------------------------------------------------------------------------- */
 
 /* error codes */

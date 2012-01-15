@@ -1,1 +1,1 @@
-../../tut01_intro/triangle.cpp
+../../tut02_clean/triangle.cpp
