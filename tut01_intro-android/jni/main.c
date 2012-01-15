@@ -20,7 +20,8 @@
 #include <errno.h>
 
 #include <EGL/egl.h>
-#include <GLES/gl.h>
+#include <GLES2/gl2.h>
+//#include <GLES2/gl2ext.h>
 
 #include <android/sensor.h>
 #include <android/log.h>
@@ -28,6 +29,13 @@
 
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "native-activity", __VA_ARGS__))
 #define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "native-activity", __VA_ARGS__))
+
+/* <MiniGLUT> */
+static void (*miniglutDisplayCallback)(void) = NULL;
+static unsigned int miniglutDisplayMode = 0;
+static struct engine engine;
+/* </MiniGLUT> */
+
 
 /**
  * Our saved state data.
@@ -48,19 +56,22 @@ struct engine {
     const ASensor* accelerometerSensor;
     ASensorEventQueue* sensorEventQueue;
 
-    int animating;
     EGLDisplay display;
     EGLSurface surface;
     EGLContext context;
     int32_t width;
     int32_t height;
     struct saved_state state;
+
+    int miniglutInit;
 };
 
 /**
  * Initialize an EGL context for the current display.
  */
 static int engine_init_display(struct engine* engine) {
+    engine->miniglutInit = 1;
+
     // initialize OpenGL ES and EGL
 
     /*
@@ -68,11 +79,13 @@ static int engine_init_display(struct engine* engine) {
      * Below, we select an EGLConfig with at least 8 bits per color
      * component compatible with on-screen windows
      */
+    // Ensure OpenGLES 2.0 context (mandatory)
     const EGLint attribs[] = {
             EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
             EGL_BLUE_SIZE, 8,
             EGL_GREEN_SIZE, 8,
             EGL_RED_SIZE, 8,
+	    EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
             EGL_NONE
     };
     EGLint w, h, dummy, format;
@@ -82,6 +95,7 @@ static int engine_init_display(struct engine* engine) {
     EGLContext context;
 
     EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    // TODO : apply miniglutDisplayMode
 
     eglInitialize(display, 0, 0);
 
@@ -99,7 +113,12 @@ static int engine_init_display(struct engine* engine) {
     ANativeWindow_setBuffersGeometry(engine->app->window, 0, 0, format);
 
     surface = eglCreateWindowSurface(display, config, engine->app->window, NULL);
-    context = eglCreateContext(display, config, NULL, NULL);
+    // Ensure OpenGLES 2.0 context (mandatory)
+    static const EGLint ctx_attribs[] = {
+      EGL_CONTEXT_CLIENT_VERSION, 2,
+      EGL_NONE
+    };
+    context = eglCreateContext(display, config, EGL_NO_CONTEXT, ctx_attribs);
 
     if (eglMakeCurrent(display, surface, surface, context) == EGL_FALSE) {
         LOGW("Unable to eglMakeCurrent");
@@ -116,30 +135,10 @@ static int engine_init_display(struct engine* engine) {
     engine->height = h;
     engine->state.angle = 0;
 
-    // Initialize GL state.
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
-    glEnable(GL_CULL_FACE);
-    glShadeModel(GL_SMOOTH);
-    glDisable(GL_DEPTH_TEST);
+    // miniglut:
+    glViewport(0, 0, 480, 800);
 
     return 0;
-}
-
-/**
- * Just the current frame in the display.
- */
-static void engine_draw_frame(struct engine* engine) {
-    if (engine->display == NULL) {
-        // No display.
-        return;
-    }
-
-    // Just fill the screen with a color.
-    glClearColor(((float)engine->state.x)/engine->width, engine->state.angle,
-            ((float)engine->state.y)/engine->height, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    eglSwapBuffers(engine->display, engine->surface);
 }
 
 /**
@@ -156,7 +155,6 @@ static void engine_term_display(struct engine* engine) {
         }
         eglTerminate(engine->display);
     }
-    engine->animating = 0;
     engine->display = EGL_NO_DISPLAY;
     engine->context = EGL_NO_CONTEXT;
     engine->surface = EGL_NO_SURFACE;
@@ -168,7 +166,6 @@ static void engine_term_display(struct engine* engine) {
 static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) {
     struct engine* engine = (struct engine*)app->userData;
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
-        engine->animating = 1;
         engine->state.x = AMotionEvent_getX(event, 0);
         engine->state.y = AMotionEvent_getY(event, 0);
         return 1;
@@ -192,7 +189,6 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
             // The window is being shown, get it ready.
             if (engine->app->window != NULL) {
                 engine_init_display(engine);
-                engine_draw_frame(engine);
             }
             break;
         case APP_CMD_TERM_WINDOW:
@@ -216,9 +212,6 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
                 ASensorEventQueue_disableSensor(engine->sensorEventQueue,
                         engine->accelerometerSensor);
             }
-            // Also stop animating.
-            engine->animating = 0;
-            engine_draw_frame(engine);
             break;
     }
 }
@@ -228,8 +221,90 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
  * android_native_app_glue.  It runs in its own thread, with its own
  * event loop for receiving input events and doing other things.
  */
-void android_main(struct android_app* state) {
-    struct engine engine;
+struct android_app* state;
+void android_main(struct android_app* state_param) {
+  LOGI("android_main");
+  state = state_param;
+  // Call user's main
+  main();
+}
+
+void process_events() {
+        // Read all pending events.
+        int ident;
+        int events;
+        struct android_poll_source* source;
+
+	// We loop until all events are read, then continue
+        // to draw the next frame of animation.
+        while ((ident=ALooper_pollAll(0, NULL, &events, (void**)&source)) >= 0) {
+
+            // Process this event.
+            if (source != NULL) {
+                source->process(state, source);
+            }
+
+            // If a sensor has data, process it now.
+            if (ident == LOOPER_ID_USER) {
+                if (engine.accelerometerSensor != NULL) {
+                    ASensorEvent event;
+                    while (ASensorEventQueue_getEvents(engine.sensorEventQueue,
+                            &event, 1) > 0) {
+		      ; // Don't spam the logs
+		      //LOGI("accelerometer: x=%f y=%f z=%f",
+                      //          event.acceleration.x, event.acceleration.y,
+                      //          event.acceleration.z);
+                    }
+                }
+            }
+
+            // Check if we are exiting.
+            if (state->destroyRequested != 0) {
+                engine_term_display(&engine);
+                return;
+            }
+        }
+}
+
+void glutMainLoop() {
+  LOGI("glutMainLoop");
+
+    // loop waiting for stuff to do.
+    while (1) {
+        process_events();
+
+	if (miniglutDisplayCallback != NULL)
+	    miniglutDisplayCallback();
+    }
+}
+//END_INCLUDE(all)
+
+
+void glutInit( int* pargc, char** argv ) {
+  LOGI("glutInit");
+  // NOOP
+}
+
+void glutInitDisplayMode( unsigned int displayMode ) {
+  LOGI("glutInitDisplayMode");
+  miniglutDisplayMode = displayMode;
+}
+
+void glutInitWindowSize( int width, int height ) {
+  LOGI("glutInitWindowSize");
+  // TODO?
+}
+
+int glutCreateWindow( const char* title ) {
+  LOGI("glutCreateWindow");
+  static int window_id = 0;
+  if (window_id == 0) {
+    window_id++;
+  } else {
+    // Only one full-screen window
+    return 0;
+  }
+
 
     // Make sure glue isn't stripped.
     app_dummy();
@@ -252,56 +327,22 @@ void android_main(struct android_app* state) {
         engine.state = *(struct saved_state*)state->savedState;
     }
 
-    // loop waiting for stuff to do.
+    // Wait until window is available and OpenGL context is created
+    while (engine.miniglutInit == 0)
+      process_events();
 
-    while (1) {
-        // Read all pending events.
-        int ident;
-        int events;
-        struct android_poll_source* source;
-
-        // If not animating, we will block forever waiting for events.
-        // If animating, we loop until all events are read, then continue
-        // to draw the next frame of animation.
-        while ((ident=ALooper_pollAll(engine.animating ? 0 : -1, NULL, &events,
-                (void**)&source)) >= 0) {
-
-            // Process this event.
-            if (source != NULL) {
-                source->process(state, source);
-            }
-
-            // If a sensor has data, process it now.
-            if (ident == LOOPER_ID_USER) {
-                if (engine.accelerometerSensor != NULL) {
-                    ASensorEvent event;
-                    while (ASensorEventQueue_getEvents(engine.sensorEventQueue,
-                            &event, 1) > 0) {
-                        LOGI("accelerometer: x=%f y=%f z=%f",
-                                event.acceleration.x, event.acceleration.y,
-                                event.acceleration.z);
-                    }
-                }
-            }
-
-            // Check if we are exiting.
-            if (state->destroyRequested != 0) {
-                engine_term_display(&engine);
-                return;
-            }
-        }
-
-        if (engine.animating) {
-            // Done with events; draw next animation frame.
-            engine.state.angle += .01f;
-            if (engine.state.angle > 1) {
-                engine.state.angle = 0;
-            }
-
-            // Drawing is throttled to the screen update rate, so there
-            // is no need to do timing here.
-            engine_draw_frame(&engine);
-        }
-    }
+    if (engine.display != EGL_NO_DISPLAY)
+      return window_id;
+    else
+      return 0;
 }
-//END_INCLUDE(all)
+
+void glutDisplayFunc( void (* callback)( void ) ) {
+  LOGI("glutDisplayFunc");
+  miniglutDisplayCallback = callback;
+}
+
+void glutSwapBuffers( void ) {
+  //LOGI("glutSwapBuffers");
+  eglSwapBuffers(engine.display, engine.surface);
+}
