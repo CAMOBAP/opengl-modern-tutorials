@@ -90,7 +90,7 @@ void print_log(GLuint object)
 /**
  * Compile the shader from file 'filename', with error handling
  */
-GLint create_shader(const char* filename, GLenum type)
+GLuint create_shader(const char* filename, GLenum type)
 {
   const GLchar* source = file_read(filename);
   if (source == NULL) {
