@@ -8,3 +8,4 @@ all:
 clean:
 	ndk-build clean
 	ant clean
+	rm -rf obj/ libs/ build.xml proguard.cfg project.properties local.properties
