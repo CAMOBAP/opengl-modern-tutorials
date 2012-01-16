@@ -31,9 +31,13 @@
 #define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "native-activity", __VA_ARGS__))
 
 /* <MiniGLUT> */
+#include "GL/glut.h"
 static void (*miniglutDisplayCallback)(void) = NULL;
+static void (*miniglutIdleCallback)(void) = NULL;
 static unsigned int miniglutDisplayMode = 0;
 static struct engine engine;
+#include <sys/time.h>
+static long miniglutStartTimeMillis = 0;
 /* </MiniGLUT> */
 
 
@@ -275,6 +279,9 @@ void glutMainLoop() {
     while (1) {
         process_events();
 
+	// TODO: don't call DisplayCallback unless necessary (cf. glutPostRedisplay)
+	if (miniglutIdleCallback != NULL)
+	    miniglutIdleCallback();
 	if (miniglutDisplayCallback != NULL)
 	    miniglutDisplayCallback();
     }
@@ -284,7 +291,9 @@ void glutMainLoop() {
 
 void glutInit( int* pargc, char** argv ) {
   LOGI("glutInit");
-  // NOOP
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  miniglutStartTimeMillis = tv.tv_sec * 1000 + tv.tv_usec/1000;
 }
 
 void glutInitDisplayMode( unsigned int displayMode ) {
@@ -344,7 +353,29 @@ void glutDisplayFunc( void (* callback)( void ) ) {
   miniglutDisplayCallback = callback;
 }
 
+void glutIdleFunc( void (* callback)( void ) ) {
+  LOGI("glutIdleFunc");
+  miniglutIdleCallback = callback;
+}
+
 void glutSwapBuffers( void ) {
   //LOGI("glutSwapBuffers");
   eglSwapBuffers(engine.display, engine.surface);
 }
+
+int glutGet( GLenum query ) {
+  //LOGI("glutGet");
+  if (query == GLUT_ELAPSED_TIME) {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    long cur_time = tv.tv_sec * 1000 + tv.tv_usec/1000;
+    //LOGI("glutGet: %d", (int) cur_time - miniglutStartTimeMillis);
+    return cur_time - miniglutStartTimeMillis;
+  }
+}
+
+void glutPostRedisplay() {
+  // TODO
+}
+
+// TODO: handle resize when screen is rotated

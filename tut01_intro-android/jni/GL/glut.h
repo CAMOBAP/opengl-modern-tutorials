@@ -47,8 +47,11 @@ FGAPI void    FGAPIENTRY glutInitDisplayMode( unsigned int displayMode );
 FGAPI void    FGAPIENTRY glutInitWindowSize( int width, int height );
 FGAPI int     FGAPIENTRY glutCreateWindow( const char* title );
 FGAPI void    FGAPIENTRY glutDisplayFunc( void (* callback)( void ) );
+FGAPI void    FGAPIENTRY glutIdleFunc( void (* callback)( void ) );
 FGAPI void    FGAPIENTRY glutMainLoop( void );
 FGAPI void    FGAPIENTRY glutSwapBuffers( void );
+FGAPI int     FGAPIENTRY glutGet( GLenum query );
+FGAPI void    FGAPIENTRY glutPostRedisplay( void );
 
 /*
  * GLUT API macro definitions -- the display mode definitions
@@ -65,6 +68,12 @@ FGAPI void    FGAPIENTRY glutSwapBuffers( void );
 #define  GLUT_MULTISAMPLE                   0x0080
 #define  GLUT_STEREO                        0x0100
 #define  GLUT_LUMINANCE                     0x0200
+
+
+/*
+ * GLUT API macro definitions -- the glutGet parameters
+ */
+#define  GLUT_ELAPSED_TIME                  0x02BC
 
 #ifdef __cplusplus
     }
