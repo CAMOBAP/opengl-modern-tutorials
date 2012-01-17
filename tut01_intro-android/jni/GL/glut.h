@@ -48,6 +48,7 @@ FGAPI void    FGAPIENTRY glutInitWindowSize( int width, int height );
 FGAPI int     FGAPIENTRY glutCreateWindow( const char* title );
 FGAPI void    FGAPIENTRY glutDisplayFunc( void (* callback)( void ) );
 FGAPI void    FGAPIENTRY glutIdleFunc( void (* callback)( void ) );
+FGAPI void    FGAPIENTRY glutReshapeFunc( void (* callback)( int, int ) );
 FGAPI void    FGAPIENTRY glutMainLoop( void );
 FGAPI void    FGAPIENTRY glutSwapBuffers( void );
 FGAPI int     FGAPIENTRY glutGet( GLenum query );

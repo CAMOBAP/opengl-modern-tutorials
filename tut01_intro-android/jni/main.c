@@ -34,6 +34,7 @@
 #include "GL/glut.h"
 static void (*miniglutDisplayCallback)(void) = NULL;
 static void (*miniglutIdleCallback)(void) = NULL;
+static void (*miniglutReshapeCallback)(int,int) = NULL;
 static unsigned int miniglutDisplayMode = 0;
 static struct engine engine;
 #include <sys/time.h>
@@ -90,6 +91,7 @@ static int engine_init_display(struct engine* engine) {
             EGL_GREEN_SIZE, 8,
             EGL_RED_SIZE, 8,
 	    EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+	    EGL_DEPTH_SIZE, (miniglutDisplayMode & GLUT_DEPTH) ? 24 : 0,
             EGL_NONE
     };
     EGLint w, h, dummy, format;
@@ -275,6 +277,9 @@ void process_events() {
 void glutMainLoop() {
   LOGI("glutMainLoop");
 
+    if (miniglutReshapeCallback != NULL)
+        miniglutReshapeCallback(480, 800);
+
     // loop waiting for stuff to do.
     while (1) {
         process_events();
@@ -358,6 +363,11 @@ void glutIdleFunc( void (* callback)( void ) ) {
   miniglutIdleCallback = callback;
 }
 
+void glutReshapeFunc(void(*callback)(int,int)) {
+  LOGI("glutReshapeFunc");
+  miniglutReshapeCallback = callback;
+}
+
 void glutSwapBuffers( void ) {
   //LOGI("glutSwapBuffers");
   eglSwapBuffers(engine.display, engine.surface);
@@ -379,3 +389,4 @@ void glutPostRedisplay() {
 }
 
 // TODO: handle resize when screen is rotated
+// TODO: handle Reshape

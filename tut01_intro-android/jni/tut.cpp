@@ -1,1 +1,1 @@
-../../tut04_transform/triangle.cpp
+../../tut05_cube/cube.cpp
