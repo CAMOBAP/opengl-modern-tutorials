@@ -46,7 +46,6 @@ static long miniglutStartTimeMillis = 0;
  * Our saved state data.
  */
 struct saved_state {
-    float angle;
     int32_t x;
     int32_t y;
 };
@@ -139,7 +138,6 @@ static int engine_init_display(struct engine* engine) {
     engine->surface = surface;
     engine->width = w;
     engine->height = h;
-    engine->state.angle = 0;
 
     // miniglut:
     glViewport(0, 0, 480, 800);

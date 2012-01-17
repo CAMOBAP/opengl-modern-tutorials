@@ -1,1 +1,1 @@
-../../tut05_cube/cube.cpp
+../../tut06_textures/cube.cpp
