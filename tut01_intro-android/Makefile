@@ -1,8 +1,10 @@
 all:
-	ndk-build
+	ndk-build NDK_DEBUG=1
 	android update project --name wikibooks-opengl --path . --target "android-10"
 	ant clean
 	ant debug
+
+install:
 	adb install -r bin/wikibooks-opengl-debug.apk
 
 clean:
