@@ -226,7 +226,7 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
 
 void print_info_paths(struct android_app* state_param) {
     JNIEnv* env = state_param->activity->env;
-    jclass activityClass = (*env)->FindClass(env, "android/app/NativeActivity");
+    jclass activityClass = (*env)->GetObjectClass(env, state_param->activity->clazz);
 
     jclass fileClass = (*env)->FindClass(env, "java/io/File");
     jmethodID getAbsolutePath = (*env)->GetMethodID(env, fileClass, "getAbsolutePath", "()Ljava/lang/String;");
@@ -245,6 +245,7 @@ void print_info_paths(struct android_app* state_param) {
 
     {
 	// /data/app/org.wikibooks.OpenGL-X.apk
+	// /mnt/asec/org.wikibooks.OpenGL-X/pkg.apk
 	jmethodID method = (*env)->GetMethodID(env, activityClass, "getPackageResourcePath", "()Ljava/lang/String;");
 	jobject jpath = (*env)->CallObjectMethod(env, state_param->activity->clazz, method);
 	const char* dir = (*env)->GetStringUTFChars(env, (jstring) jpath, NULL);
@@ -254,6 +255,7 @@ void print_info_paths(struct android_app* state_param) {
 
     {
 	// /data/app/org.wikibooks.OpenGL-X.apk
+	// /mnt/asec/org.wikibooks.OpenGL-X/pkg.apk
 	jmethodID method = (*env)->GetMethodID(env, activityClass, "getPackageCodePath", "()Ljava/lang/String;");
 	jobject jpath = (*env)->CallObjectMethod(env, state_param->activity->clazz, method);
 	const char* dir = (*env)->GetStringUTFChars(env, (jstring) jpath, NULL);
@@ -278,7 +280,7 @@ void android_main(struct android_app* state_param) {
     (*vm)->AttachCurrentThread(vm, &env, NULL);
 
     // Get path to data dir (/data/data/org.wikibooks.OpenGL/files)
-    jclass activityClass = (*env)->FindClass(env, "android/app/NativeActivity");
+    jclass activityClass = (*env)->GetObjectClass(env, state_param->activity->clazz);
     jclass fileClass = (*env)->FindClass(env, "java/io/File");
     jmethodID getAbsolutePath = (*env)->GetMethodID(env, fileClass, "getAbsolutePath", "()Ljava/lang/String;");
 
