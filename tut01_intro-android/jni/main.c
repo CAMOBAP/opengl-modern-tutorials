@@ -232,6 +232,16 @@ void print_info_paths(struct android_app* state_param) {
     jmethodID getAbsolutePath = (*env)->GetMethodID(env, fileClass, "getAbsolutePath", "()Ljava/lang/String;");
 
     {
+	// /data/data/org.wikibooks.OpenGL/files
+	jmethodID method = (*env)->GetMethodID(env, activityClass, "getFilesDir", "()Ljava/io/File;");
+	jobject file = (*env)->CallObjectMethod(env, state_param->activity->clazz, method);
+	jobject jpath = (*env)->CallObjectMethod(env, file, getAbsolutePath);
+	const char* dir = (*env)->GetStringUTFChars(env, (jstring) jpath, NULL);
+	LOGI("%s", dir);
+	(*env)->ReleaseStringUTFChars(env, jpath, dir);
+    }
+
+    {
 	// /data/data/org.wikibooks.OpenGL/cache
 	jmethodID method = (*env)->GetMethodID(env, activityClass, "getCacheDir", "()Ljava/io/File;");
 	jobject file = (*env)->CallObjectMethod(env, state_param->activity->clazz, method);
@@ -279,12 +289,12 @@ void android_main(struct android_app* state_param) {
     JavaVM* vm = state_param->activity->vm;
     (*vm)->AttachCurrentThread(vm, &env, NULL);
 
-    // Get path to data dir (/data/data/org.wikibooks.OpenGL/files)
+    // Get path to cache dir (/data/data/org.wikibooks.OpenGL/cache)
     jclass activityClass = (*env)->GetObjectClass(env, state_param->activity->clazz);
     jclass fileClass = (*env)->FindClass(env, "java/io/File");
     jmethodID getAbsolutePath = (*env)->GetMethodID(env, fileClass, "getAbsolutePath", "()Ljava/lang/String;");
 
-    jmethodID getFilesDir = (*env)->GetMethodID(env, activityClass, "getFilesDir", "()Ljava/io/File;");
+    jmethodID getFilesDir = (*env)->GetMethodID(env, activityClass, "getCacheDir", "()Ljava/io/File;");
     jobject file = (*env)->CallObjectMethod(env, state_param->activity->clazz, getFilesDir);
     jobject jpath = (*env)->CallObjectMethod(env, file, getAbsolutePath);
     const char* app_dir = (*env)->GetStringUTFChars(env, (jstring) jpath, NULL);
