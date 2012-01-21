@@ -516,7 +516,15 @@ GLuint create_shader(const char* filename, GLenum type)
     return 0;
   }
   GLuint res = glCreateShader(type);
-  glShaderSource(res, 1, &source, NULL);
+  const GLchar* sources[2] = {
+#ifdef GL_ES_VERSION_2_0
+    "#version 100\n"
+    "#define GLES2\n",
+#else
+    "#version 120\n",
+#endif
+    source };
+  glShaderSource(res, 2, sources, NULL);
   free((void*)source);
 
   glCompileShader(res);
