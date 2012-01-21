@@ -1,1 +1,1 @@
-../../tut06_textures/cube.cpp
+../../bezier_teapot/teapot.cpp

@@ -39,6 +39,7 @@ static unsigned int miniglutDisplayMode = 0;
 static struct engine engine;
 #include <sys/time.h>
 static long miniglutStartTimeMillis = 0;
+static int miniglutTermWindow = 0;
 /* </MiniGLUT> */
 
 
@@ -93,7 +94,7 @@ static int engine_init_display(struct engine* engine) {
 	    EGL_DEPTH_SIZE, (miniglutDisplayMode & GLUT_DEPTH) ? 24 : 0,
             EGL_NONE
     };
-    EGLint w, h, dummy, format;
+    EGLint w, h, format;
     EGLint numConfigs;
     EGLConfig config;
     EGLSurface surface;
@@ -197,7 +198,8 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
             break;
         case APP_CMD_TERM_WINDOW:
             // The window is being hidden or closed, clean it up.
-            engine_term_display(engine);
+            //engine_term_display(engine);
+            miniglutTermWindow = 1;
             break;
         case APP_CMD_GAINED_FOCUS:
             // When our app gains focus, we start monitoring the accelerometer.
@@ -227,12 +229,20 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
  */
 struct android_app* state;
 void android_main(struct android_app* state_param) {
-  LOGI("android_main");
-  state = state_param;
-  // Quick'n'dirty way to read the pre-copied shaders
-  chdir("/data/data/org.wikibooks.OpenGL/");
-  // Call user's main
-  main();
+    LOGI("android_main");
+    state = state_param;
+
+    // Quick'n'dirty way to read the pre-copied shaders
+    chdir("/data/data/org.wikibooks.OpenGL/");
+
+    // Call user's main
+    main();
+
+    // Destroy OpenGL context
+    engine_term_display(&engine);
+
+    LOGI("android_main: end");
+    exit(0);
 }
 
 void process_events() {
@@ -263,17 +273,11 @@ void process_events() {
                     }
                 }
             }
-
-            // Check if we are exiting.
-            if (state->destroyRequested != 0) {
-                engine_term_display(&engine);
-                return;
-            }
         }
 }
 
 void glutMainLoop() {
-  LOGI("glutMainLoop");
+    LOGI("glutMainLoop");
 
     if (miniglutReshapeCallback != NULL)
         miniglutReshapeCallback(480, 800);
@@ -282,43 +286,57 @@ void glutMainLoop() {
     while (1) {
         process_events();
 
+	// Check if we are exiting.
+	//if (state->destroyRequested != 0) {
+	//    break;
+	//}
+
+	// Check if we are exiting.
+	// GLUT doesn't provide a callback to restore a lost context,
+	// so we just quit the application
+	if (miniglutTermWindow != 0) {
+	    break;
+	}
+
 	// TODO: don't call DisplayCallback unless necessary (cf. glutPostRedisplay)
 	if (miniglutIdleCallback != NULL)
 	    miniglutIdleCallback();
 	if (miniglutDisplayCallback != NULL)
 	    miniglutDisplayCallback();
     }
+
+    LOGI("glutMainLoop: end");
 }
 //END_INCLUDE(all)
 
 
 void glutInit( int* pargc, char** argv ) {
-  LOGI("glutInit");
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  miniglutStartTimeMillis = tv.tv_sec * 1000 + tv.tv_usec/1000;
+    LOGI("glutInit");
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    miniglutStartTimeMillis = tv.tv_sec * 1000 + tv.tv_usec/1000;
 }
 
 void glutInitDisplayMode( unsigned int displayMode ) {
-  LOGI("glutInitDisplayMode");
-  miniglutDisplayMode = displayMode;
+    LOGI("glutInitDisplayMode");
+    miniglutDisplayMode = displayMode;
 }
 
 void glutInitWindowSize( int width, int height ) {
-  LOGI("glutInitWindowSize");
-  // TODO?
+    LOGI("glutInitWindowSize");
+    // TODO?
 }
 
 int glutCreateWindow( const char* title ) {
-  LOGI("glutCreateWindow");
-  static int window_id = 0;
-  if (window_id == 0) {
-    window_id++;
-  } else {
-    // Only one full-screen window
-    return 0;
-  }
-
+    LOGI("glutCreateWindow");
+    static int window_id = 0;
+    if (window_id == 0) {
+	window_id++;
+    } else {
+	// Only one full-screen window
+	return 0;
+    }
+    
 
     // Make sure glue isn't stripped.
     app_dummy();
@@ -343,43 +361,43 @@ int glutCreateWindow( const char* title ) {
 
     // Wait until window is available and OpenGL context is created
     while (engine.miniglutInit == 0)
-      process_events();
+	process_events();
 
     if (engine.display != EGL_NO_DISPLAY)
-      return window_id;
+	return window_id;
     else
-      return 0;
+	return 0;
 }
 
 void glutDisplayFunc( void (* callback)( void ) ) {
-  LOGI("glutDisplayFunc");
-  miniglutDisplayCallback = callback;
+    LOGI("glutDisplayFunc");
+    miniglutDisplayCallback = callback;
 }
 
 void glutIdleFunc( void (* callback)( void ) ) {
-  LOGI("glutIdleFunc");
-  miniglutIdleCallback = callback;
+    LOGI("glutIdleFunc");
+    miniglutIdleCallback = callback;
 }
 
 void glutReshapeFunc(void(*callback)(int,int)) {
-  LOGI("glutReshapeFunc");
-  miniglutReshapeCallback = callback;
+    LOGI("glutReshapeFunc");
+    miniglutReshapeCallback = callback;
 }
 
 void glutSwapBuffers( void ) {
-  //LOGI("glutSwapBuffers");
-  eglSwapBuffers(engine.display, engine.surface);
+    //LOGI("glutSwapBuffers");
+    eglSwapBuffers(engine.display, engine.surface);
 }
 
 int glutGet( GLenum query ) {
-  //LOGI("glutGet");
-  if (query == GLUT_ELAPSED_TIME) {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    long cur_time = tv.tv_sec * 1000 + tv.tv_usec/1000;
-    //LOGI("glutGet: %d", (int) cur_time - miniglutStartTimeMillis);
-    return cur_time - miniglutStartTimeMillis;
-  }
+    //LOGI("glutGet");
+    if (query == GLUT_ELAPSED_TIME) {
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	long cur_time = tv.tv_sec * 1000 + tv.tv_usec/1000;
+	//LOGI("glutGet: %d", (int) cur_time - miniglutStartTimeMillis);
+	return cur_time - miniglutStartTimeMillis;
+    }
 }
 
 void glutPostRedisplay() {
@@ -388,3 +406,7 @@ void glutPostRedisplay() {
 
 // TODO: handle resize when screen is rotated
 // TODO: handle Reshape
+
+// Local Variables: ***
+// c-basic-offset:4 ***
+// End: ***
