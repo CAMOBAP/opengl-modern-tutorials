@@ -37,9 +37,11 @@ static void (*miniglutIdleCallback)(void) = NULL;
 static void (*miniglutReshapeCallback)(int,int) = NULL;
 static unsigned int miniglutDisplayMode = 0;
 static struct engine engine;
-#include <sys/time.h>
+#include <sys/time.h>  /* gettimeofday */
 static long miniglutStartTimeMillis = 0;
 static int miniglutTermWindow = 0;
+#include <stdlib.h>  /* exit */
+#include <stdio.h>  /* BUFSIZ */
 /* </MiniGLUT> */
 
 
@@ -222,6 +224,44 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
     }
 }
 
+void print_info_paths(struct android_app* state_param) {
+    JNIEnv* env = state_param->activity->env;
+    jclass activityClass = (*env)->FindClass(env, "android/app/NativeActivity");
+
+    jclass fileClass = (*env)->FindClass(env, "java/io/File");
+    jmethodID getAbsolutePath = (*env)->GetMethodID(env, fileClass, "getAbsolutePath", "()Ljava/lang/String;");
+
+    {
+	// /data/data/org.wikibooks.OpenGL/cache
+	jmethodID method = (*env)->GetMethodID(env, activityClass, "getCacheDir", "()Ljava/io/File;");
+	jobject file = (*env)->CallObjectMethod(env, state_param->activity->clazz, method);
+	jobject jpath = (*env)->CallObjectMethod(env, file, getAbsolutePath);
+	const char* dir = (*env)->GetStringUTFChars(env, (jstring) jpath, NULL);
+	LOGI("%s", dir);
+	(*env)->ReleaseStringUTFChars(env, jpath, dir);
+    }
+
+    // getExternalCacheDir -> ApplicationContext: unable to create external cache directory
+
+    {
+	// /data/app/org.wikibooks.OpenGL-X.apk
+	jmethodID method = (*env)->GetMethodID(env, activityClass, "getPackageResourcePath", "()Ljava/lang/String;");
+	jobject jpath = (*env)->CallObjectMethod(env, state_param->activity->clazz, method);
+	const char* dir = (*env)->GetStringUTFChars(env, (jstring) jpath, NULL);
+	LOGI("%s", dir);
+	(*env)->ReleaseStringUTFChars(env, jpath, dir);
+    }
+
+    {
+	// /data/app/org.wikibooks.OpenGL-X.apk
+	jmethodID method = (*env)->GetMethodID(env, activityClass, "getPackageCodePath", "()Ljava/lang/String;");
+	jobject jpath = (*env)->CallObjectMethod(env, state_param->activity->clazz, method);
+	const char* dir = (*env)->GetStringUTFChars(env, (jstring) jpath, NULL);
+	LOGI("%s", dir);
+	(*env)->ReleaseStringUTFChars(env, jpath, dir);
+    }
+}
+
 /**
  * This is the main entry point of a native application that is using
  * android_native_app_glue.  It runs in its own thread, with its own
@@ -232,8 +272,44 @@ void android_main(struct android_app* state_param) {
     LOGI("android_main");
     state = state_param;
 
-    // Quick'n'dirty way to read the pre-copied shaders
-    chdir("/data/data/org.wikibooks.OpenGL/");
+    // Get usable JNI context
+    JNIEnv* env = state_param->activity->env;
+    JavaVM* vm = state_param->activity->vm;
+    (*vm)->AttachCurrentThread(vm, &env, NULL);
+
+    // Get path to data dir (/data/data/org.wikibooks.OpenGL/files)
+    jclass activityClass = (*env)->FindClass(env, "android/app/NativeActivity");
+    jclass fileClass = (*env)->FindClass(env, "java/io/File");
+    jmethodID getAbsolutePath = (*env)->GetMethodID(env, fileClass, "getAbsolutePath", "()Ljava/lang/String;");
+
+    jmethodID getFilesDir = (*env)->GetMethodID(env, activityClass, "getFilesDir", "()Ljava/io/File;");
+    jobject file = (*env)->CallObjectMethod(env, state_param->activity->clazz, getFilesDir);
+    jobject jpath = (*env)->CallObjectMethod(env, file, getAbsolutePath);
+    const char* app_dir = (*env)->GetStringUTFChars(env, (jstring) jpath, NULL);
+
+    // chdir in the application file directory
+    LOGI("app_dir: %s", app_dir);
+    chdir(app_dir);
+    (*env)->ReleaseStringUTFChars(env, jpath, app_dir);
+    print_info_paths(state_param);
+
+    // Pre-extract assets, to avoid Android-specific file opening
+    jmethodID getAssets = (*env)->GetMethodID(env, activityClass, "getAssets", "()Landroid/content/res/AssetManager;"); 
+    jobject assetManager = (*env)->CallObjectMethod(env, state_param->activity->clazz, getAssets);
+    AAssetManager* mgr = AAssetManager_fromJava(env, assetManager);
+    AAssetDir* assetDir = AAssetManager_openDir(mgr, "");
+    char* filename = NULL;
+    while ((filename = AAssetDir_getNextFileName(assetDir)) != NULL) {
+	AAsset* asset = AAssetManager_open(mgr, filename, AASSET_MODE_STREAMING);
+	char buf[BUFSIZ];
+	int nb_read = 0;
+	FILE* out = fopen(filename, "w");
+	while ((nb_read = AAsset_read(asset, buf, BUFSIZ)) > 0)
+	    fwrite(buf, nb_read, 1, out);
+	fclose(out);
+	AAsset_close(asset);
+    }
+    AAssetDir_close(assetDir);
 
     // Call user's main
     main();
