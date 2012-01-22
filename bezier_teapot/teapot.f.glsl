@@ -1,5 +1,5 @@
 #ifdef GLES2
-precision mediump float;
+precision lowp float;
 #endif
 varying vec3 f_color;
 void main(void) {

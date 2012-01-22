@@ -1,1 +1,1 @@
-../../tut02_clean/triangle.cpp
+../../bezier_teapot/teapot.cpp
