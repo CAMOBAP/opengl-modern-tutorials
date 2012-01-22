@@ -85,9 +85,8 @@ static void onNativeWindowResized(ANativeActivity* activity, ANativeWindow* wind
     int32_t newWidth = ANativeWindow_getWidth(window);
     int32_t newHeight = ANativeWindow_getHeight(window);
     LOGI("w=%d, h=%d", newWidth, newHeight);
-    if (miniglutReshapeCallback != NULL) {
+    if (miniglutReshapeCallback != NULL)
 	miniglutReshapeCallback(newWidth, newHeight);
-    }
 }
 static void onContentRectChanged(ANativeActivity* activity, const ARect* rect) {
     LOGI("onContentRectChanged: l=%d,t=%d,r=%d,b=%d", rect->left, rect->top, rect->right, rect->bottom);
@@ -407,7 +406,8 @@ void glutMainLoop() {
 
     int32_t lastWidth = ANativeWindow_getWidth(engine.app->window);
     int32_t lastHeight = ANativeWindow_getHeight(engine.app->window);
-    miniglutReshapeCallback(lastWidth, lastHeight);
+    if (miniglutReshapeCallback != NULL)
+	miniglutReshapeCallback(lastWidth, lastHeight);
     // Don't call reshapeCallback before (e.g. in engine_init_display),
     // otherwise the callback may not have been set by the user yet.
 
@@ -428,7 +428,7 @@ void glutMainLoop() {
 	}
 
 	// I can't seem to get onSurfaceChanged or
-	// onNativeWindowResizedevents with Android 2.3's
+	// onNativeWindowResized events with Android 2.3's
 	// NativeActivity.  I suspect a bug.  Let's work-around it:
 	int32_t newWidth = ANativeWindow_getWidth(engine.app->window);
 	int32_t newHeight = ANativeWindow_getHeight(engine.app->window);
@@ -553,7 +553,6 @@ void glutPostRedisplay() {
 // TODO: handle keyboard event
 // TODO: make keyboard visible when pressing Menu, and find a way to
 //       send F1/F2/F3... key strokes
-// TODO: set full-screen ? <application ... android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
 
 // Local Variables: ***
 // c-basic-offset:4 ***

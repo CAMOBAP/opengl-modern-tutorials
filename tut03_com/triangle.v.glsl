@@ -1,5 +1,3 @@
-#version 120
-
 attribute vec2 coord2d;
 attribute vec3 v_color;
 varying vec3 f_color;
