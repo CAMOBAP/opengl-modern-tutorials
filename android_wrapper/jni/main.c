@@ -36,6 +36,7 @@
 static void (*miniglutDisplayCallback)(void) = NULL;
 static void (*miniglutIdleCallback)(void) = NULL;
 static void (*miniglutReshapeCallback)(int,int) = NULL;
+static void (*miniglutSpecialCallback)(int,int,int) = NULL;
 static unsigned int miniglutDisplayMode = 0;
 static struct engine engine;
 #include <sys/time.h>  /* gettimeofday */
@@ -475,6 +476,11 @@ void glutReshapeFunc(void(*callback)(int,int)) {
     miniglutReshapeCallback = callback;
 }
 
+void glutSpecialFunc(void(*callback)(int,int,int)) {
+    LOGI("glutSpecialFunc");
+    miniglutSpecialCallback = callback;
+}
+
 void glutSwapBuffers( void ) {
     //LOGI("glutSwapBuffers");
     eglSwapBuffers(engine.display, engine.surface);
@@ -497,6 +503,9 @@ void glutPostRedisplay() {
 
 // TODO: handle resize when screen is rotated
 // TODO: handle Reshape
+// TODO: handle keyboard event
+// TODO: make keyboard visible when pressing Menu, and find a way to
+//       send F1/F2/F3... key strokes
 
 // Local Variables: ***
 // c-basic-offset:4 ***
