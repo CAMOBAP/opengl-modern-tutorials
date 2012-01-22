@@ -34,8 +34,11 @@ int init_resources()
 
   GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
   const char *fs_source =
-    //"#version 120                           \n"  // OpenGL 2.1
-    //"#version 100                           \n"  // OpenGL ES 2.0
+#ifdef GL_ES_VERSION_2_0
+    "#version 100\n"  // OpenGL ES 2.0
+#else
+    "#version 120\n"  // OpenGL 2.1
+#endif
     "void main(void) {        "
     "  gl_FragColor[0] = 0.0; "
     "  gl_FragColor[1] = 0.0; "
