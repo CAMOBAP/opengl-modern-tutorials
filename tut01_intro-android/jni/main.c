@@ -290,24 +290,26 @@ void android_main(struct android_app* state_param) {
     JavaVM* vm = state_param->activity->vm;
     (*vm)->AttachCurrentThread(vm, &env, NULL);
 
-    // Get path to cache dir (/data/data/org.wikibooks.OpenGL/cache)
+    // Get a handle on our calling NativeActivity instance
     jclass activityClass = (*env)->GetObjectClass(env, state_param->activity->clazz);
+
+    // Get path to cache dir (/data/data/org.wikibooks.OpenGL/cache)
+    jmethodID getCacheDir = (*env)->GetMethodID(env, activityClass, "getCacheDir", "()Ljava/io/File;");
+    jobject file = (*env)->CallObjectMethod(env, state_param->activity->clazz, getCacheDir);
     jclass fileClass = (*env)->FindClass(env, "java/io/File");
     jmethodID getAbsolutePath = (*env)->GetMethodID(env, fileClass, "getAbsolutePath", "()Ljava/lang/String;");
-
-    jmethodID getFilesDir = (*env)->GetMethodID(env, activityClass, "getCacheDir", "()Ljava/io/File;");
-    jobject file = (*env)->CallObjectMethod(env, state_param->activity->clazz, getFilesDir);
     jobject jpath = (*env)->CallObjectMethod(env, file, getAbsolutePath);
     const char* app_dir = (*env)->GetStringUTFChars(env, (jstring) jpath, NULL);
 
-    // chdir in the application file directory
+    // chdir in the application cache directory
     LOGI("app_dir: %s", app_dir);
     chdir(app_dir);
     (*env)->ReleaseStringUTFChars(env, jpath, app_dir);
     print_info_paths(state_param);
 
     // Pre-extract assets, to avoid Android-specific file opening
-    jmethodID getAssets = (*env)->GetMethodID(env, activityClass, "getAssets", "()Landroid/content/res/AssetManager;"); 
+    jmethodID getAssets = (*env)->GetMethodID(env, activityClass,
+					      "getAssets", "()Landroid/content/res/AssetManager;"); 
     jobject assetManager = (*env)->CallObjectMethod(env, state_param->activity->clazz, getAssets);
     AAssetManager* mgr = AAssetManager_fromJava(env, assetManager);
     AAssetDir* assetDir = AAssetManager_openDir(mgr, "");
