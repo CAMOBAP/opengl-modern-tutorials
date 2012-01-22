@@ -1,5 +1,3 @@
-#version 120
-
 attribute vec3 coord3d;
 attribute vec3 v_color;
 uniform mat4 mvp;

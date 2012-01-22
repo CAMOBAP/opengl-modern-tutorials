@@ -31,21 +31,6 @@
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "native-activity", __VA_ARGS__))
 #define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "native-activity", __VA_ARGS__))
 
-/* <MiniGLUT> */
-#include "GL/glut.h"
-static void (*miniglutDisplayCallback)(void) = NULL;
-static void (*miniglutIdleCallback)(void) = NULL;
-static void (*miniglutReshapeCallback)(int,int) = NULL;
-static void (*miniglutSpecialCallback)(int,int,int) = NULL;
-static unsigned int miniglutDisplayMode = 0;
-static struct engine engine;
-#include <sys/time.h>  /* gettimeofday */
-static long miniglutStartTimeMillis = 0;
-static int miniglutTermWindow = 0;
-#include <stdlib.h>  /* exit */
-#include <stdio.h>  /* BUFSIZ */
-/* </MiniGLUT> */
-
 
 /**
  * Our saved state data.
@@ -74,6 +59,41 @@ struct engine {
 
     int miniglutInit;
 };
+
+
+/* <MiniGLUT> */
+#include "GL/glut.h"
+void miniglutDefaultOnReshapeCallback(int width, int height) {
+    LOGI("miniglutDefaultOnReshapeCallback: w=%d, h=%d", width, height);
+    glViewport(0, 0, width, height);
+}
+static void (*miniglutDisplayCallback)(void) = NULL;
+static void (*miniglutIdleCallback)(void) = NULL;
+static void (*miniglutReshapeCallback)(int,int) = miniglutDefaultOnReshapeCallback;
+static void (*miniglutSpecialCallback)(int,int,int) = NULL;
+static unsigned int miniglutDisplayMode = 0;
+static struct engine engine;
+#include <sys/time.h>  /* gettimeofday */
+static long miniglutStartTimeMillis = 0;
+static int miniglutTermWindow = 0;
+#include <stdlib.h>  /* exit */
+#include <stdio.h>  /* BUFSIZ */
+
+#include <android/native_window.h>
+static void onNativeWindowResized(ANativeActivity* activity, ANativeWindow* window) {
+    LOGI("onNativeWindowResized");
+    int32_t newWidth = ANativeWindow_getWidth(window);
+    int32_t newHeight = ANativeWindow_getHeight(window);
+    LOGI("w=%d, h=%d", newWidth, newHeight);
+    if (miniglutReshapeCallback != NULL) {
+	miniglutReshapeCallback(newWidth, newHeight);
+    }
+}
+static void onContentRectChanged(ANativeActivity* activity, const ARect* rect) {
+    LOGI("onContentRectChanged: l=%d,t=%d,r=%d,b=%d", rect->left, rect->top, rect->right, rect->bottom);
+}
+/* </MiniGLUT> */
+
 
 /**
  * Initialize an EGL context for the current display.
@@ -143,9 +163,6 @@ static int engine_init_display(struct engine* engine) {
     engine->surface = surface;
     engine->width = w;
     engine->height = h;
-
-    // miniglut:
-    glViewport(0, 0, 480, 800);
 
     return 0;
 }
@@ -223,34 +240,45 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
                         engine->accelerometerSensor);
             }
             break;
+        case APP_CMD_CONFIG_CHANGED:
+	    // Handle rotation / orientation change
+
+	    // Not needed:
+	    // sthing = AConfiguration_getOrientation(app->config);
+
+	    // Too early, should be called in onSurfaceChanged, but it
+	    // seems we're not called by android_app_NativeActivity.cpp :/
+	    // The screen we have in app->window is not rotated yet
+	    // onNativeWindowResized(app->activity, app->window);
+	    break;
     }
 }
 
 void print_info_paths(struct android_app* state_param) {
     JNIEnv* env = state_param->activity->env;
-    jclass activityClass = (*env)->GetObjectClass(env, state_param->activity->clazz);
+    jclass activityClass = env->GetObjectClass(state_param->activity->clazz);
 
-    jclass fileClass = (*env)->FindClass(env, "java/io/File");
-    jmethodID getAbsolutePath = (*env)->GetMethodID(env, fileClass, "getAbsolutePath", "()Ljava/lang/String;");
+    jclass fileClass = env->FindClass("java/io/File");
+    jmethodID getAbsolutePath = env->GetMethodID(fileClass, "getAbsolutePath", "()Ljava/lang/String;");
 
     {
 	// /data/data/org.wikibooks.OpenGL/files
-	jmethodID method = (*env)->GetMethodID(env, activityClass, "getFilesDir", "()Ljava/io/File;");
-	jobject file = (*env)->CallObjectMethod(env, state_param->activity->clazz, method);
-	jobject jpath = (*env)->CallObjectMethod(env, file, getAbsolutePath);
-	const char* dir = (*env)->GetStringUTFChars(env, (jstring) jpath, NULL);
+	jmethodID method = env->GetMethodID(activityClass, "getFilesDir", "()Ljava/io/File;");
+	jobject file = env->CallObjectMethod(state_param->activity->clazz, method);
+	jstring jpath = (jstring)env->CallObjectMethod(file, getAbsolutePath);
+	const char* dir = env->GetStringUTFChars(jpath, NULL);
 	LOGI("%s", dir);
-	(*env)->ReleaseStringUTFChars(env, jpath, dir);
+	env->ReleaseStringUTFChars(jpath, dir);
     }
 
     {
 	// /data/data/org.wikibooks.OpenGL/cache
-	jmethodID method = (*env)->GetMethodID(env, activityClass, "getCacheDir", "()Ljava/io/File;");
-	jobject file = (*env)->CallObjectMethod(env, state_param->activity->clazz, method);
-	jobject jpath = (*env)->CallObjectMethod(env, file, getAbsolutePath);
-	const char* dir = (*env)->GetStringUTFChars(env, (jstring) jpath, NULL);
+	jmethodID method = env->GetMethodID(activityClass, "getCacheDir", "()Ljava/io/File;");
+	jobject file = env->CallObjectMethod(state_param->activity->clazz, method);
+	jstring jpath = (jstring)env->CallObjectMethod(file, getAbsolutePath);
+	const char* dir = env->GetStringUTFChars(jpath, NULL);
 	LOGI("%s", dir);
-	(*env)->ReleaseStringUTFChars(env, jpath, dir);
+	env->ReleaseStringUTFChars(jpath, dir);
     }
 
     // getExternalCacheDir -> ApplicationContext: unable to create external cache directory
@@ -258,21 +286,21 @@ void print_info_paths(struct android_app* state_param) {
     {
 	// /data/app/org.wikibooks.OpenGL-X.apk
 	// /mnt/asec/org.wikibooks.OpenGL-X/pkg.apk
-	jmethodID method = (*env)->GetMethodID(env, activityClass, "getPackageResourcePath", "()Ljava/lang/String;");
-	jobject jpath = (*env)->CallObjectMethod(env, state_param->activity->clazz, method);
-	const char* dir = (*env)->GetStringUTFChars(env, (jstring) jpath, NULL);
+	jmethodID method = env->GetMethodID(activityClass, "getPackageResourcePath", "()Ljava/lang/String;");
+	jstring jpath = (jstring)env->CallObjectMethod(state_param->activity->clazz, method);
+	const char* dir = env->GetStringUTFChars(jpath, NULL);
 	LOGI("%s", dir);
-	(*env)->ReleaseStringUTFChars(env, jpath, dir);
+	env->ReleaseStringUTFChars(jpath, dir);
     }
 
     {
 	// /data/app/org.wikibooks.OpenGL-X.apk
 	// /mnt/asec/org.wikibooks.OpenGL-X/pkg.apk
-	jmethodID method = (*env)->GetMethodID(env, activityClass, "getPackageCodePath", "()Ljava/lang/String;");
-	jobject jpath = (*env)->CallObjectMethod(env, state_param->activity->clazz, method);
-	const char* dir = (*env)->GetStringUTFChars(env, (jstring) jpath, NULL);
+	jmethodID method = env->GetMethodID(activityClass, "getPackageCodePath", "()Ljava/lang/String;");
+	jstring jpath = (jstring)env->CallObjectMethod(state_param->activity->clazz, method);
+	const char* dir = env->GetStringUTFChars(jpath, NULL);
 	LOGI("%s", dir);
-	(*env)->ReleaseStringUTFChars(env, jpath, dir);
+	env->ReleaseStringUTFChars(jpath, dir);
     }
 }
 
@@ -282,39 +310,43 @@ void print_info_paths(struct android_app* state_param) {
  * event loop for receiving input events and doing other things.
  */
 struct android_app* state;
+#include <unistd.h>
+#include <android/asset_manager.h>
+extern int main(int argc, char* argv[]);
 void android_main(struct android_app* state_param) {
     LOGI("android_main");
     state = state_param;
 
+    // Register window resize callback
+    state_param->activity->callbacks->onNativeWindowResized = onNativeWindowResized;
+    state_param->activity->callbacks->onContentRectChanged = onContentRectChanged;
+
     // Get usable JNI context
     JNIEnv* env = state_param->activity->env;
     JavaVM* vm = state_param->activity->vm;
-    (*vm)->AttachCurrentThread(vm, &env, NULL);
+    vm->AttachCurrentThread(&env, NULL);
 
     // Get a handle on our calling NativeActivity instance
-    jclass activityClass = (*env)->GetObjectClass(env, state_param->activity->clazz);
+    jclass activityClass = env->GetObjectClass(state_param->activity->clazz);
 
     // Get path to cache dir (/data/data/org.wikibooks.OpenGL/cache)
-    jmethodID getCacheDir = (*env)->GetMethodID(env, activityClass, "getCacheDir", "()Ljava/io/File;");
-    jobject file = (*env)->CallObjectMethod(env, state_param->activity->clazz, getCacheDir);
-    jclass fileClass = (*env)->FindClass(env, "java/io/File");
-    jmethodID getAbsolutePath = (*env)->GetMethodID(env, fileClass, "getAbsolutePath", "()Ljava/lang/String;");
-    jobject jpath = (*env)->CallObjectMethod(env, file, getAbsolutePath);
-    const char* app_dir = (*env)->GetStringUTFChars(env, (jstring) jpath, NULL);
+    jmethodID getCacheDir = env->GetMethodID(activityClass, "getCacheDir", "()Ljava/io/File;");
+    jobject file = env->CallObjectMethod(state_param->activity->clazz, getCacheDir);
+    jclass fileClass = env->FindClass("java/io/File");
+    jmethodID getAbsolutePath = env->GetMethodID(fileClass, "getAbsolutePath", "()Ljava/lang/String;");
+    jstring jpath = (jstring)env->CallObjectMethod(file, getAbsolutePath);
+    const char* app_dir = env->GetStringUTFChars(jpath, NULL);
 
     // chdir in the application cache directory
     LOGI("app_dir: %s", app_dir);
     chdir(app_dir);
-    (*env)->ReleaseStringUTFChars(env, jpath, app_dir);
+    env->ReleaseStringUTFChars(jpath, app_dir);
     print_info_paths(state_param);
 
     // Pre-extract assets, to avoid Android-specific file opening
-    jmethodID getAssets = (*env)->GetMethodID(env, activityClass,
-					      "getAssets", "()Landroid/content/res/AssetManager;"); 
-    jobject assetManager = (*env)->CallObjectMethod(env, state_param->activity->clazz, getAssets);
-    AAssetManager* mgr = AAssetManager_fromJava(env, assetManager);
+    AAssetManager* mgr = state_param->activity->assetManager;
     AAssetDir* assetDir = AAssetManager_openDir(mgr, "");
-    char* filename = NULL;
+    const char* filename = (const char*)NULL;
     while ((filename = AAssetDir_getNextFileName(assetDir)) != NULL) {
 	AAsset* asset = AAssetManager_open(mgr, filename, AASSET_MODE_STREAMING);
 	char buf[BUFSIZ];
@@ -328,7 +360,9 @@ void android_main(struct android_app* state_param) {
     AAssetDir_close(assetDir);
 
     // Call user's main
-    main();
+    char progname[5] = "self";
+    char* argv[] = {progname};
+    main(1, argv);
 
     // Destroy OpenGL context
     engine_term_display(&engine);
@@ -371,12 +405,28 @@ void process_events() {
 void glutMainLoop() {
     LOGI("glutMainLoop");
 
-    if (miniglutReshapeCallback != NULL)
-        miniglutReshapeCallback(480, 800);
+    int32_t lastWidth = ANativeWindow_getWidth(engine.app->window);
+    int32_t lastHeight = ANativeWindow_getHeight(engine.app->window);
+    miniglutReshapeCallback(lastWidth, lastHeight);
+    // Don't call reshapeCallback before (e.g. in engine_init_display),
+    // otherwise the callback may not have been set by the user yet.
 
     // loop waiting for stuff to do.
     while (1) {
         process_events();
+
+	// I can't seem to get
+	// onSurfaceChanged/onNativeWindowResizedevents with Android
+	// 2.3's NativeActivity.  I suspect a bug.  Let's work-around
+	// it:
+
+	int32_t newWidth = ANativeWindow_getWidth(engine.app->window);
+	int32_t newHeight = ANativeWindow_getHeight(engine.app->window);
+	if (newWidth != lastWidth || newHeight != lastHeight) {
+	    lastWidth = newWidth;
+	    lastHeight = newHeight;
+	    onNativeWindowResized(engine.app->activity, engine.app->window);
+	}
 
 	// Check if we are exiting.
 	//if (state->destroyRequested != 0) {
@@ -502,10 +552,10 @@ void glutPostRedisplay() {
 }
 
 // TODO: handle resize when screen is rotated
-// TODO: handle Reshape
 // TODO: handle keyboard event
 // TODO: make keyboard visible when pressing Menu, and find a way to
 //       send F1/F2/F3... key strokes
+// TODO: set full-screen ? <application ... android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
 
 // Local Variables: ***
 // c-basic-offset:4 ***

@@ -1,1 +1,1 @@
-../../bezier_teapot/teapot.cpp
+../../tut05_cube/cube.cpp

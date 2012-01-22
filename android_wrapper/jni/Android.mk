@@ -17,7 +17,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE    := native-activity
-LOCAL_SRC_FILES := main.c GL/glew.c tut.cpp ../common/shader_utils.cpp
+LOCAL_SRC_FILES := main.cpp GL/glew.c tut.cpp ../common/shader_utils.cpp
 LOCAL_CPPFLAGS  := -I/usr/src/glm
 LOCAL_CXXFLAGS  := -gstabs+
 LOCAL_LDLIBS    := -llog -landroid -lEGL -lGLESv2
