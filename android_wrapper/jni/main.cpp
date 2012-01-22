@@ -415,11 +415,21 @@ void glutMainLoop() {
     while (1) {
         process_events();
 
-	// I can't seem to get
-	// onSurfaceChanged/onNativeWindowResizedevents with Android
-	// 2.3's NativeActivity.  I suspect a bug.  Let's work-around
-	// it:
+	// Check if we are exiting.
+	//if (state->destroyRequested != 0) {
+	//    break;
+	//}
 
+	// Check if we are exiting.
+	if (miniglutTermWindow != 0) {
+	    // GLUT doesn't provide a callback to restore a lost
+	    // context, so we just quit the application
+	    break;
+	}
+
+	// I can't seem to get onSurfaceChanged or
+	// onNativeWindowResizedevents with Android 2.3's
+	// NativeActivity.  I suspect a bug.  Let's work-around it:
 	int32_t newWidth = ANativeWindow_getWidth(engine.app->window);
 	int32_t newHeight = ANativeWindow_getHeight(engine.app->window);
 	if (newWidth != lastWidth || newHeight != lastHeight) {
@@ -427,19 +437,7 @@ void glutMainLoop() {
 	    lastHeight = newHeight;
 	    onNativeWindowResized(engine.app->activity, engine.app->window);
 	}
-
-	// Check if we are exiting.
-	//if (state->destroyRequested != 0) {
-	//    break;
-	//}
-
-	// Check if we are exiting.
-	// GLUT doesn't provide a callback to restore a lost context,
-	// so we just quit the application
-	if (miniglutTermWindow != 0) {
-	    break;
-	}
-
+	
 	// TODO: don't call DisplayCallback unless necessary (cf. glutPostRedisplay)
 	if (miniglutIdleCallback != NULL)
 	    miniglutIdleCallback();
