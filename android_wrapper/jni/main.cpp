@@ -198,12 +198,49 @@ static void engine_term_display(struct engine* engine) {
 /**
  * Process the next input event.
  */
+/* Cf. http://developer.android.com/reference/android/view/KeyEvent.html */
+#define AKEYCODE_F1 131
+#define AKEYCODE_F2 132
+#define AKEYCODE_F3 133
+#define AKEYCODE_DPAD_UP 19
+#define AKEYCODE_DPAD_DOWN 20
+#define AKEYCODE_DPAD_LEFT 21
+#define AKEYCODE_DPAD_RIGHT 22
 static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) {
     struct engine* engine = (struct engine*)app->userData;
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         engine->state.x = AMotionEvent_getX(event, 0);
         engine->state.y = AMotionEvent_getY(event, 0);
         return 1;
+    } else if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY
+	       && AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_DOWN) {
+	int32_t code = AKeyEvent_getKeyCode(event);
+	LOGI("code: %d", code);
+	if (miniglutSpecialCallback != NULL) {
+	    switch (code) {
+	    case AKEYCODE_F1:
+		miniglutSpecialCallback(GLUT_KEY_F1, engine->state.x, engine->state.y);
+		break;
+	    case AKEYCODE_F2:
+		miniglutSpecialCallback(GLUT_KEY_F2, engine->state.x, engine->state.y);
+		break;
+	    case AKEYCODE_F3:
+		miniglutSpecialCallback(GLUT_KEY_F3, engine->state.x, engine->state.y);
+		break;
+	    case AKEYCODE_DPAD_UP:
+		miniglutSpecialCallback(GLUT_KEY_UP, engine->state.x, engine->state.y);
+		break;
+	    case AKEYCODE_DPAD_DOWN:
+		miniglutSpecialCallback(GLUT_KEY_DOWN, engine->state.x, engine->state.y);
+		break;
+	    case AKEYCODE_DPAD_LEFT:
+		miniglutSpecialCallback(GLUT_KEY_LEFT, engine->state.x, engine->state.y);
+		break;
+	    case AKEYCODE_DPAD_RIGHT:
+		miniglutSpecialCallback(GLUT_KEY_RIGHT, engine->state.x, engine->state.y);
+		break;
+	    }
+	}
     }
     return 0;
 }
