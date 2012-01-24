@@ -1,5 +1,3 @@
-#version 120
-
 attribute float coord1d;
 varying vec4 f_color;
 uniform float offset_x;
@@ -12,5 +10,5 @@ void main(void) {
 
   gl_Position = vec4(coord1d, y, 0.0, 1.0);
   f_color = vec4(x / 2.0 + 0.5, y / 2.0 + 0.5, 1.0, 1.0);
-  gl_PointSize = 5;
+  gl_PointSize = 5.0;
 }
