@@ -549,7 +549,6 @@ void glutPostRedisplay() {
   // TODO
 }
 
-// TODO: handle resize when screen is rotated
 // TODO: handle keyboard event
 // TODO: make keyboard visible when pressing Menu, and find a way to
 //       send F1/F2/F3... key strokes
