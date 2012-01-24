@@ -28,8 +28,8 @@
 #include <android/log.h>
 #include <android_native_app_glue.h>
 
-#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "native-activity", __VA_ARGS__))
-#define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "native-activity", __VA_ARGS__))
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "wikibooks-android_wrapper", __VA_ARGS__))
+#define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "wikibooks-android_wrapper", __VA_ARGS__))
 
 
 /**
@@ -79,14 +79,23 @@ static int miniglutTermWindow = 0;
 #include <stdlib.h>  /* exit */
 #include <stdio.h>  /* BUFSIZ */
 
+/* Copied from android_native_app_glue.c to inject missing resize
+   event */
+#include <unistd.h>
+static void android_app_write_cmd(struct android_app* android_app, int8_t cmd) {
+    if (write(android_app->msgwrite, &cmd, sizeof(cmd)) != sizeof(cmd)) {
+        LOGI("Failure writing android_app cmd: %s\n", strerror(errno));
+    }
+}
+
 #include <android/native_window.h>
 static void onNativeWindowResized(ANativeActivity* activity, ANativeWindow* window) {
-    LOGI("onNativeWindowResized");
-    int32_t newWidth = ANativeWindow_getWidth(window);
-    int32_t newHeight = ANativeWindow_getHeight(window);
-    LOGI("w=%d, h=%d", newWidth, newHeight);
-    if (miniglutReshapeCallback != NULL)
-	miniglutReshapeCallback(newWidth, newHeight);
+    struct android_app* android_app = (struct android_app*)activity->instance;
+    LOGI("onNativeWindowResized: %p\n", activity);
+    // Sent an event to the queue so it gets handled in the app thread
+    // after other waiting events, rather than asynchronously in the
+    // native_app_glue event thread:
+    android_app_write_cmd(android_app, APP_CMD_WINDOW_RESIZED);
 }
 static void onContentRectChanged(ANativeActivity* activity, const ARect* rect) {
     LOGI("onContentRectChanged: l=%d,t=%d,r=%d,b=%d", rect->left, rect->top, rect->right, rect->bottom);
@@ -98,6 +107,7 @@ static void onContentRectChanged(ANativeActivity* activity, const ARect* rect) {
  * Initialize an EGL context for the current display.
  */
 static int engine_init_display(struct engine* engine) {
+    LOGI("engine_init_display");
     engine->miniglutInit = 1;
 
     // initialize OpenGL ES and EGL
@@ -250,6 +260,14 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
 	    // The screen we have in app->window is not rotated yet
 	    // onNativeWindowResized(app->activity, app->window);
 	    break;
+    case APP_CMD_WINDOW_RESIZED:
+	{
+	    int32_t newWidth = ANativeWindow_getWidth(engine->app->window);
+	    int32_t newHeight = ANativeWindow_getHeight(engine->app->window);
+	    LOGI("APP_CMD_WINDOW_RESIZED-engine: w=%d, h=%d", newWidth, newHeight);
+	    if (miniglutReshapeCallback != NULL)
+		miniglutReshapeCallback(newWidth, newHeight);
+	}
     }
 }
 
