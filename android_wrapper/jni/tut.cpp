@@ -1,1 +1,0 @@
-../../tut05_cube/cube.cpp
