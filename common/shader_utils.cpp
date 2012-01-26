@@ -76,11 +76,22 @@ GLuint create_shader(const char* filename, GLenum type)
   const GLchar* sources[2] = {
 #ifdef GL_ES_VERSION_2_0
     "#version 100\n"
-    "#define GLES2\n",
+    // Define default float precision for fragment shaders:
+    "#ifdef GL_FRAGMENT_PRECISION_HIGH\n"
+    "precision highp float;           \n"
+    "#else                            \n"
+    "precision mediump float;         \n"
+    "#endif                           \n"
+    // Note: OpenGL ES automatically defines this:
+    // #define GL_ES
 #else
-    "#version 120\n",
+    "#version 120\n"
+    // Ignore GLES 2 precision specifiers:
+    "#define lowp   \n"
+    "#define mediump\n"
+    "#define highp  \n"
 #endif
-    source };
+    , source };
   glShaderSource(res, 2, sources, NULL);
   free((void*)source);
 

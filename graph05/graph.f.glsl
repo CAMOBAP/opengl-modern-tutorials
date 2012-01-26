@@ -1,5 +1,3 @@
-#version 120
-
 varying vec4 graph_coord;
 uniform vec4 color;
 

@@ -18,8 +18,11 @@ int init_resources()
 
   GLuint vs = glCreateShader(GL_VERTEX_SHADER);
   const char *vs_source =
-    //"#version 120                           \n"  // OpenGL 2.1
-    //"#version 100                           \n"  // OpenGL ES 2.0
+#ifdef GL_ES_VERSION_2_0
+    "#version 100\n"  // OpenGL ES 2.0
+#else
+    "#version 120\n"  // OpenGL 2.1
+#endif
     "attribute vec2 coord2d;                  "
     "void main(void) {                        "
     "  gl_Position = vec4(coord2d, 0.0, 1.0); "

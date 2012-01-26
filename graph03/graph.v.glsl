@@ -1,5 +1,3 @@
-#version 120
-
 attribute vec2 coord2d;
 uniform mat4 transform;
 
