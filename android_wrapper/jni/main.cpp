@@ -302,6 +302,8 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
 	    int32_t newWidth = ANativeWindow_getWidth(engine->app->window);
 	    int32_t newHeight = ANativeWindow_getHeight(engine->app->window);
 	    LOGI("APP_CMD_WINDOW_RESIZED-engine: w=%d, h=%d", newWidth, newHeight);
+	    engine->width = newWidth;
+	    engine->height = newHeight;
 	    if (miniglutReshapeCallback != NULL)
 		miniglutReshapeCallback(newWidth, newHeight);
 	}
@@ -491,6 +493,8 @@ void glutMainLoop() {
 	    lastWidth = newWidth;
 	    lastHeight = newHeight;
 	    onNativeWindowResized(engine.app->activity, engine.app->window);
+	    // Process new resize event :)
+	    continue;
 	}
 	
 	// TODO: don't call DisplayCallback unless necessary (cf. glutPostRedisplay)
@@ -597,6 +601,10 @@ int glutGet( GLenum query ) {
 	long cur_time = tv.tv_sec * 1000 + tv.tv_usec/1000;
 	//LOGI("glutGet: %d", (int) cur_time - miniglutStartTimeMillis);
 	return cur_time - miniglutStartTimeMillis;
+    } else if (query == GLUT_WINDOW_WIDTH) {
+	return engine.width;
+    } else if (query == GLUT_WINDOW_HEIGHT) {
+	return engine.height;
     }
 }
 

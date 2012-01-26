@@ -100,6 +100,8 @@ FGAPI void    FGAPIENTRY glutPostRedisplay( void );
 /*
  * GLUT API macro definitions -- the glutGet parameters
  */
+#define  GLUT_WINDOW_WIDTH                  0x0066
+#define  GLUT_WINDOW_HEIGHT                 0x0067
 #define  GLUT_ELAPSED_TIME                  0x02BC
 
 #ifdef __cplusplus
