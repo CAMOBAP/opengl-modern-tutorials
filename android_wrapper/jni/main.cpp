@@ -199,6 +199,8 @@ static void engine_term_display(struct engine* engine) {
  * Process the next input event.
  */
 /* Cf. http://developer.android.com/reference/android/view/KeyEvent.html */
+#define AKEYCODE_MOVE_HOME 122
+#define AKEYCODE_MOVE_END 123
 #define AKEYCODE_F1 131
 #define AKEYCODE_F2 132
 #define AKEYCODE_F3 133
@@ -226,6 +228,12 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
 		break;
 	    case AKEYCODE_F3:
 		miniglutSpecialCallback(GLUT_KEY_F3, engine->state.x, engine->state.y);
+		break;
+	    case AKEYCODE_MOVE_HOME:
+		miniglutSpecialCallback(GLUT_KEY_HOME, engine->state.x, engine->state.y);
+		break;
+	    case AKEYCODE_MOVE_END:
+		miniglutSpecialCallback(GLUT_KEY_END, engine->state.x, engine->state.y);
 		break;
 	    case AKEYCODE_DPAD_UP:
 		miniglutSpecialCallback(GLUT_KEY_UP, engine->state.x, engine->state.y);
