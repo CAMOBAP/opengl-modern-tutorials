@@ -58,6 +58,7 @@ struct engine {
     struct saved_state state;
 
     int miniglutInit;
+    int keyboard_metastate;
 };
 
 
@@ -71,6 +72,10 @@ static void (*miniglutDisplayCallback)(void) = NULL;
 static void (*miniglutIdleCallback)(void) = NULL;
 static void (*miniglutReshapeCallback)(int,int) = miniglutDefaultOnReshapeCallback;
 static void (*miniglutSpecialCallback)(int,int,int) = NULL;
+static void (*miniglutSpecialUpCallback)(int,int,int) = NULL;
+static void (*miniglutMouseCallback)(int,int,int,int) = NULL;
+static void (*miniglutMotionCallback)(int,int) = NULL;
+
 static unsigned int miniglutDisplayMode = 0;
 static struct engine engine;
 #include <sys/time.h>  /* gettimeofday */
@@ -199,54 +204,90 @@ static void engine_term_display(struct engine* engine) {
  * Process the next input event.
  */
 /* Cf. http://developer.android.com/reference/android/view/KeyEvent.html */
-#define AKEYCODE_MOVE_HOME 122
-#define AKEYCODE_MOVE_END 123
-#define AKEYCODE_F1 131
-#define AKEYCODE_F2 132
-#define AKEYCODE_F3 133
-#define AKEYCODE_DPAD_UP 19
-#define AKEYCODE_DPAD_DOWN 20
-#define AKEYCODE_DPAD_LEFT 21
-#define AKEYCODE_DPAD_RIGHT 22
+enum {
+    AKEYCODE_MOVE_HOME=122,
+    AKEYCODE_MOVE_END=123,
+    AKEYCODE_F1=131,
+    AKEYCODE_F2=132,
+    AKEYCODE_F3=133,
+};
 static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) {
     struct engine* engine = (struct engine*)app->userData;
+    // TODO: process mouse clicks and mouse motions
+    // TODO: GLUT generates repeat events when key is left pressed
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         engine->state.x = AMotionEvent_getX(event, 0);
         engine->state.y = AMotionEvent_getY(event, 0);
         return 1;
-    } else if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY
-	       && AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_DOWN) {
-	int32_t code = AKeyEvent_getKeyCode(event);
-	LOGI("code: %d", code);
-	if (miniglutSpecialCallback != NULL) {
-	    switch (code) {
-	    case AKEYCODE_F1:
-		miniglutSpecialCallback(GLUT_KEY_F1, engine->state.x, engine->state.y);
-		break;
-	    case AKEYCODE_F2:
-		miniglutSpecialCallback(GLUT_KEY_F2, engine->state.x, engine->state.y);
-		break;
-	    case AKEYCODE_F3:
-		miniglutSpecialCallback(GLUT_KEY_F3, engine->state.x, engine->state.y);
-		break;
-	    case AKEYCODE_MOVE_HOME:
-		miniglutSpecialCallback(GLUT_KEY_HOME, engine->state.x, engine->state.y);
-		break;
-	    case AKEYCODE_MOVE_END:
-		miniglutSpecialCallback(GLUT_KEY_END, engine->state.x, engine->state.y);
-		break;
-	    case AKEYCODE_DPAD_UP:
-		miniglutSpecialCallback(GLUT_KEY_UP, engine->state.x, engine->state.y);
-		break;
-	    case AKEYCODE_DPAD_DOWN:
-		miniglutSpecialCallback(GLUT_KEY_DOWN, engine->state.x, engine->state.y);
-		break;
-	    case AKEYCODE_DPAD_LEFT:
-		miniglutSpecialCallback(GLUT_KEY_LEFT, engine->state.x, engine->state.y);
-		break;
-	    case AKEYCODE_DPAD_RIGHT:
-		miniglutSpecialCallback(GLUT_KEY_RIGHT, engine->state.x, engine->state.y);
-		break;
+    } else if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY) {
+	engine->keyboard_metastate = AKeyEvent_getMetaState(event);
+	if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_DOWN) {
+	    int32_t code = AKeyEvent_getKeyCode(event);
+	    LOGI("code: %d", code);
+	    if (miniglutSpecialCallback != NULL) {
+		switch (code) {
+		case AKEYCODE_F1:
+		    miniglutSpecialCallback(GLUT_KEY_F1, engine->state.x, engine->state.y);
+		    break;
+		case AKEYCODE_F2:
+		    miniglutSpecialCallback(GLUT_KEY_F2, engine->state.x, engine->state.y);
+		    break;
+		case AKEYCODE_F3:
+		    miniglutSpecialCallback(GLUT_KEY_F3, engine->state.x, engine->state.y);
+		    break;
+		case AKEYCODE_MOVE_HOME:
+		    miniglutSpecialCallback(GLUT_KEY_HOME, engine->state.x, engine->state.y);
+		    break;
+		case AKEYCODE_MOVE_END:
+		    miniglutSpecialCallback(GLUT_KEY_END, engine->state.x, engine->state.y);
+		    break;
+		case AKEYCODE_DPAD_UP:
+		    miniglutSpecialCallback(GLUT_KEY_UP, engine->state.x, engine->state.y);
+		    break;
+		case AKEYCODE_DPAD_DOWN:
+		    miniglutSpecialCallback(GLUT_KEY_DOWN, engine->state.x, engine->state.y);
+		    break;
+		case AKEYCODE_DPAD_LEFT:
+		    miniglutSpecialCallback(GLUT_KEY_LEFT, engine->state.x, engine->state.y);
+		    break;
+		case AKEYCODE_DPAD_RIGHT:
+		    miniglutSpecialCallback(GLUT_KEY_RIGHT, engine->state.x, engine->state.y);
+		    break;
+		}
+	    }
+	} else if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_UP) {
+	    int32_t code = AKeyEvent_getKeyCode(event);
+	    LOGI("code: %d", code);
+	    if (miniglutSpecialUpCallback != NULL) {
+		switch (code) {
+		case AKEYCODE_F1:
+		    miniglutSpecialUpCallback(GLUT_KEY_F1, engine->state.x, engine->state.y);
+		    break;
+		case AKEYCODE_F2:
+		    miniglutSpecialUpCallback(GLUT_KEY_F2, engine->state.x, engine->state.y);
+		    break;
+		case AKEYCODE_F3:
+		    miniglutSpecialUpCallback(GLUT_KEY_F3, engine->state.x, engine->state.y);
+		    break;
+		case AKEYCODE_MOVE_HOME:
+		    miniglutSpecialUpCallback(GLUT_KEY_HOME, engine->state.x, engine->state.y);
+		    break;
+		case AKEYCODE_MOVE_END:
+		    miniglutSpecialUpCallback(GLUT_KEY_END, engine->state.x, engine->state.y);
+		    break;
+		case AKEYCODE_DPAD_UP:
+		    miniglutSpecialUpCallback(GLUT_KEY_UP, engine->state.x, engine->state.y);
+		    break;
+		case AKEYCODE_DPAD_DOWN:
+		    miniglutSpecialUpCallback(GLUT_KEY_DOWN, engine->state.x, engine->state.y);
+		    break;
+		case AKEYCODE_DPAD_LEFT:
+		    miniglutSpecialUpCallback(GLUT_KEY_LEFT, engine->state.x, engine->state.y);
+		    break;
+		case AKEYCODE_DPAD_RIGHT:
+		    miniglutSpecialUpCallback(GLUT_KEY_RIGHT, engine->state.x, engine->state.y);
+		    break;
+		}
 	    }
 	}
     }
@@ -596,6 +637,21 @@ void glutSpecialFunc(void(*callback)(int,int,int)) {
     miniglutSpecialCallback = callback;
 }
 
+void glutSpecialUpFunc(void(*callback)(int,int,int)) {
+    LOGI("glutSpecialUpFunc");
+    miniglutSpecialUpCallback = callback;
+}
+
+void glutMouseFunc(void (* callback)( int, int, int, int )) {
+    LOGI("glutMouseFunc");
+    miniglutMouseCallback = callback;
+}
+
+void glutMotionFunc(void (* callback)( int, int )) {
+    LOGI("glutMotionFunc");
+    miniglutMotionCallback = callback;
+}
+
 void glutSwapBuffers( void ) {
     //LOGI("glutSwapBuffers");
     eglSwapBuffers(engine.display, engine.surface);
@@ -614,6 +670,22 @@ int glutGet( GLenum query ) {
     } else if (query == GLUT_WINDOW_HEIGHT) {
 	return engine.height;
     }
+}
+
+/**
+ * Get keyboard ctrl/shift/alt state
+ */
+/** Cf. http://developer.android.com/reference/android/view/KeyEvent.html */
+enum { AMETA_CTRL_ON = 0x00001000 };
+int glutGetModifiers() {
+    int state = 0;
+    if (engine.keyboard_metastate & AMETA_SHIFT_ON)
+	state = state | GLUT_ACTIVE_SHIFT;
+    if (engine.keyboard_metastate & AMETA_CTRL_ON)
+	state |= GLUT_ACTIVE_CTRL;
+    if (engine.keyboard_metastate & AMETA_ALT_ON)
+	state |= GLUT_ACTIVE_ALT;
+    return state;
 }
 
 void glutPostRedisplay() {

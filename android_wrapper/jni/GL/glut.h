@@ -45,15 +45,25 @@
 FGAPI void    FGAPIENTRY glutInit( int* pargc, char** argv );
 FGAPI void    FGAPIENTRY glutInitDisplayMode( unsigned int displayMode );
 FGAPI void    FGAPIENTRY glutInitWindowSize( int width, int height );
+
+FGAPI void    FGAPIENTRY glutMainLoop( void );
+
 FGAPI int     FGAPIENTRY glutCreateWindow( const char* title );
-FGAPI void    FGAPIENTRY glutDisplayFunc( void (* callback)( void ) );
+
+FGAPI void    FGAPIENTRY glutSwapBuffers( void );
+FGAPI void    FGAPIENTRY glutPostRedisplay( void );
+
 FGAPI void    FGAPIENTRY glutIdleFunc( void (* callback)( void ) );
+FGAPI void    FGAPIENTRY glutMouseFunc( void (* callback)( int, int, int, int ) );
+FGAPI void    FGAPIENTRY glutMotionFunc( void (* callback)( int, int ) );
 FGAPI void    FGAPIENTRY glutSpecialFunc( void (* callback)( int, int, int ) );
 FGAPI void    FGAPIENTRY glutReshapeFunc( void (* callback)( int, int ) );
-FGAPI void    FGAPIENTRY glutMainLoop( void );
-FGAPI void    FGAPIENTRY glutSwapBuffers( void );
+FGAPI void    FGAPIENTRY glutDisplayFunc( void (* callback)( void ) );
+
+FGAPI void    FGAPIENTRY glutSpecialUpFunc( void (* callback)( int, int, int ) );
+
 FGAPI int     FGAPIENTRY glutGet( GLenum query );
-FGAPI void    FGAPIENTRY glutPostRedisplay( void );
+FGAPI int     FGAPIENTRY glutGetModifiers( void );
 
 /*
  * GLUT API macro definitions -- the special key codes:
@@ -81,6 +91,17 @@ FGAPI void    FGAPIENTRY glutPostRedisplay( void );
 #define  GLUT_KEY_INSERT                    0x006C
 
 /*
+ * GLUT API macro definitions -- mouse state definitions
+ */
+#define  GLUT_LEFT_BUTTON                   0x0000
+#define  GLUT_MIDDLE_BUTTON                 0x0001
+#define  GLUT_RIGHT_BUTTON                  0x0002
+#define  GLUT_DOWN                          0x0000
+#define  GLUT_UP                            0x0001
+#define  GLUT_LEFT                          0x0000
+#define  GLUT_ENTERED                       0x0001
+
+/*
  * GLUT API macro definitions -- the display mode definitions
  */
 #define  GLUT_RGB                           0x0000
@@ -96,13 +117,19 @@ FGAPI void    FGAPIENTRY glutPostRedisplay( void );
 #define  GLUT_STEREO                        0x0100
 #define  GLUT_LUMINANCE                     0x0200
 
-
 /*
  * GLUT API macro definitions -- the glutGet parameters
  */
 #define  GLUT_WINDOW_WIDTH                  0x0066
 #define  GLUT_WINDOW_HEIGHT                 0x0067
 #define  GLUT_ELAPSED_TIME                  0x02BC
+
+/*
+ * GLUT API macro definitions -- the glutGetModifiers parameters
+ */
+#define  GLUT_ACTIVE_SHIFT                  0x0001
+#define  GLUT_ACTIVE_CTRL                   0x0002
+#define  GLUT_ACTIVE_ALT                    0x0004
 
 #ifdef __cplusplus
     }
