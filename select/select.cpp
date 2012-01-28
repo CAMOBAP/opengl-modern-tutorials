@@ -225,7 +225,7 @@ void onDisplay() {
 
 	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
-	glm::mat4 view = glm::lookAt(glm::gtx::rotate_vector::rotateY(glm::vec3(0.0, 2.0, 4.0), camera_angle), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+	glm::mat4 view = glm::lookAt(glm::rotateY(glm::vec3(0.0, 2.0, 4.0), camera_angle), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 	glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 10.0f);
 
 	GLfloat color_normal[4] = {1, 1, 1, 1};
@@ -292,7 +292,7 @@ void onMouse(int button, int state, int x, int y) {
 			x, y, color[0], color[1], color[2], color[3], depth, index);
 
 	/* Convert from window coordinates to object coordinates */
-	glm::mat4 view = glm::lookAt(glm::gtx::rotate_vector::rotateY(glm::vec3(0.0, 2.0, 4.0), camera_angle), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+	glm::mat4 view = glm::lookAt(glm::rotateY(glm::vec3(0.0, 2.0, 4.0), camera_angle), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 	glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 10.0f);
 	glm::vec4 viewport = glm::vec4(0, 0, screen_width, screen_height);
 
