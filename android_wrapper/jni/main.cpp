@@ -214,16 +214,24 @@ enum {
 static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) {
     struct engine* engine = (struct engine*)app->userData;
     // TODO: process mouse clicks and mouse motions
-    // TODO: GLUT generates repeat events when key is left pressed
+    // TODO: repeated events have 2 issues:
+    // - down and up events happen most often at the exact same time
+    //   (down/up/wait/down/up rather than down/wait/down/wait/up
+    // - getRepeatCount always returns 0
+    LOGI("engine_handle_input - type=%d action=%d repeat=%d down=%lld",
+	 AInputEvent_getType(event), AKeyEvent_getAction(event),
+	 AKeyEvent_getRepeatCount(event), AKeyEvent_getDownTime(event));
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         engine->state.x = AMotionEvent_getX(event, 0);
         engine->state.y = AMotionEvent_getY(event, 0);
         return 1;
     } else if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY) {
+	// Note: Android generates repeat events when key is left
+	// pressed - just what like GLUT expects
 	engine->keyboard_metastate = AKeyEvent_getMetaState(event);
 	if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_DOWN) {
 	    int32_t code = AKeyEvent_getKeyCode(event);
-	    LOGI("code: %d", code);
+	    LOGI("keydown, code: %d", code);
 	    if (miniglutSpecialCallback != NULL) {
 		switch (code) {
 		case AKEYCODE_F1:
@@ -257,7 +265,7 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
 	    }
 	} else if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_UP) {
 	    int32_t code = AKeyEvent_getKeyCode(event);
-	    LOGI("code: %d", code);
+	    LOGI("keyup, code: %d", code);
 	    if (miniglutSpecialUpCallback != NULL) {
 		switch (code) {
 		case AKEYCODE_F1:
