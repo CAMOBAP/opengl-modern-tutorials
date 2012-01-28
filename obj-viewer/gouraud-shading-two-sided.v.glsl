@@ -2,7 +2,6 @@
  * This file is in the public domain.
  * Contributors: Martin Kraus, Sylvain Beucler
  */
-#version 120
 attribute vec4 v_coord;
 attribute vec3 v_normal;
 uniform mat4 m, v, p;
