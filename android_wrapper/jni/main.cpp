@@ -59,6 +59,7 @@ struct engine {
 
     int miniglutInit;
     int keyboard_metastate;
+    bool need_redisplay;
 };
 
 
@@ -104,6 +105,10 @@ static void onNativeWindowResized(ANativeActivity* activity, ANativeWindow* wind
 }
 static void onContentRectChanged(ANativeActivity* activity, const ARect* rect) {
     LOGI("onContentRectChanged: l=%d,t=%d,r=%d,b=%d", rect->left, rect->top, rect->right, rect->bottom);
+    // Make Android realize the screen size changed, needed when the
+    // GLUT app refreshes only on event rather than in loop.  Beware
+    // that we're not in the GLUT thread here, but in the event one.
+    glutPostRedisplay();
 }
 /* </MiniGLUT> */
 
@@ -140,6 +145,7 @@ static int engine_init_display(struct engine* engine) {
 
     EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     // TODO : apply miniglutDisplayMode
+    //        (GLUT_DEPTH already applied in attribs[] above)
 
     eglInitialize(display, 0, 0);
 
@@ -225,13 +231,13 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
         engine->state.y = AMotionEvent_getY(event, 0);
 	int32_t action = AMotionEvent_getAction(event);
 	LOGI("motion %d,%d action=%d", engine->state.x, engine->state.y, AMotionEvent_getAction(event));
-	if (action == AMOTION_EVENT_ACTION_DOWN)
+	if (action == AMOTION_EVENT_ACTION_DOWN && miniglutMouseCallback != NULL)
 	    miniglutMouseCallback(GLUT_LEFT_BUTTON, GLUT_DOWN,
 				  engine->state.x, engine->state.y);
-	else if (action == AMOTION_EVENT_ACTION_UP)
+	else if (action == AMOTION_EVENT_ACTION_UP && miniglutMouseCallback != NULL)
 	    miniglutMouseCallback(GLUT_LEFT_BUTTON, GLUT_UP,
 				  engine->state.x, engine->state.y);
-	else if (action == AMOTION_EVENT_ACTION_MOVE)
+	else if (action == AMOTION_EVENT_ACTION_MOVE && miniglutMotionCallback != NULL)
 	    miniglutMotionCallback(engine->state.x, engine->state.y);
         return 1;
     } else if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY) {
@@ -370,8 +376,8 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
 	    LOGI("APP_CMD_WINDOW_RESIZED-engine: w=%d, h=%d", newWidth, newHeight);
 	    engine->width = newWidth;
 	    engine->height = newHeight;
-	    if (miniglutReshapeCallback != NULL)
-		miniglutReshapeCallback(newWidth, newHeight);
+	    engine->need_redisplay = true;
+	    miniglutReshapeCallback(newWidth, newHeight);
 	}
     }
 }
@@ -527,12 +533,8 @@ void process_events() {
 void glutMainLoop() {
     LOGI("glutMainLoop");
 
-    int32_t lastWidth = ANativeWindow_getWidth(engine.app->window);
-    int32_t lastHeight = ANativeWindow_getHeight(engine.app->window);
-    if (miniglutReshapeCallback != NULL)
-	miniglutReshapeCallback(lastWidth, lastHeight);
-    // Don't call reshapeCallback before (e.g. in engine_init_display),
-    // otherwise the callback may not have been set by the user yet.
+    int32_t lastWidth = -1;
+    int32_t lastHeight = -1;
 
     // loop waiting for stuff to do.
     while (1) {
@@ -563,11 +565,14 @@ void glutMainLoop() {
 	    continue;
 	}
 	
-	// TODO: don't call DisplayCallback unless necessary (cf. glutPostRedisplay)
 	if (miniglutIdleCallback != NULL)
 	    miniglutIdleCallback();
+
 	if (miniglutDisplayCallback != NULL)
-	    miniglutDisplayCallback();
+	    if (engine.need_redisplay) {
+		engine.need_redisplay = false;
+		miniglutDisplayCallback();
+	    }
     }
 
     LOGI("glutMainLoop: end");
@@ -706,12 +711,8 @@ int glutGetModifiers() {
 }
 
 void glutPostRedisplay() {
-  // TODO
+    engine.need_redisplay = true;
 }
-
-// TODO: handle keyboard event
-// TODO: make keyboard visible when pressing Menu, and find a way to
-//       send F1/F2/F3... key strokes
 
 // Local Variables: ***
 // c-basic-offset:4 ***
