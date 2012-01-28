@@ -2,7 +2,6 @@
  * This file is in the public domain.
  * Contributors: Martin Kraus, Sylvain Beucler
  */
-#version 120
 varying vec4 position;  // position of the vertex (and fragment) in world space
 varying vec3 varyingNormalDirection;  // surface normal vector in world space
 uniform mat4 m, v, p;

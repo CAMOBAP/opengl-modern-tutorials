@@ -2,7 +2,6 @@
  * This file is in the public domain.
  * Contributors: Martin Kraus, Sylvain Beucler
  */
-#version 120
 varying vec4 position;  // position of the vertex (and fragment) in world space
 varying vec3 varyingNormalDirection;  // surface normal vector in world space
 uniform mat4 m, v, p;
@@ -18,7 +17,7 @@ struct lightSource
   vec3 spotDirection;
 };
 const int numberOfLights = 2;
-lightSource[numberOfLights] lights;
+lightSource lights[numberOfLights];
 lightSource light0 = lightSource(
   vec4(0.0,  1.0,  2.0, 1.0),
   vec4(1.0,  1.0,  1.0, 1.0),
