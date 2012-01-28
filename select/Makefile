@@ -1,4 +1,5 @@
 CC=g++
 LDLIBS=-lglut -lGLEW -lGL -lm
 all: select
-cube.o: res_texture.c
+select.o: res_texture.c
+select: ../common/shader_utils.o
