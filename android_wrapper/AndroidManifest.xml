@@ -11,6 +11,7 @@
 
     <!-- This .apk has no Java code itself, so set hasCode to false. -->
     <application android:label="@string/app_name" android:hasCode="true"
+		 android:icon="@drawable/icon"
 		 android:debuggable="true"
 		 android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
 
