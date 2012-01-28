@@ -43,6 +43,12 @@ struct saved_state {
 /**
  * Shared state for our app.
  */
+struct vpad_state {
+    bool left;
+    bool right;
+    bool up;
+    bool down;
+};
 struct engine {
     struct android_app* app;
 
@@ -60,6 +66,8 @@ struct engine {
     int miniglutInit;
     int keyboard_metastate;
     bool need_redisplay;
+    struct vpad_state vpad;
+    bool in_mmotion;
 };
 
 
@@ -227,18 +235,65 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
 	 AInputEvent_getType(event), AKeyEvent_getAction(event),
 	 AKeyEvent_getRepeatCount(event), AKeyEvent_getDownTime(event));
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
-        engine->state.x = AMotionEvent_getX(event, 0);
-        engine->state.y = AMotionEvent_getY(event, 0);
 	int32_t action = AMotionEvent_getAction(event);
-	LOGI("motion %d,%d action=%d", engine->state.x, engine->state.y, AMotionEvent_getAction(event));
-	if (action == AMOTION_EVENT_ACTION_DOWN && miniglutMouseCallback != NULL)
-	    miniglutMouseCallback(GLUT_LEFT_BUTTON, GLUT_DOWN,
-				  engine->state.x, engine->state.y);
-	else if (action == AMOTION_EVENT_ACTION_UP && miniglutMouseCallback != NULL)
-	    miniglutMouseCallback(GLUT_LEFT_BUTTON, GLUT_UP,
-				  engine->state.x, engine->state.y);
-	else if (action == AMOTION_EVENT_ACTION_MOVE && miniglutMotionCallback != NULL)
-	    miniglutMotionCallback(engine->state.x, engine->state.y);
+	float x = AMotionEvent_getX(event, 0);
+	float y = AMotionEvent_getY(event, 0);
+        engine->state.x = x;
+        engine->state.y = y;
+	LOGI("motion %.01f,%.01f action=%d", x, y, AMotionEvent_getAction(event));
+
+	/* Virtual arrows PAD */
+	struct vpad_state prev_vpad = engine->vpad;
+	engine->vpad.left = engine->vpad.right
+	    = engine->vpad.up = engine->vpad.down = false;
+	if (!engine->in_mmotion && (action == AMOTION_EVENT_ACTION_DOWN || action == AMOTION_EVENT_ACTION_MOVE)) {
+	    if ((x > 0 && x < 100) && (y > (engine->height - 100) && y < engine->height))
+		engine->vpad.left = true;
+	    if ((x > 200 && x < 300) && (y > (engine->height - 100) && y < engine->height))
+		engine->vpad.right = true;
+	    if ((x > 100 && x < 200) && (y > (engine->height - 100) && y < engine->height))
+		engine->vpad.down = true;
+	    if ((x > 100 && x < 200) && (y > (engine->height - 200) && y < (engine->height - 100)))
+		engine->vpad.up = true;
+	}
+	if (prev_vpad.left != engine->vpad.left
+	    || prev_vpad.right != engine->vpad.right
+	    || prev_vpad.up != engine->vpad.up
+	    || prev_vpad.down != engine->vpad.down) {
+	    if (miniglutSpecialCallback != NULL) {
+		if (prev_vpad.left == false && engine->vpad.left == true)
+		    miniglutSpecialCallback(GLUT_KEY_LEFT, x, y);
+		else if (prev_vpad.right == false && engine->vpad.right == true)
+		    miniglutSpecialCallback(GLUT_KEY_RIGHT, x, y);
+		else if (prev_vpad.up == false && engine->vpad.up == true)
+		    miniglutSpecialCallback(GLUT_KEY_UP, x, y);
+		else if (prev_vpad.down == false && engine->vpad.down == true)
+		    miniglutSpecialCallback(GLUT_KEY_DOWN, x, y);
+	    }
+	    if (miniglutSpecialUpCallback != NULL) {
+		if (prev_vpad.left == true && engine->vpad.left == false)
+		    miniglutSpecialUpCallback(GLUT_KEY_LEFT, x, y);
+		if (prev_vpad.right == true && engine->vpad.right == false)
+		    miniglutSpecialUpCallback(GLUT_KEY_RIGHT, x, y);
+		if (prev_vpad.up == true && engine->vpad.up == false)
+		    miniglutSpecialUpCallback(GLUT_KEY_UP, x, y);
+		if (prev_vpad.down == true && engine->vpad.down == false)
+		    miniglutSpecialUpCallback(GLUT_KEY_DOWN, x, y);
+	    }
+	}
+	/* Normal mouse events */
+	else {
+	    if (action == AMOTION_EVENT_ACTION_DOWN && miniglutMouseCallback != NULL) {
+		engine->in_mmotion = true;
+		miniglutMouseCallback(GLUT_LEFT_BUTTON, GLUT_DOWN, x, y);
+	    } else if (action == AMOTION_EVENT_ACTION_UP && miniglutMouseCallback != NULL) {
+		engine->in_mmotion = false;
+		miniglutMouseCallback(GLUT_LEFT_BUTTON, GLUT_UP, x, y);
+	    } else if (action == AMOTION_EVENT_ACTION_MOVE && miniglutMotionCallback != NULL) {
+		miniglutMotionCallback(x, y);
+	    }
+	}
+
         return 1;
     } else if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY) {
 	// Note: Android generates repeat events when key is left
