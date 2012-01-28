@@ -50,12 +50,16 @@ FGAPI void    FGAPIENTRY glutMainLoop( void );
 
 FGAPI int     FGAPIENTRY glutCreateWindow( const char* title );
 
-FGAPI void    FGAPIENTRY glutSwapBuffers( void );
 FGAPI void    FGAPIENTRY glutPostRedisplay( void );
+FGAPI void    FGAPIENTRY glutSwapBuffers( void );
+
+FGAPI void    FGAPIENTRY glutWarpPointer( int x, int y );
+FGAPI void    FGAPIENTRY glutSetCursor( int cursor );
 
 FGAPI void    FGAPIENTRY glutIdleFunc( void (* callback)( void ) );
 FGAPI void    FGAPIENTRY glutMouseFunc( void (* callback)( int, int, int, int ) );
 FGAPI void    FGAPIENTRY glutMotionFunc( void (* callback)( int, int ) );
+FGAPI void    FGAPIENTRY glutPassiveMotionFunc( void (* callback)( int, int ) );
 FGAPI void    FGAPIENTRY glutSpecialFunc( void (* callback)( int, int, int ) );
 FGAPI void    FGAPIENTRY glutReshapeFunc( void (* callback)( int, int ) );
 FGAPI void    FGAPIENTRY glutDisplayFunc( void (* callback)( void ) );
@@ -130,6 +134,33 @@ FGAPI int     FGAPIENTRY glutGetModifiers( void );
 #define  GLUT_ACTIVE_SHIFT                  0x0001
 #define  GLUT_ACTIVE_CTRL                   0x0002
 #define  GLUT_ACTIVE_ALT                    0x0004
+
+/*
+ * GLUT API macro definitions -- the glutSetCursor parameters
+ */
+#define  GLUT_CURSOR_RIGHT_ARROW            0x0000
+#define  GLUT_CURSOR_LEFT_ARROW             0x0001
+#define  GLUT_CURSOR_INFO                   0x0002
+#define  GLUT_CURSOR_DESTROY                0x0003
+#define  GLUT_CURSOR_HELP                   0x0004
+#define  GLUT_CURSOR_CYCLE                  0x0005
+#define  GLUT_CURSOR_SPRAY                  0x0006
+#define  GLUT_CURSOR_WAIT                   0x0007
+#define  GLUT_CURSOR_TEXT                   0x0008
+#define  GLUT_CURSOR_CROSSHAIR              0x0009
+#define  GLUT_CURSOR_UP_DOWN                0x000A
+#define  GLUT_CURSOR_LEFT_RIGHT             0x000B
+#define  GLUT_CURSOR_TOP_SIDE               0x000C
+#define  GLUT_CURSOR_BOTTOM_SIDE            0x000D
+#define  GLUT_CURSOR_LEFT_SIDE              0x000E
+#define  GLUT_CURSOR_RIGHT_SIDE             0x000F
+#define  GLUT_CURSOR_TOP_LEFT_CORNER        0x0010
+#define  GLUT_CURSOR_TOP_RIGHT_CORNER       0x0011
+#define  GLUT_CURSOR_BOTTOM_RIGHT_CORNER    0x0012
+#define  GLUT_CURSOR_BOTTOM_LEFT_CORNER     0x0013
+#define  GLUT_CURSOR_INHERIT                0x0064
+#define  GLUT_CURSOR_NONE                   0x0065
+#define  GLUT_CURSOR_FULL_CROSSHAIR         0x0066
 
 #ifdef __cplusplus
     }

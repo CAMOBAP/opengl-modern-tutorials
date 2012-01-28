@@ -238,8 +238,6 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
 	int32_t action = AMotionEvent_getAction(event);
 	float x = AMotionEvent_getX(event, 0);
 	float y = AMotionEvent_getY(event, 0);
-        engine->state.x = x;
-        engine->state.y = y;
 	LOGI("motion %.01f,%.01f action=%d", x, y, AMotionEvent_getAction(event));
 
 	/* Virtual arrows PAD */
@@ -283,6 +281,8 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
 	}
 	/* Normal mouse events */
 	else {
+	    engine->state.x = x;
+	    engine->state.y = y;
 	    if (action == AMOTION_EVENT_ACTION_DOWN && miniglutMouseCallback != NULL) {
 		engine->in_mmotion = true;
 		miniglutMouseCallback(GLUT_LEFT_BUTTON, GLUT_DOWN, x, y);
@@ -729,9 +729,19 @@ void glutMotionFunc(void (* callback)( int, int )) {
     miniglutMotionCallback = callback;
 }
 
-void glutSwapBuffers( void ) {
+void glutSwapBuffers() {
     //LOGI("glutSwapBuffers");
     eglSwapBuffers(engine.display, engine.surface);
+}
+
+void glutWarpPointer(int x, int y) {
+    // No-op - no mouse pointer
+}
+void glutSetCursor(int cursor) {
+    // No-op - no mouse pointer
+}
+void glutPassiveMotionFunc( void (* callback)( int, int ) ) {
+    // No-op - no mouse pointer
 }
 
 int glutGet( GLenum query ) {

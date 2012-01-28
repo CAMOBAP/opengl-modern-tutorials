@@ -1,5 +1,3 @@
-#version 120
-
 varying vec4 texcoord;
 uniform sampler2D texture;
 
@@ -12,7 +10,7 @@ void main(void) {
 
 	// If the texture index is negative, it is a top or bottom face, otherwise a side face
 	// Side faces are less bright than top faces, simulating a sun at noon
-	if(texcoord.w < 0) {
+	if(texcoord.w < 0.0) {
 		coord2d = vec2((fract(texcoord.x) + texcoord.w) / 16.0, texcoord.z);
 		intensity = 1.0;
 	} else {
@@ -31,7 +29,7 @@ void main(void) {
 
 	// Calculate strength of fog
 	float z = gl_FragCoord.z / gl_FragCoord.w;
-	float fog = clamp(exp(-fogdensity * z * z), 0.2, 1);
+	float fog = clamp(exp(-fogdensity * z * z), 0.2, 1.0);
 
 	// Final color is a mix of the actual color and the fog color
 	gl_FragColor = mix(fogcolor, color, fog);
