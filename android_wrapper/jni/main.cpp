@@ -213,7 +213,6 @@ enum {
 };
 static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) {
     struct engine* engine = (struct engine*)app->userData;
-    // TODO: process mouse clicks and mouse motions
     // TODO: repeated events have 2 issues:
     // - down and up events happen most often at the exact same time
     //   (down/up/wait/down/up rather than down/wait/down/wait/up
@@ -224,6 +223,16 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         engine->state.x = AMotionEvent_getX(event, 0);
         engine->state.y = AMotionEvent_getY(event, 0);
+	int32_t action = AMotionEvent_getAction(event);
+	LOGI("motion %d,%d action=%d", engine->state.x, engine->state.y, AMotionEvent_getAction(event));
+	if (action == AMOTION_EVENT_ACTION_DOWN)
+	    miniglutMouseCallback(GLUT_LEFT_BUTTON, GLUT_DOWN,
+				  engine->state.x, engine->state.y);
+	else if (action == AMOTION_EVENT_ACTION_UP)
+	    miniglutMouseCallback(GLUT_LEFT_BUTTON, GLUT_UP,
+				  engine->state.x, engine->state.y);
+	else if (action == AMOTION_EVENT_ACTION_MOVE)
+	    miniglutMotionCallback(engine->state.x, engine->state.y);
         return 1;
     } else if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY) {
 	// Note: Android generates repeat events when key is left
