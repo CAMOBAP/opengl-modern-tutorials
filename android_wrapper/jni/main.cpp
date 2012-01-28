@@ -44,6 +44,7 @@ struct saved_state {
  * Shared state for our app.
  */
 struct vpad_state {
+    bool on;
     bool left;
     bool right;
     bool up;
@@ -241,48 +242,60 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
 	LOGI("motion %.01f,%.01f action=%d", x, y, AMotionEvent_getAction(event));
 
 	/* Virtual arrows PAD */
-	struct vpad_state prev_vpad = engine->vpad;
-	engine->vpad.left = engine->vpad.right
-	    = engine->vpad.up = engine->vpad.down = false;
-	if (!engine->in_mmotion && (action == AMOTION_EVENT_ACTION_DOWN || action == AMOTION_EVENT_ACTION_MOVE)) {
-	    if ((x > 0 && x < 100) && (y > (engine->height - 100) && y < engine->height))
-		engine->vpad.left = true;
-	    if ((x > 200 && x < 300) && (y > (engine->height - 100) && y < engine->height))
-		engine->vpad.right = true;
-	    if ((x > 100 && x < 200) && (y > (engine->height - 100) && y < engine->height))
-		engine->vpad.down = true;
-	    if ((x > 100 && x < 200) && (y > (engine->height - 200) && y < (engine->height - 100)))
-		engine->vpad.up = true;
-	}
-	if (prev_vpad.left != engine->vpad.left
-	    || prev_vpad.right != engine->vpad.right
-	    || prev_vpad.up != engine->vpad.up
-	    || prev_vpad.down != engine->vpad.down) {
-	    if (miniglutSpecialCallback != NULL) {
-		if (prev_vpad.left == false && engine->vpad.left == true)
-		    miniglutSpecialCallback(GLUT_KEY_LEFT, x, y);
-		else if (prev_vpad.right == false && engine->vpad.right == true)
-		    miniglutSpecialCallback(GLUT_KEY_RIGHT, x, y);
-		else if (prev_vpad.up == false && engine->vpad.up == true)
-		    miniglutSpecialCallback(GLUT_KEY_UP, x, y);
-		else if (prev_vpad.down == false && engine->vpad.down == true)
-		    miniglutSpecialCallback(GLUT_KEY_DOWN, x, y);
+	// Don't interfere with existing mouse move event
+	if (!engine->in_mmotion) {
+	    struct vpad_state prev_vpad = engine->vpad;
+	    engine->vpad.left = engine->vpad.right
+		= engine->vpad.up = engine->vpad.down = false;
+	    if (action == AMOTION_EVENT_ACTION_DOWN || action == AMOTION_EVENT_ACTION_MOVE) {
+		if ((x > 0 && x < 100) && (y > (engine->height - 100) && y < engine->height))
+		    engine->vpad.left = true;
+		if ((x > 200 && x < 300) && (y > (engine->height - 100) && y < engine->height))
+		    engine->vpad.right = true;
+		if ((x > 100 && x < 200) && (y > (engine->height - 100) && y < engine->height))
+		    engine->vpad.down = true;
+		if ((x > 100 && x < 200) && (y > (engine->height - 200) && y < (engine->height - 100)))
+		    engine->vpad.up = true;
 	    }
-	    if (miniglutSpecialUpCallback != NULL) {
-		if (prev_vpad.left == true && engine->vpad.left == false)
-		    miniglutSpecialUpCallback(GLUT_KEY_LEFT, x, y);
-		if (prev_vpad.right == true && engine->vpad.right == false)
-		    miniglutSpecialUpCallback(GLUT_KEY_RIGHT, x, y);
-		if (prev_vpad.up == true && engine->vpad.up == false)
-		    miniglutSpecialUpCallback(GLUT_KEY_UP, x, y);
-		if (prev_vpad.down == true && engine->vpad.down == false)
-		    miniglutSpecialUpCallback(GLUT_KEY_DOWN, x, y);
+	    if (action == AMOTION_EVENT_ACTION_DOWN && 
+		(engine->vpad.left || engine->vpad.right || engine->vpad.down || engine->vpad.up))
+		engine->vpad.on = true;
+	    if (action == AMOTION_EVENT_ACTION_UP)
+		engine->vpad.on = false;
+	    if (prev_vpad.left != engine->vpad.left
+		|| prev_vpad.right != engine->vpad.right
+		|| prev_vpad.up != engine->vpad.up
+		|| prev_vpad.down != engine->vpad.down
+		|| prev_vpad.on != engine->vpad.on) {
+		if (miniglutSpecialCallback != NULL) {
+		    if (prev_vpad.left == false && engine->vpad.left == true)
+			miniglutSpecialCallback(GLUT_KEY_LEFT, x, y);
+		    else if (prev_vpad.right == false && engine->vpad.right == true)
+			miniglutSpecialCallback(GLUT_KEY_RIGHT, x, y);
+		    else if (prev_vpad.up == false && engine->vpad.up == true)
+			miniglutSpecialCallback(GLUT_KEY_UP, x, y);
+		    else if (prev_vpad.down == false && engine->vpad.down == true)
+			miniglutSpecialCallback(GLUT_KEY_DOWN, x, y);
+		}
+		if (miniglutSpecialUpCallback != NULL) {
+		    if (prev_vpad.left == true && engine->vpad.left == false)
+			miniglutSpecialUpCallback(GLUT_KEY_LEFT, x, y);
+		    if (prev_vpad.right == true && engine->vpad.right == false)
+			miniglutSpecialUpCallback(GLUT_KEY_RIGHT, x, y);
+		    if (prev_vpad.up == true && engine->vpad.up == false)
+			miniglutSpecialUpCallback(GLUT_KEY_UP, x, y);
+		    if (prev_vpad.down == true && engine->vpad.down == false)
+			miniglutSpecialUpCallback(GLUT_KEY_DOWN, x, y);
+		}
+		return 1;
 	    }
 	}
+
 	/* Normal mouse events */
-	else {
+	if (!engine->vpad.on) {
 	    engine->state.x = x;
 	    engine->state.y = y;
+	    LOGI("Changed mouse position: %d,%d", x, y);
 	    if (action == AMOTION_EVENT_ACTION_DOWN && miniglutMouseCallback != NULL) {
 		engine->in_mmotion = true;
 		miniglutMouseCallback(GLUT_LEFT_BUTTON, GLUT_DOWN, x, y);
@@ -294,7 +307,7 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
 	    }
 	}
 
-        return 1;
+	return 1;
     } else if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY) {
 	// Note: Android generates repeat events when key is left
 	// pressed - just what like GLUT expects
@@ -331,7 +344,12 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
 		case AKEYCODE_DPAD_RIGHT:
 		    miniglutSpecialCallback(GLUT_KEY_RIGHT, engine->state.x, engine->state.y);
 		    break;
+		default:
+		    // Let the system handle other keyevent (in
+		    // particular the Back key)
+		    return 0;
 		}
+		return 1;
 	    }
 	} else if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_UP) {
 	    int32_t code = AKeyEvent_getKeyCode(event);
@@ -365,7 +383,12 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
 		case AKEYCODE_DPAD_RIGHT:
 		    miniglutSpecialUpCallback(GLUT_KEY_RIGHT, engine->state.x, engine->state.y);
 		    break;
+		default:
+		    // Let the system handle other keyevent (in
+		    // particular the Back key)
+		    return 0;
 		}
+		return 1;
 	    }
 	}
     }
