@@ -1,5 +1,3 @@
-#version 120
-
 attribute vec4 coord;
 varying vec2 texpos;
 

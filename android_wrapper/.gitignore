@@ -8,3 +8,4 @@ libs/
 obj/
 assets
 jni/tut.cpp
+freetype/
