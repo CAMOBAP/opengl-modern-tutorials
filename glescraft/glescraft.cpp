@@ -13,10 +13,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/noise.hpp>
 #include <time.h>
 #include "../common/shader_utils.h"
 
-#include "noise.cpp"
 #include "textures.c"
 
 static GLuint program;
@@ -75,7 +75,7 @@ struct chunk {
 	int elements;
 	time_t lastused;
 	bool changed;
-	bool perlinated;
+	bool noised;
 	bool initialized;
 	int ax;
 	int ay;
@@ -88,7 +88,7 @@ struct chunk {
 		slot = 0;
 		changed = true;
 		initialized = false;
-		perlinated = false;
+		noised = false;
 	}
 
 	chunk(int x, int y, int z): ax(x), ay(y), az(z) {
@@ -98,7 +98,7 @@ struct chunk {
 		slot = 0;
 		changed = true;
 		initialized = false;
-		perlinated = false;
+		noised = false;
 	}
 
 	uint8_t get(int x, int y, int z) const {
@@ -187,16 +187,44 @@ struct chunk {
 			back->changed = true;
 	}
 
-	void perlin(int seed) {
-		if(perlinated)
+	static float noise2d(float x, float y, int seed, int octaves, float persistence) {
+		float sum = 0;
+		float strength = 1.0;
+		float scale = 1.0;
+
+		for(int i = 0; i < octaves; i++) {
+			sum += strength * glm::simplex(glm::vec2(x, y) * scale);
+			scale *= 2.0;
+			strength *= persistence;
+		}
+
+		return sum;
+	}
+
+	static float noise3d_abs(float x, float y, float z, int seed, int octaves, float persistence) {
+		float sum = 0;
+		float strength = 1.0;
+		float scale = 1.0;
+
+		for(int i = 0; i < octaves; i++) {
+			sum += strength * fabs(glm::simplex(glm::vec3(x, y, z) * scale));
+			scale *= 2.0;
+			strength *= persistence;
+		}
+
+		return sum;
+	}
+
+	void noise(int seed) {
+		if(noised)
 			return;
 		else
-			perlinated = true;
+			noised = true;
 
 		for(int x = 0; x < CX; x++) {
 			for(int z = 0; z < CZ; z++) {
 				// Land height
-				float n = noise2d_perlin((x + ax * CX) / 256.0, (z + az * CZ) / 256.0, seed, 4, 2.38);
+				float n = noise2d((x + ax * CX) / 256.0, (z + az * CZ) / 256.0, seed, 5, 0.8) * 4;
 				int h = n * 2;
 				int y = 0;
 
@@ -232,7 +260,7 @@ struct chunk {
 					}
 
 					// Random value used to determine land type
-					float r = noise3d_perlin_abs((x + ax * CX) / 16.0, (y + ay * CY) / 16.0, (z + az * CZ) / 16.0, -seed, 2, 1);
+					float r = noise3d_abs((x + ax * CX) / 16.0, (y + ay * CY) / 16.0, (z + az * CZ) / 16.0, -seed, 2, 1);
 
 					// Sand layer
 					if(n + r * 5 < 4)
@@ -650,19 +678,19 @@ struct superchunk {
 		}
 
 		if(ux >= 0) {
-			c[ux][uy][uz]->perlin(seed);
+			c[ux][uy][uz]->noise(seed);
 			if(c[ux][uy][uz]->left)
-				c[ux][uy][uz]->left->perlin(seed);
+				c[ux][uy][uz]->left->noise(seed);
 			if(c[ux][uy][uz]->right)
-				c[ux][uy][uz]->right->perlin(seed);
+				c[ux][uy][uz]->right->noise(seed);
 			if(c[ux][uy][uz]->below)
-				c[ux][uy][uz]->below->perlin(seed);
+				c[ux][uy][uz]->below->noise(seed);
 			if(c[ux][uy][uz]->above)
-				c[ux][uy][uz]->above->perlin(seed);
+				c[ux][uy][uz]->above->noise(seed);
 			if(c[ux][uy][uz]->front)
-				c[ux][uy][uz]->front->perlin(seed);
+				c[ux][uy][uz]->front->noise(seed);
 			if(c[ux][uy][uz]->back)
-				c[ux][uy][uz]->back->perlin(seed);
+				c[ux][uy][uz]->back->noise(seed);
 			c[ux][uy][uz]->initialized = true;
 		}
 	}
