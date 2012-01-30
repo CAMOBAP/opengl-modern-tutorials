@@ -14,3 +14,6 @@ It will create an executable (such as 'triangle', 'cube' or 'teapot')
 that you can run:
 
   ./triangle
+
+You can compile all examples in one go by calling "make" in the top level
+directory.
