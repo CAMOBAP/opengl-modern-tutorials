@@ -6,7 +6,13 @@
 #include <stdlib.h>
 #include <math.h>
 /* Use glew.h instead of gl.h to get all the GL prototypes declared */
+#ifdef NOGLEW
+#define GL_GLEXT_PROTOTYPES
+#include <GL/gl.h>
+#include <GL/glext.h>
+#else
 #include <GL/glew.h>
+#endif
 /* Using the GLUT library for the base windowing setup */
 #include <GL/glut.h>
 /* GLM */
@@ -138,6 +144,7 @@ int main(int argc, char* argv[]) {
   glutInitWindowSize(640, 480);
   glutCreateWindow("My Transformed Triangle");
 
+#ifndef NOGLEW
   GLenum glew_status = glewInit();
   if (glew_status != GLEW_OK) {
     fprintf(stderr, "Error: %s\n", glewGetErrorString(glew_status));
@@ -148,6 +155,7 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "Error: your graphic card does not support OpenGL 2.0\n");
     return 1;
   }
+#endif
 
   if (init_resources()) {
     glutDisplayFunc(onDisplay);

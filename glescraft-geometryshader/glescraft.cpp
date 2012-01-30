@@ -1176,6 +1176,7 @@ int main(int argc, char* argv[]) {
 	printf("Press the right mouse button to remove a block.\n");
 	printf("Use the scrollwheel to select different types of blocks.\n");
 
+
 	if (init_resources()) {
 		glutSetCursor(GLUT_CURSOR_NONE);
 		glutWarpPointer(320, 240);
