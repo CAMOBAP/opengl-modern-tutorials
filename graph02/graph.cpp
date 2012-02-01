@@ -231,6 +231,11 @@ int main(int argc, char* argv[]) {
 	  return 1;
   }
 
+  GLfloat range[2];
+  glGetFloatv(GL_ALIASED_POINT_SIZE_RANGE, range);
+  if(range[1] < 5.0)
+	  fprintf(stderr, "WARNING: point sprite range (%f, %f) too small\n", range[0], range[1]);
+
   if (init_resources()) {
     glutDisplayFunc(display);
     glutSpecialFunc(special);
