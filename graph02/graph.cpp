@@ -224,6 +224,13 @@ int main(int argc, char* argv[]) {
   }
 #endif
 
+  GLint max_units;
+  glGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, &max_units);
+  if(max_units < 1) {
+	  fprintf(stderr, "Your GPU does not have any vertex texture image units\n");
+	  return 1;
+  }
+
   if (init_resources()) {
     glutDisplayFunc(display);
     glutSpecialFunc(special);
