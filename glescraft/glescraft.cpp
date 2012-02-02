@@ -40,6 +40,7 @@ static uint8_t buildtype = 1;
 
 static time_t now;
 static unsigned int keys;
+static bool select_using_depthbuffer = false;
 
 // Size of one chunk in blocks
 #define CX 16
@@ -840,50 +841,99 @@ static void display() {
 
 	world->render(mvp);
 
-	/* Find out coordinates of the center pixel */
+	/* At which voxel are we looking? */
 
-	float depth;
-	glReadPixels(ww / 2, wh / 2, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
+	if(select_using_depthbuffer) {
+		/* Find out coordinates of the center pixel */
 
-	glm::vec4 viewport = glm::vec4(0, 0, ww, wh);
-	glm::vec3 wincoord = glm::vec3(ww / 2, wh / 2, depth);
-	glm::vec3 objcoord = glm::unProject(wincoord, view, projection, viewport);
+		float depth;
+		glReadPixels(ww / 2, wh / 2, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
 
-	/* Find out which block it belongs to */
+		glm::vec4 viewport = glm::vec4(0, 0, ww, wh);
+		glm::vec3 wincoord = glm::vec3(ww / 2, wh / 2, depth);
+		glm::vec3 objcoord = glm::unProject(wincoord, view, projection, viewport);
 
-	mx = objcoord.x;
-	my = objcoord.y;
-	mz = objcoord.z;
-	if(objcoord.x < 0)
-		mx--;
-	if(objcoord.y < 0)
-		my--;
-	if(objcoord.z < 0)
-		mz--;
+		/* Find out which block it belongs to */
+
+		mx = objcoord.x;
+		my = objcoord.y;
+		mz = objcoord.z;
+		if(objcoord.x < 0)
+			mx--;
+		if(objcoord.y < 0)
+			my--;
+		if(objcoord.z < 0)
+			mz--;
+
+		/* Find out which face of the block we are looking at */
+
+		if(fract(objcoord.x) < fract(objcoord.y))
+			if(fract(objcoord.x) < fract(objcoord.z))
+				face = 0; // X
+			else
+				face = 2; // Z
+		else
+			if(fract(objcoord.y) < fract(objcoord.z))
+				face = 1; // Y
+			else
+				face = 2; // Z
+
+		if(face == 0 && lookat.x > 0)
+			face += 3;
+		if(face == 1 && lookat.y > 0)
+			face += 3;
+		if(face == 2 && lookat.z > 0)
+			face += 3;
+	} else {
+		/* Very naive ray casting algorithm to find out which block we are looking at */
+
+		glm::vec3 testpos = position;
+		glm::vec3 prevpos = position;
+
+		for(int i = 0; i < 100; i++) {
+			/* Advance from our currect position to the direction we are looking at, in small steps */
+
+			prevpos = testpos;
+			testpos += lookat * 0.1f;
+
+			mx = floorf(testpos.x);
+			my = floorf(testpos.y);
+			mz = floorf(testpos.z);
+
+			/* If we find a block that is not air, we are done */
+
+			if(world->get(mx, my, mz))
+				break;
+		}
+
+		/* Find out which face of the block we are looking at */
+
+		int px = floorf(prevpos.x);
+		int py = floorf(prevpos.y);
+		int pz = floorf(prevpos.z);
+
+		if(px > mx)
+			face = 0;
+		else if(px < mx)
+			face = 3;
+		else if(py > my)
+			face = 1;
+		else if(py < my)
+			face = 4;
+		else if(pz > mz)
+			face = 2;
+		else if(pz < mz)
+			face = 5;
+
+		/* If we are looking at air, move the cursor out of sight */
+
+		if(!world->get(mx, my, mz))
+			mx = my = mz = 99999;
+	}
+
 	float bx = mx;
 	float by = my;
 	float bz = mz;
-
-	/* Find out which face of the block we are looking at */
-
-	if(fract(objcoord.x) < fract(objcoord.y))
-		if(fract(objcoord.x) < fract(objcoord.z))
-			face = 0; // X
-		else
-			face = 2; // Z
-	else
-		if(fract(objcoord.y) < fract(objcoord.z))
-			face = 1; // Y
-		else
-			face = 2; // Z
-
-	if(face == 0 && lookat.x > 0)
-		face += 3;
-	if(face == 1 && lookat.y > 0)
-		face += 3;
-	if(face == 2 && lookat.z > 0)
-		face += 3;
-
 
 	/* Render a box around the block we are pointing at */
 
@@ -975,6 +1025,13 @@ static void special(int key, int x, int y) {
 			position = glm::vec3(0, CX * SCX, 0);
 			angle = glm::vec3(0, -M_PI * 0.49, 0);
 			update_vectors();
+			break;
+		case GLUT_KEY_F1:
+			select_using_depthbuffer = !select_using_depthbuffer;
+			if(select_using_depthbuffer)
+				printf("Using depth buffer selection method\n");
+			else
+				printf("Using ray casting selection method\n");
 			break;
 	}
 }
@@ -1121,6 +1178,7 @@ int main(int argc, char* argv[]) {
 	printf("Press the left mouse button to build a block.\n");
 	printf("Press the right mouse button to remove a block.\n");
 	printf("Use the scrollwheel to select different types of blocks.\n");
+	printf("Press F1 to toggle between depth buffer and ray casting methods for cube selection.\n");
 
 	if (init_resources()) {
 		glutSetCursor(GLUT_CURSOR_NONE);
