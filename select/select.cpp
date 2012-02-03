@@ -22,6 +22,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/rotate_vector.hpp>
+#include <glm/gtx/closest_point.hpp>
 #include "../common/shader_utils.h"
 
 #include "res_texture.c"
@@ -41,6 +42,7 @@ bool highlight[NCUBES];
 
 float angle = 0;
 float camera_angle = 0;
+const glm::vec3 camera_position(0.0, 2.0, 4.0);
 
 int init_resources() {
 	GLfloat cube_vertices[] = {
@@ -231,7 +233,7 @@ void onDisplay() {
 
 	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
-	glm::mat4 view = glm::lookAt(glm::rotateY(glm::vec3(0.0, 2.0, 4.0), camera_angle), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+	glm::mat4 view = glm::lookAt(glm::rotateY(camera_position, camera_angle), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 	glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 10.0f);
 
 	GLfloat color_normal[4] = {1, 1, 1, 1};
@@ -298,7 +300,7 @@ void onMouse(int button, int state, int x, int y) {
 			x, y, color[0], color[1], color[2], color[3], depth, index);
 
 	/* Convert from window coordinates to object coordinates */
-	glm::mat4 view = glm::lookAt(glm::rotateY(glm::vec3(0.0, 2.0, 4.0), camera_angle), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+	glm::mat4 view = glm::lookAt(glm::rotateY(camera_position, camera_angle), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 	glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 10.0f);
 	glm::vec4 viewport = glm::vec4(0, 0, screen_width, screen_height);
 
@@ -315,6 +317,26 @@ void onMouse(int button, int state, int x, int y) {
 
 	printf("Coordinates in object space: %f, %f, %f, closest to center of box %d\n",
 			objcoord.x, objcoord.y, objcoord.z, closest_i + 1);
+
+	/* Ray casting */
+	closest_i = -1;
+	float closest_distance = 1.0/0.0; // infinity
+
+	wincoord.z = 0.99;
+	glm::vec3 point1 = glm::rotateY(camera_position, camera_angle);
+	glm::vec3 point2 = glm::unProject(wincoord, view, projection, viewport);
+
+	for(int i = 0; i < NCUBES; i++) {
+		glm::vec3 cpol = glm::closestPointOnLine(positions[i], point1, point2);
+		float dtol = glm::distance(positions[i], cpol);
+		float distance = glm::distance(positions[i], glm::rotateY(camera_position, camera_angle));
+		if(dtol < 0.2 * sqrtf(3.0) && distance < closest_distance) {
+			closest_i = i;
+			closest_distance = distance;
+		}
+	}
+
+	printf("Closest along camera ray: %d\n", closest_i + 1);
 
 	/* Toggle highlighting of the selected object */
 	if(index)
