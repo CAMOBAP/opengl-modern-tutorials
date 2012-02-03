@@ -4,7 +4,9 @@ all:
 	ant debug
 
 install:
+	#adb install -r bin/wikibooks-opengl-debug.apk
 	ant installd
+	adb shell am start -a android.intenon.MAIN -n org.wikibooks.OpenGL/android.app.NativeActivity
 
 clean:
 	ndk-build clean
