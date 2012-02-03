@@ -42,7 +42,7 @@ bool highlight[NCUBES];
 
 float angle = 0;
 float camera_angle = 0;
-const glm::vec3 camera_position(0.0, 2.0, 4.0);
+glm::vec3 camera_position(0.0, 2.0, 4.0);
 
 int init_resources() {
 	GLfloat cube_vertices[] = {
@@ -233,7 +233,7 @@ void onDisplay() {
 
 	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
-	glm::mat4 view = glm::lookAt(glm::rotateY(camera_position, camera_angle), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+	glm::mat4 view = glm::lookAt(camera_position, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 	glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 10.0f);
 
 	GLfloat color_normal[4] = {1, 1, 1, 1};
@@ -281,6 +281,8 @@ void onSpecial(int key, int x, int y) {
 			camera_angle += 5;
 			break;
 	}
+
+	camera_position = glm::rotateY(glm::vec3(0.0, 2.0, 4.0), camera_angle);
 }
 
 void onMouse(int button, int state, int x, int y) {
@@ -300,7 +302,7 @@ void onMouse(int button, int state, int x, int y) {
 			x, y, color[0], color[1], color[2], color[3], depth, index);
 
 	/* Convert from window coordinates to object coordinates */
-	glm::mat4 view = glm::lookAt(glm::rotateY(camera_position, camera_angle), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+	glm::mat4 view = glm::lookAt(camera_position, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 	glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 10.0f);
 	glm::vec4 viewport = glm::vec4(0, 0, screen_width, screen_height);
 
@@ -323,13 +325,13 @@ void onMouse(int button, int state, int x, int y) {
 	float closest_distance = 1.0/0.0; // infinity
 
 	wincoord.z = 0.99;
-	glm::vec3 point1 = glm::rotateY(camera_position, camera_angle);
+	glm::vec3 point1 = camera_position;
 	glm::vec3 point2 = glm::unProject(wincoord, view, projection, viewport);
 
 	for(int i = 0; i < NCUBES; i++) {
 		glm::vec3 cpol = glm::closestPointOnLine(positions[i], point1, point2);
 		float dtol = glm::distance(positions[i], cpol);
-		float distance = glm::distance(positions[i], glm::rotateY(camera_position, camera_angle));
+		float distance = glm::distance(positions[i], camera_position);
 		if(dtol < 0.2 * sqrtf(3.0) && distance < closest_distance) {
 			closest_i = i;
 			closest_distance = distance;
