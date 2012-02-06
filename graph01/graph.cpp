@@ -1,13 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#ifdef NOGLEW
-#define GL_GLEXT_PROTOTYPES
-#include <GL/gl.h>
-#include <GL/glext.h>
-#else
 #include <GL/glew.h>
-#endif
 #include <GL/glut.h>
 #include "../common/shader_utils.h"
 
@@ -218,7 +212,6 @@ int main(int argc, char* argv[]) {
   glutInitWindowSize(640, 480);
   glutCreateWindow("My Graph");
 
-#ifndef NOGLEW
   GLenum glew_status = glewInit();
   if (GLEW_OK != glew_status) {
     fprintf(stderr, "Error: %s\n", glewGetErrorString(glew_status));
@@ -229,7 +222,6 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "No support for OpenGL 2.0 found\n");
     return 1;
   }
-#endif
 
   GLfloat range[2];
   glGetFloatv(GL_ALIASED_POINT_SIZE_RANGE, range);

@@ -5,13 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef NOGLEW
-#define GL_GLEXT_PROTOTYPES
-#include <GL/gl.h>
-#include <GL/glext.h>
-#else
 #include <GL/glew.h>
-#endif
 
 /**
  * Store all the file's contents in memory, useful to pass shaders
