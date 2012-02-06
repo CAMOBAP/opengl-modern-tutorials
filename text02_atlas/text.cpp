@@ -296,7 +296,7 @@ int init_resources()
  * The pixel coordinates that the FreeType2 library uses are scaled by (sx, sy).
  */
 void render_text(const char *text, atlas *a, float x, float y, float sx, float sy) {
-	const char *p;
+	const uint8_t *p;
 
 	/* Use the texture containing the atlas */
 	glBindTexture(GL_TEXTURE_2D, a->tex);
@@ -311,7 +311,7 @@ void render_text(const char *text, atlas *a, float x, float y, float sx, float s
 	int c = 0;
 
 	/* Loop through all characters */
-	for(p = text; *p; p++) {
+	for(p = (const uint8_t *)text; *p; p++) {
 		/* Calculate the vertex and texture coordinates */
 		float x2 =  x + a->c[*p].bl * sx;
 		float y2 = -y - a->c[*p].bt * sy;
