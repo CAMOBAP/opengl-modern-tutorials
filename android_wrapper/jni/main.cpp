@@ -521,6 +521,10 @@ struct android_app* state;
 extern int main(int argc, char* argv[]);
 void android_main(struct android_app* state_param) {
     LOGI("android_main");
+    
+    // Make sure glue isn't stripped.
+    app_dummy();
+
     state = state_param;
 
     // Register window resize callback
@@ -684,10 +688,6 @@ int glutCreateWindow( const char* title ) {
 	// Only one full-screen window
 	return 0;
     }
-    
-
-    // Make sure glue isn't stripped.
-    app_dummy();
 
     memset(&engine, 0, sizeof(engine));
     state->userData = &engine;
