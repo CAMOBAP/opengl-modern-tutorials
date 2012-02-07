@@ -9,6 +9,6 @@ install:
 	adb shell am start -a android.intenon.MAIN -n org.wikibooks.OpenGL/android.app.NativeActivity
 
 clean:
-	ndk-build clean
+	ndk-build clean NDK_MODULE_PATH=$$NDK_MODULE_PATH:.
 	ant clean
 	rm -rf obj/ libs/ build.xml proguard.cfg project.properties local.properties
