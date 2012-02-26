@@ -461,7 +461,11 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
 }
 
 void print_info_paths(struct android_app* state_param) {
+    // Get usable JNI context
     JNIEnv* env = state_param->activity->env;
+    JavaVM* vm = state_param->activity->vm;
+    vm->AttachCurrentThread(&env, NULL);
+
     jclass activityClass = env->GetObjectClass(state_param->activity->clazz);
 
     jclass fileClass = env->FindClass("java/io/File");
