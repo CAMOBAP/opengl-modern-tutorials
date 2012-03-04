@@ -1,5 +1,3 @@
-#version 120
-
 attribute vec3 v_coord;
 attribute vec2 v_texcoord;
 varying vec2 f_texcoord;

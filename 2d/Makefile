@@ -2,5 +2,6 @@ LDLIBS=-lglut -lGLEW -lGL -lm
 all: sprites
 clean:
 	rm -f *.o sprites
-cube.o: res_texture.c
+sprites.o: res_texture.c
+sprites: ../common/shader_utils.o
 .PHONY: all clean
