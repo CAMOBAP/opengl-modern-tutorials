@@ -151,11 +151,6 @@ int init_resources()
 		return 0;
 	}
 
-	/* Create texture atlasses for several font sizes */
-	a48 = new atlas(face, 48);
-	a24 = new atlas(face, 24);
-	a12 = new atlas(face, 12);
-
 	/* Compile and link the shader program */
 	GLint link_ok = GL_FALSE;
 
@@ -199,6 +194,12 @@ int init_resources()
 
 	// Create the vertex buffer object
 	glGenBuffers(1, &vbo);
+
+	/* Create texture atlasses for several font sizes */
+	glUseProgram(program);
+	a48 = new atlas(face, 48);
+	a24 = new atlas(face, 24);
+	a12 = new atlas(face, 12);
 
 	return 1;
 }
