@@ -124,7 +124,6 @@ struct atlas {
 			o += g->bitmap.width + 1;
 		}
 
-		glGenerateMipmap(GL_TEXTURE_2D);
 		fprintf(stderr, "Generated a %d x %d (%d kb) texture atlas\n", minw, minh, minw * minh / 1024);
 	}
 
