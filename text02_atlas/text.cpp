@@ -314,7 +314,7 @@ int main(int argc, char* argv[]) {
 	if(argc > 1)
 		fontfilename = argv[1];
 	else
-		fontfilename = "../font/FreeSans.ttf";
+		fontfilename = "FreeSans.ttf";
 
 	GLenum glew_status = glewInit();
 	if (GLEW_OK != glew_status) {
