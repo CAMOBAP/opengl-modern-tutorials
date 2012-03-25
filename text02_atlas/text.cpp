@@ -30,6 +30,9 @@ GLuint vbo;
 FT_Library ft;
 FT_Face face;
 
+// Maximum texture width
+#define MAXWIDTH 1024
+
 const char *fontfilename;
 
 /**
@@ -43,8 +46,8 @@ const char *fontfilename;
 struct atlas {
 	GLuint tex;    // texture object
 
-	float w; // width of texture in pixels
-	float h; // height of texture in pixels
+	int w; // width of texture in pixels
+	int h; // height of texture in pixels
 
 	struct {
 		float ax; // advance.x
@@ -57,14 +60,17 @@ struct atlas {
 		float bt; // bitmap_top;
 
 		float tx; // x offset of glyph in texture coordinates
+		float ty; // y offset of glyph in texture coordinates
 	} c[128]; // character information
 
 	atlas(FT_Face face, int height) {
 		FT_Set_Pixel_Sizes(face, 0, height);
 		FT_GlyphSlot g = face->glyph;
 
-		int minw = 0;
-		int minh = 0;
+		int roww = 0;
+		int rowh = 0;
+		w = 0;
+		h = 0;
 
 		memset(c, 0, sizeof c);
 
@@ -74,12 +80,18 @@ struct atlas {
 				fprintf(stderr, "Loading character %c failed!\n", i);
 				continue;
 			}
-			minw += g->bitmap.width + 1;
-			minh = std::max(minh, g->bitmap.rows);
+			if(roww + g->bitmap.width + 1 >= MAXWIDTH) {
+				w = std::max(w, roww);
+				h += rowh;
+				roww = 0;
+				rowh = 0;
+			}
+			roww += g->bitmap.width + 1;
+			rowh = std::max(rowh, g->bitmap.rows);
 		}
 
-		w = minw;
-		h = minh;
+		w = std::max(w, roww);
+		h += rowh;
 
 		/* Create a texture that will be used to hold all ASCII glyphs */
 		glActiveTexture(GL_TEXTURE0);
@@ -87,7 +99,7 @@ struct atlas {
 		glBindTexture(GL_TEXTURE_2D, tex);
 		glUniform1i(uniform_tex, 0);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, minw, minh, 0, GL_ALPHA, GL_UNSIGNED_BYTE, 0);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, w, h, 0, GL_ALPHA, GL_UNSIGNED_BYTE, 0);
 
 		/* We require 1 byte alignment when uploading texture data */
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -101,7 +113,9 @@ struct atlas {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 		/* Paste all glyph bitmaps into the texture, remembering the offset */
-		int o = 0;
+		int ox = 0;
+		int oy = 0;
+		rowh = 0;
 
 		for(int i = 32; i < 128; i++) {
 			if(FT_Load_Char(face, i, FT_LOAD_RENDER)) {
@@ -109,7 +123,13 @@ struct atlas {
 				continue;
 			}
 
-			glTexSubImage2D(GL_TEXTURE_2D, 0, o, 0, g->bitmap.width, g->bitmap.rows, GL_ALPHA, GL_UNSIGNED_BYTE, g->bitmap.buffer);
+			if(ox + g->bitmap.width + 1 >= MAXWIDTH) {
+				oy += rowh;
+				rowh = 0;
+				ox = 0;
+			}
+
+			glTexSubImage2D(GL_TEXTURE_2D, 0, ox, oy, g->bitmap.width, g->bitmap.rows, GL_ALPHA, GL_UNSIGNED_BYTE, g->bitmap.buffer);
 			c[i].ax = g->advance.x >> 6;
 			c[i].ay = g->advance.y >> 6;
 
@@ -119,12 +139,14 @@ struct atlas {
 			c[i].bl = g->bitmap_left;
 			c[i].bt = g->bitmap_top;
 
-			c[i].tx = o / w;
+			c[i].tx = ox / (float)w;
+			c[i].ty = oy / (float)h;
 
-			o += g->bitmap.width + 1;
+			rowh = std::max(rowh, g->bitmap.rows);
+			ox += g->bitmap.width + 1;
 		}
 
-		fprintf(stderr, "Generated a %d x %d (%d kb) texture atlas\n", minw, minh, minw * minh / 1024);
+		fprintf(stderr, "Generated a %d x %d (%d kb) texture atlas\n", w, h, w * h / 1024);
 	}
 
 	~atlas() {
@@ -154,7 +176,7 @@ int init_resources()
 	GLint link_ok = GL_FALSE;
 
 	GLuint vs, fs;
-	if ((vs = create_shader("text.v.glsl", GL_VERTEX_SHADER))	 == 0) return 0;
+	if ((vs = create_shader("text.v.glsl", GL_VERTEX_SHADER)) == 0) return 0;
 	if ((fs = create_shader("text.f.glsl", GL_FRAGMENT_SHADER)) == 0) return 0;
 
 	program = glCreateProgram();
@@ -239,12 +261,12 @@ void render_text(const char *text, atlas *a, float x, float y, float sx, float s
 		if(!w || !h)
 			continue;
 
-		coords[c++] = (point){x2,     -y2    , a->c[*p].tx,                      0};
-		coords[c++] = (point){x2 + w, -y2    , a->c[*p].tx + a->c[*p].bw / a->w, 0};
-		coords[c++] = (point){x2,     -y2 - h, a->c[*p].tx,                      a->c[*p].bh / a->h};
-		coords[c++] = (point){x2 + w, -y2    , a->c[*p].tx + a->c[*p].bw / a->w, 0};
-		coords[c++] = (point){x2,     -y2 - h, a->c[*p].tx,                      a->c[*p].bh / a->h};
-		coords[c++] = (point){x2 + w, -y2 - h, a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].bh / a->h};
+		coords[c++] = (point){x2,     -y2    , a->c[*p].tx,                      a->c[*p].ty};
+		coords[c++] = (point){x2 + w, -y2    , a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].ty};
+		coords[c++] = (point){x2,     -y2 - h, a->c[*p].tx,                      a->c[*p].ty + a->c[*p].bh / a->h};
+		coords[c++] = (point){x2 + w, -y2    , a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].ty};
+		coords[c++] = (point){x2,     -y2 - h, a->c[*p].tx,                      a->c[*p].ty + a->c[*p].bh / a->h};
+		coords[c++] = (point){x2 + w, -y2 - h, a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].ty + a->c[*p].bh / a->h};
 	}
 
 	/* Draw all the character on the screen in one go */
