@@ -22,25 +22,22 @@
 int screen_width=800, screen_height=600;
 GLuint vbo_sprite_vertices, vbo_sprite_texcoords;
 GLuint program;
-GLuint texture_id;
 GLint attribute_v_coord, attribute_v_texcoord;
 GLint uniform_mvp, uniform_mytexture;
 
 int init_resources()
 {
   GLfloat sprite_vertices[] = {
-    // front
-      0,    0, 0,
-    256,    0, 0,
-      0,  256, 0,
-    256,  256, 0,
+      0,    0, 0, 1,
+    256,    0, 0, 1,
+      0,  256, 0, 1,
+    256,  256, 0, 1,
   };
   glGenBuffers(1, &vbo_sprite_vertices);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_sprite_vertices);
   glBufferData(GL_ARRAY_BUFFER, sizeof(sprite_vertices), sprite_vertices, GL_STATIC_DRAW);
 
-  GLfloat sprite_texcoords[2*4*6] = {
-    // front
+  GLfloat sprite_texcoords[] = {
     0.0, 0.0,
     1.0, 0.0,
     0.0, 1.0,
@@ -50,6 +47,7 @@ int init_resources()
   glBindBuffer(GL_ARRAY_BUFFER, vbo_sprite_texcoords);
   glBufferData(GL_ARRAY_BUFFER, sizeof(sprite_texcoords), sprite_texcoords, GL_STATIC_DRAW);
 
+  GLuint texture_id;
   glActiveTexture(GL_TEXTURE0);
   glGenTextures(1, &texture_id);
   glBindTexture(GL_TEXTURE_2D, texture_id);
@@ -124,7 +122,7 @@ void onDisplay()
   glBindBuffer(GL_ARRAY_BUFFER, vbo_sprite_vertices);
   glVertexAttribPointer(
     attribute_v_coord, // attribute
-    3,                 // number of elements per vertex, here (x,y,z)
+    4,                 // number of elements per vertex, here (x,y,z)
     GL_FLOAT,          // the type of each element
     GL_FALSE,          // take our values as-is
     0,                 // no extra data between each position
@@ -154,14 +152,15 @@ void onIdle() {
   float scale = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * .2;  // 20% per second
   glm::mat4 projection = glm::ortho(0.0f, 1.0f*screen_width*scale, 1.0f*screen_height*scale, 0.0f);
 
-  float move = 300; // sinf(glutGet(GLUT_ELAPSED_TIME) / 1000.0 * (2*3.14) / 5); // -1<->+1 every 5 seconds
+  float move = 128;
   float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 45;  // 45° per second
   glm::vec3 axis_z(0, 0, 1);
   glm::mat4 m_transform = glm::translate(glm::mat4(1.0f), glm::vec3(move, move, 0.0))
-    * glm::rotate(glm::mat4(1.0f), angle, axis_z);
+    * glm::rotate(glm::mat4(1.0f), angle, axis_z)
+    * glm::translate(glm::mat4(1.0f), glm::vec3(-256/2, -256/2, 0.0));
 
-  glm::mat3 mvp = glm::mat3(projection * m_transform); // * view * model * anim;
-  glUniformMatrix3fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
+  glm::mat4 mvp = projection * m_transform; // * view * model * anim;
+  glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
   glutPostRedisplay();
 }
 
