@@ -596,7 +596,7 @@ glm::mat4 portal_view(glm::mat4 orig_view, Mesh* src, Mesh* dst) {
   return portal_cam;
 }
 
-void onIdle() {
+void logic() {
   /* FPS count */
   {
     fps_frames++;
@@ -1110,8 +1110,7 @@ void draw_scene(vector<glm::mat4> view_stack, int rec, int outer_portal = -1) {
   // sleep(2);
 }
 
-void onDisplay()
-{
+void draw() {
   glClearColor(0.45, 0.45, 0.45, 1.0);
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 
@@ -1133,7 +1132,12 @@ void onDisplay()
   );
   draw_scene(view_stack, 4);
   draw_camera();
+}
 
+void onDisplay()
+{
+  logic();
+  draw();
   glutSwapBuffers();
 }
 
@@ -1204,7 +1208,6 @@ int main(int argc, char* argv[]) {
     glutMouseFunc(onMouse);
     glutMotionFunc(onMotion);
     glutReshapeFunc(onReshape);
-    glutIdleFunc(onIdle);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_DEPTH_TEST);
