@@ -1,10 +1,8 @@
 CXXFLAGS=-ggdb
 LDLIBS=-lglut -lGLEW -lGL -lm
-all: suzanne
-suzanne: ../common/shader_utils.o
+all: obj-viewer
+obj-viewer: ../common/shader_utils.o
 clean:
-	rm -f *.o suzanne
+	rm -f *.o obj-viewer
 
-test:
-	./suzanne suzanne.obj phong-shading.v.glsl phong-shading.f.glsl
-.PHONY: all clean test
+.PHONY: all clean
