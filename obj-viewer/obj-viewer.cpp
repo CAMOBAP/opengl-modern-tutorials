@@ -473,7 +473,7 @@ glm::vec3 get_arcball_vector(int x, int y) {
   return P;
 }
 
-void onIdle() {
+void logic() {
   /* FPS count */
   {
     fps_frames++;
@@ -555,8 +555,7 @@ void onIdle() {
   glutPostRedisplay();
 }
 
-void onDisplay()
-{
+void draw() {
   glClearColor(0.45, 0.45, 0.45, 1.0);
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
@@ -565,7 +564,12 @@ void onDisplay()
   main_object.draw();
   ground.draw();
   light_bbox.draw_bbox();
+}
 
+void onDisplay()
+{
+  logic();
+  draw();
   glutSwapBuffers();
 }
 
@@ -634,7 +638,6 @@ int main(int argc, char* argv[]) {
     glutMouseFunc(onMouse);
     glutMotionFunc(onMotion);
     glutReshapeFunc(onReshape);
-    glutIdleFunc(onIdle);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_DEPTH_TEST);
