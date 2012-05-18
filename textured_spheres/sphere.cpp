@@ -37,11 +37,10 @@ int init_resources()
      "Earthmap720x360_grid.jpg",
      SOIL_LOAD_AUTO,
      SOIL_CREATE_NEW_ID,
-     SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y
-     | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
+     SOIL_FLAG_INVERT_Y
      );
   if(texture_id == 0)
-    cerr << "SOIL loading error: '" << SOIL_last_result() << "' (" << "Earthmap720x360_grid.jpg" << "%s)" << endl;
+    cerr << "SOIL loading error: '" << SOIL_last_result() << "' (" << "Earthmap720x360_grid.jpg" << ")" << endl;
 
   GLint link_ok = GL_FALSE;
 
@@ -89,8 +88,8 @@ void logic() {
   glm::mat4 anim = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0, 1, 0));
 
   glm::mat4 fix_orientation = glm::rotate(glm::mat4(1.0f), -90.f, glm::vec3(1, 0, 0));
-  glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -4.0));
-  glm::mat4 view = glm::lookAt(glm::vec3(0.0, 2.0, 0.0), glm::vec3(0.0, 0.0, -4.0), glm::vec3(0.0, 1.0, 0.0));
+  glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -2.0));
+  glm::mat4 view = glm::lookAt(glm::vec3(0.0, 2.0, 0.0), glm::vec3(0.0, 0.0, -2.0), glm::vec3(0.0, 1.0, 0.0));
   glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 10.0f);
 
   glm::mat4 mvp = projection * view * model * anim * fix_orientation;
@@ -108,7 +107,7 @@ void draw()
   glUniform1i(uniform_mytexture, /*GL_TEXTURE*/0);
 
   glutSetVertexAttribCoord3(attribute_coord3d);
-  glutSolidSphere(1.0,16,16);
+  glutSolidSphere(1.0,30,30);
 }
 
 void onDisplay() {
