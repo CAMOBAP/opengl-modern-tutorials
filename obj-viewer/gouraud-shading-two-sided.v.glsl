@@ -88,7 +88,7 @@ void main(void)
 
   // Computation of lighting for front faces
 
-  vec3 ambientLightning = vec3(scene_ambient) * vec3(frontMaterial.ambient);
+  vec3 ambientLighting = vec3(scene_ambient) * vec3(frontMaterial.ambient);
 
   vec3 diffuseReflection = attenuation
     * vec3(light0.diffuse) * vec3(frontMaterial.diffuse)
@@ -106,7 +106,7 @@ void main(void)
 	      frontMaterial.shininess);
     }
 
-  frontColor = vec4(ambientLightning + diffuseReflection + specularReflection, 1.0);
+  frontColor = vec4(ambientLighting + diffuseReflection + specularReflection, 1.0);
 
   // Computation of lighting for back faces (uses negative normalDirection and back material colors)
 

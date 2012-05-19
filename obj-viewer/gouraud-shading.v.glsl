@@ -79,7 +79,7 @@ void main(void)
         }
     }
 
-  vec3 ambientLightning = vec3(scene_ambient) * vec3(mymaterial.ambient);
+  vec3 ambientLighting = vec3(scene_ambient) * vec3(mymaterial.ambient);
 
   vec3 diffuseReflection = attenuation
     * vec3(light0.diffuse) * vec3(mymaterial.diffuse)
@@ -97,6 +97,6 @@ void main(void)
               mymaterial.shininess);
     }
 
-  color = vec4(ambientLightning + diffuseReflection + specularReflection, 1.0);
+  color = vec4(ambientLighting + diffuseReflection + specularReflection, 1.0);
   gl_Position = mvp * v_coord;
 }
