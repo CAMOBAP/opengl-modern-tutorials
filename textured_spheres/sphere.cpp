@@ -27,7 +27,7 @@ GLuint ibo_sphere_elements;
 GLuint program;
 GLuint texture_id;
 GLint attribute_coord3d, attribute_texcoord;
-GLint uniform_mvp, uniform_mytexture;
+GLint uniform_mvp, uniform_mytexture, uniform_mytexture_ST;
 
 int init_resources()
 {
@@ -37,7 +37,7 @@ int init_resources()
      "Earthmap720x360_grid.jpg",
      SOIL_LOAD_AUTO,
      SOIL_CREATE_NEW_ID,
-     SOIL_FLAG_INVERT_Y
+     SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS
      );
   if(texture_id == 0)
     cerr << "SOIL loading error: '" << SOIL_last_result() << "' (" << "Earthmap720x360_grid.jpg" << ")" << endl;
@@ -79,6 +79,12 @@ int init_resources()
     fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
     return 0;
   }
+  uniform_name = "mytexture_ST";
+  uniform_mytexture_ST = glGetUniformLocation(program, uniform_name);
+  if (uniform_mytexture_ST == -1) {
+    fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
+    return 0;
+  }
 
   return 1;
 }
@@ -95,6 +101,10 @@ void logic() {
   glm::mat4 mvp = projection * view * model * anim * fix_orientation;
   glUseProgram(program);
   glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
+
+  // tiling and offset
+  glUniform4f(uniform_mytexture_ST, 2,1, 0,-.05);
+
   glutPostRedisplay();
 }
 
