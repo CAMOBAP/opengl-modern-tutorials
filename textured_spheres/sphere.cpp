@@ -22,12 +22,12 @@
 using namespace std;
 
 int screen_width=800, screen_height=600;
-GLuint vbo_sphere_vertices, vbo_sphere_texcoords;
-GLuint ibo_sphere_elements;
 GLuint program;
 GLuint texture_id;
-GLint attribute_coord3d, attribute_texcoord;
-GLint uniform_mvp, uniform_mytexture, uniform_mytexture_ST;
+GLint attribute_v_coord = -1, attribute_v_normal = 1;
+GLint uniform_m = -1, uniform_v = -1, uniform_p = -1,
+    uniform_m_3x3_inv_transp = -1, uniform_v_inv = -1,
+    uniform_mytexture = -1, uniform_mytexture_ST = -1;
 
 char* vshader_filename = (char*) "sphere.v.glsl";
 char* fshader_filename = (char*) "sphere.f.glsl";
@@ -63,18 +63,45 @@ int init_resources()
   }
 
   const char* attribute_name;
-  attribute_name = "coord3d";
-  attribute_coord3d = glGetAttribLocation(program, attribute_name);
-  if (attribute_coord3d == -1) {
+  attribute_name = "v_coord";
+  attribute_v_coord = glGetAttribLocation(program, attribute_name);
+  if (attribute_v_coord == -1) {
     fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
     return 0;
   }
+  attribute_name = "v_normal";
+  attribute_v_normal = glGetAttribLocation(program, attribute_name);
+  if (attribute_v_normal == -1) {
+    fprintf(stderr, "Warning: Could not bind attribute %s\n", attribute_name);
+  }
   const char* uniform_name;
-  uniform_name = "mvp";
-  uniform_mvp = glGetUniformLocation(program, uniform_name);
-  if (uniform_mvp == -1) {
+  uniform_name = "m";
+  uniform_m = glGetUniformLocation(program, uniform_name);
+  if (uniform_m == -1) {
     fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
     return 0;
+  }
+  uniform_name = "v";
+  uniform_v = glGetUniformLocation(program, uniform_name);
+  if (uniform_v == -1) {
+    fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
+    return 0;
+  }
+  uniform_name = "p";
+  uniform_p = glGetUniformLocation(program, uniform_name);
+  if (uniform_p == -1) {
+    fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
+    return 0;
+  }
+  uniform_name = "m_3x3_inv_transp";
+  uniform_m_3x3_inv_transp = glGetUniformLocation(program, uniform_name);
+  if (uniform_m_3x3_inv_transp == -1) {
+    fprintf(stderr, "Warning: Could not bind uniform %s\n", uniform_name);
+  }
+  uniform_name = "v_inv";
+  uniform_v_inv = glGetUniformLocation(program, uniform_name);
+  if (uniform_v_inv == -1) {
+    fprintf(stderr, "Warning: Could not bind uniform %s\n", uniform_name);
   }
   uniform_name = "mytexture";
   uniform_mytexture = glGetUniformLocation(program, uniform_name);
@@ -103,12 +130,25 @@ void logic() {
   glm::mat4 view = glm::lookAt(glm::vec3(0.0, 2.0, 0.0), glm::vec3(0.0, 0.0, -2.0), glm::vec3(0.0, 1.0, 0.0));
   glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 10.0f);
 
-  glm::mat4 mvp = projection * view * model * anim * fix_orientation;
+  //glm::mat4 mvp = projection * view * model * anim * fix_orientation;
+  //glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
+
+
   glUseProgram(program);
-  glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
+  glm::mat4 m = model * anim * fix_orientation;
+  glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(m));
+  glm::mat3 m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(m)));
+  glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
+
+  glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(view));
+  glm::mat4 v_inv = glm::inverse(view);
+  glUniformMatrix4fv(uniform_v_inv, 1, GL_FALSE, glm::value_ptr(v_inv));
+
+  glUniformMatrix4fv(uniform_p, 1, GL_FALSE, glm::value_ptr(projection));
 
   // tiling and offset
-  glUniform4f(uniform_mytexture_ST, 2,1, 0,-.05);
+  if (uniform_mytexture_ST >= 0)
+      glUniform4f(uniform_mytexture_ST, 2,1, 0,-.05);
 
   glutPostRedisplay();
 }
@@ -121,7 +161,8 @@ void draw()
   glUseProgram(program);
   glUniform1i(uniform_mytexture, /*GL_TEXTURE*/0);
 
-  glutSetVertexAttribCoord3(attribute_coord3d);
+  glutSetVertexAttribCoord3(attribute_v_coord);
+  glutSetVertexAttribNormal(attribute_v_normal);
   glutSolidSphere(1.0,30,30);
 }
 
@@ -140,9 +181,6 @@ void onReshape(int width, int height) {
 void free_resources()
 {
   glDeleteProgram(program);
-  glDeleteBuffers(1, &vbo_sphere_vertices);
-  glDeleteBuffers(1, &vbo_sphere_texcoords);
-  glDeleteBuffers(1, &ibo_sphere_elements);
   glDeleteTextures(1, &texture_id);
 }
 
