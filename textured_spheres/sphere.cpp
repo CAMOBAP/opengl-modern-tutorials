@@ -29,6 +29,9 @@ GLuint texture_id;
 GLint attribute_coord3d, attribute_texcoord;
 GLint uniform_mvp, uniform_mytexture, uniform_mytexture_ST;
 
+char* vshader_filename = (char*) "sphere.v.glsl";
+char* fshader_filename = (char*) "sphere.f.glsl";
+
 int init_resources()
 {
   glActiveTexture(GL_TEXTURE0);
@@ -45,8 +48,8 @@ int init_resources()
   GLint link_ok = GL_FALSE;
 
   GLuint vs, fs;
-  if ((vs = create_shader("sphere.v.glsl", GL_VERTEX_SHADER))   == 0) return 0;
-  if ((fs = create_shader("sphere.f.glsl", GL_FRAGMENT_SHADER)) == 0) return 0;
+  if ((vs = create_shader(vshader_filename, GL_VERTEX_SHADER))   == 0) return 0;
+  if ((fs = create_shader(fshader_filename, GL_FRAGMENT_SHADER)) == 0) return 0;
 
   program = glCreateProgram();
   glAttachShader(program, vs);
@@ -79,11 +82,13 @@ int init_resources()
     fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
     return 0;
   }
-  uniform_name = "mytexture_ST";
-  uniform_mytexture_ST = glGetUniformLocation(program, uniform_name);
-  if (uniform_mytexture_ST == -1) {
-    fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
-    return 0;
+  if (strstr(fshader_filename, "_ST")) {
+      uniform_name = "mytexture_ST";
+      uniform_mytexture_ST = glGetUniformLocation(program, uniform_name);
+      if (uniform_mytexture_ST == -1) {
+          fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
+          return 0;
+      }
   }
 
   return 1;
@@ -147,6 +152,13 @@ int main(int argc, char* argv[]) {
   glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
   glutInitWindowSize(screen_width, screen_height);
   glutCreateWindow("Textured Spheres");
+
+  if (argc != 3) {
+    fprintf(stderr, "Usage: %s vertex_shader.v.glsl fragment_shader.f.glsl\n", argv[0]);
+  } else {
+    vshader_filename = argv[1];
+    fshader_filename = argv[2];
+  }
 
   GLenum glew_status = glewInit();
   if (glew_status != GLEW_OK) {
