@@ -201,12 +201,18 @@ int main(int argc, char* argv[]) {
   GLenum glew_status = glewInit();
   if (glew_status != GLEW_OK) {
     fprintf(stderr, "Error: %s\n", glewGetErrorString(glew_status));
-    return 1;
+    return EXIT_FAILURE;
   }
 
   if (!GLEW_VERSION_2_0) {
     fprintf(stderr, "Error: your graphic card does not support OpenGL 2.0\n");
-    return 1;
+    return EXIT_FAILURE;
+  }
+
+  if (glutGet(GLUT_VERSION) < 30000) {
+    // Well, you probably got a compile-time error already, but here's the explanation :)
+    fprintf(stderr, "You need FreeGLUT 3.0 to run this program (for glutSetVertexAttribCoord3).\n");
+    return EXIT_FAILURE;
   }
 
   if (init_resources()) {
@@ -219,5 +225,5 @@ int main(int argc, char* argv[]) {
   }
 
   free_resources();
-  return 0;
+  return EXIT_SUCCESS;
 }
