@@ -166,6 +166,11 @@ void draw()
 
   glutSetVertexAttribCoord3(attribute_v_coord);
   glutSetVertexAttribNormal(attribute_v_normal);
+
+  glCullFace(GL_FRONT);
+  glutSolidSphere(1.0,30,30);
+
+  glCullFace(GL_BACK);
   glutSolidSphere(1.0,30,30);
 }
 
@@ -222,9 +227,18 @@ int main(int argc, char* argv[]) {
   if (init_resources()) {
     glutDisplayFunc(onDisplay);
     glutReshapeFunc(onReshape);
+
+    // glEnable(GL_DEPTH_TEST);
+
+    glEnable(GL_CULL_FACE);
+
+    // glAlphaFunc(GL_GREATER, 0.1);
+    // glEnable(GL_ALPHA_TEST);
+
     glEnable(GL_BLEND);
-    glEnable(GL_DEPTH_TEST);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
     glutMainLoop();
   }
 

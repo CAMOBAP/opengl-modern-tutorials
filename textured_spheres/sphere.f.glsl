@@ -8,7 +8,7 @@ void main(void) {
         // this is unnecessary if correct texture coordinates are specified by the application
 
     gl_FragColor = texture2D(mytexture, longitudeLatitude);
-        // look up the color of the texture image specified by the uniform "textureUnit"
+        // look up the color of the texture image specified by the uniform "mytexture"
         // at the position specified by "longitudeLatitude.x" and
         // "longitudeLatitude.y" and return it in "gl_FragColor"
 }
