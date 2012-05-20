@@ -29,6 +29,7 @@ GLint uniform_m = -1, uniform_v = -1, uniform_p = -1,
     uniform_m_3x3_inv_transp = -1, uniform_v_inv = -1,
     uniform_mytexture = -1, uniform_mytexture_ST = -1;
 
+char* texture_filename = (char*) "Earthmap720x360_grid.jpg";
 char* vshader_filename = (char*) "sphere.v.glsl";
 char* fshader_filename = (char*) "sphere.f.glsl";
 
@@ -37,7 +38,7 @@ int init_resources()
   glActiveTexture(GL_TEXTURE0);
   GLuint texture_id = SOIL_load_OGL_texture
     (
-     "Earthmap720x360_grid.jpg",
+     texture_filename,
      SOIL_LOAD_AUTO,
      SOIL_CREATE_NEW_ID,
      SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS
@@ -137,6 +138,8 @@ void logic() {
   glUseProgram(program);
   glm::mat4 m = model * anim * fix_orientation;
   glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(m));
+  /* Transform normal vectors with transpose of inverse of upper left
+     3x3 model matrix (ex-gl_NormalMatrix): */
   glm::mat3 m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(m)));
   glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
 
@@ -191,11 +194,12 @@ int main(int argc, char* argv[]) {
   glutInitWindowSize(screen_width, screen_height);
   glutCreateWindow("Textured Spheres");
 
-  if (argc != 3) {
-    fprintf(stderr, "Usage: %s vertex_shader.v.glsl fragment_shader.f.glsl\n", argv[0]);
+  if (argc != 4) {
+    fprintf(stderr, "Usage: %s texture_image vertex_shader.v.glsl fragment_shader.f.glsl\n", argv[0]);
   } else {
-    vshader_filename = argv[1];
-    fshader_filename = argv[2];
+    texture_filename = argv[1];
+    vshader_filename = argv[2];
+    fshader_filename = argv[3];
   }
 
   GLenum glew_status = glewInit();

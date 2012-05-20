@@ -122,6 +122,8 @@ public:
     
     /* Apply object's transformation matrix */
     glUniformMatrix4fv(uniform_m, 1, GL_FALSE, glm::value_ptr(this->object2world));
+    /* Transform normal vectors with transpose of inverse of upper left
+       3x3 model matrix (ex-gl_NormalMatrix): */
     glm::mat3 m_3x3_inv_transp = glm::transpose(glm::inverse(glm::mat3(this->object2world)));
     glUniformMatrix3fv(uniform_m_3x3_inv_transp, 1, GL_FALSE, glm::value_ptr(m_3x3_inv_transp));
     
