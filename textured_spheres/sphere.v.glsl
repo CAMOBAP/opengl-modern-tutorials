@@ -1,5 +1,4 @@
 attribute vec3 v_coord;
-attribute vec2 texcoord;
 varying vec4 texCoords;
 uniform mat4 m,v,p;
 
