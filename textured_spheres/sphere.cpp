@@ -23,11 +23,11 @@ using namespace std;
 
 int screen_width=800, screen_height=600;
 GLuint program;
-GLuint texture_id;
+GLuint texture_id, texture_sunlit_id;
 GLint attribute_v_coord = -1, attribute_v_normal = 1;
 GLint uniform_m = -1, uniform_v = -1, uniform_p = -1,
     uniform_m_3x3_inv_transp = -1, uniform_v_inv = -1,
-    uniform_mytexture = -1, uniform_mytexture_ST = -1;
+    uniform_mytexture = -1, uniform_mytexture_sunlit = -1, uniform_mytexture_ST = -1;
 
 char* texture_filename = (char*) "Earthmap720x360_grid.jpg";
 char* vshader_filename = (char*) "sphere.v.glsl";
@@ -36,7 +36,7 @@ char* fshader_filename = (char*) "sphere.f.glsl";
 int init_resources()
 {
   glActiveTexture(GL_TEXTURE0);
-  GLuint texture_id = SOIL_load_OGL_texture
+  texture_id = SOIL_load_OGL_texture
     (
      texture_filename,
      SOIL_LOAD_AUTO,
@@ -44,7 +44,19 @@ int init_resources()
      SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS
      );
   if(texture_id == 0)
-    cerr << "SOIL loading error: '" << SOIL_last_result() << "' (" << "Earthmap720x360_grid.jpg" << ")" << endl;
+    cerr << "SOIL loading error: '" << SOIL_last_result() << "' (" << texture_filename << ")" << endl;
+
+  // Day-time texture:
+  glActiveTexture(GL_TEXTURE1);
+  texture_sunlit_id = SOIL_load_OGL_texture
+    (
+     "Land_shallow_topo_2048.jpg",
+     SOIL_LOAD_AUTO,
+     SOIL_CREATE_NEW_ID,
+     SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS
+     );
+  if(texture_sunlit_id == 0)
+    cerr << "SOIL loading error: '" << SOIL_last_result() << "' (" << "Land_shallow_topo_2048.jpg" << ")" << endl;
 
   GLint link_ok = GL_FALSE;
 
@@ -163,6 +175,7 @@ void draw()
 
   glUseProgram(program);
   glUniform1i(uniform_mytexture, /*GL_TEXTURE*/0);
+  glUniform1i(uniform_mytexture_sunlit, /*GL_TEXTURE*/1);
 
   glutSetVertexAttribCoord3(attribute_v_coord);
   glutSetVertexAttribNormal(attribute_v_normal);
@@ -190,6 +203,7 @@ void free_resources()
 {
   glDeleteProgram(program);
   glDeleteTextures(1, &texture_id);
+  glDeleteTextures(1, &texture_sunlit_id);
 }
 
 
