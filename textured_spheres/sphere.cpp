@@ -23,7 +23,7 @@ using namespace std;
 
 int screen_width=800, screen_height=600;
 GLuint program;
-GLuint texture_id, texture_sunlit_id;
+GLuint mytexture_id, mytexture_sunlit_id;
 GLint attribute_v_coord = -1, attribute_v_normal = 1;
 GLint uniform_m = -1, uniform_v = -1, uniform_p = -1,
     uniform_m_3x3_inv_transp = -1, uniform_v_inv = -1,
@@ -35,27 +35,25 @@ char* fshader_filename = (char*) "sphere.f.glsl";
 
 int init_resources()
 {
-  glActiveTexture(GL_TEXTURE0);
-  texture_id = SOIL_load_OGL_texture
+  mytexture_id = SOIL_load_OGL_texture
     (
      texture_filename,
      SOIL_LOAD_AUTO,
      SOIL_CREATE_NEW_ID,
      SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS
      );
-  if(texture_id == 0)
+  if (mytexture_id == 0)
     cerr << "SOIL loading error: '" << SOIL_last_result() << "' (" << texture_filename << ")" << endl;
 
   // Day-time texture:
-  glActiveTexture(GL_TEXTURE1);
-  texture_sunlit_id = SOIL_load_OGL_texture
+  mytexture_sunlit_id = SOIL_load_OGL_texture
     (
      "Land_shallow_topo_2048.jpg",
      SOIL_LOAD_AUTO,
      SOIL_CREATE_NEW_ID,
      SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS
      );
-  if(texture_sunlit_id == 0)
+  if (mytexture_sunlit_id == 0)
     cerr << "SOIL loading error: '" << SOIL_last_result() << "' (" << "Land_shallow_topo_2048.jpg" << ")" << endl;
 
   GLint link_ok = GL_FALSE;
@@ -122,6 +120,11 @@ int init_resources()
     fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
     return 0;
   }
+  uniform_name = "mytexture_sunlit";
+  uniform_mytexture_sunlit = glGetUniformLocation(program, uniform_name);
+  if (uniform_mytexture_sunlit == -1) {
+    fprintf(stderr, "Warning: Could not bind uniform %s\n", uniform_name);
+  }
   if (strstr(fshader_filename, "_ST")) {
       uniform_name = "mytexture_ST";
       uniform_mytexture_ST = glGetUniformLocation(program, uniform_name);
@@ -174,7 +177,13 @@ void draw()
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
   glUseProgram(program);
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, mytexture_id);
   glUniform1i(uniform_mytexture, /*GL_TEXTURE*/0);
+
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, mytexture_sunlit_id);
   glUniform1i(uniform_mytexture_sunlit, /*GL_TEXTURE*/1);
 
   glutSetVertexAttribCoord3(attribute_v_coord);
@@ -202,8 +211,8 @@ void onReshape(int width, int height) {
 void free_resources()
 {
   glDeleteProgram(program);
-  glDeleteTextures(1, &texture_id);
-  glDeleteTextures(1, &texture_sunlit_id);
+  glDeleteTextures(1, &mytexture_id);
+  glDeleteTextures(1, &mytexture_sunlit_id);
 }
 
 

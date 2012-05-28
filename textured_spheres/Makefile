@@ -14,3 +14,4 @@ sphere: ../common/shader_utils.o
 # ./sphere Land_shallow_topo_alpha_2048.png sphere.v.glsl sphere_discard.f.glsl
 # ./sphere Land_shallow_topo_alpha_2048.png sphere.v.glsl sphere.f.glsl
 # ./sphere Land_shallow_topo_alpha_2048.png sphere.v.glsl sphere_oceans.f.glsl
+# ./sphere Earth_lights_lrg.jpg sphere-sunlit.v.glsl sphere-sunlit.f.glsl
