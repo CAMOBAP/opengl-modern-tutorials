@@ -11,6 +11,5 @@ void main(void)
     vec4 nighttimeColor = texture2D(mytexture, longitudeLatitude);
     vec4 daytimeColor = texture2D(mytexture_sunlit, longitudeLatitude);
 
-    //gl_FragColor = mix(nighttimeColor, daytimeColor, levelOfLighting);
     gl_FragColor = mix(nighttimeColor, daytimeColor, levelOfLighting);
 }

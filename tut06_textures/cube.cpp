@@ -102,7 +102,6 @@ int init_resources()
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_elements), cube_elements, GL_STATIC_DRAW);
 
-  glActiveTexture(GL_TEXTURE0);
   glGenTextures(1, &texture_id);
   glBindTexture(GL_TEXTURE_2D, texture_id);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -186,7 +185,11 @@ void onDisplay()
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
   glUseProgram(program);
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, texture_id);
   glUniform1i(uniform_mytexture, /*GL_TEXTURE*/0);
+
   glEnableVertexAttribArray(attribute_coord3d);
   // Describe our vertices array to OpenGL (it can't guess its format automatically)
   glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_vertices);
