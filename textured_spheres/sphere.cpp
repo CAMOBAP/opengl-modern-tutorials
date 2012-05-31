@@ -29,21 +29,42 @@ GLint uniform_m = -1, uniform_v = -1, uniform_p = -1,
     uniform_m_3x3_inv_transp = -1, uniform_v_inv = -1,
     uniform_mytexture = -1, uniform_mytexture_sunlit = -1, uniform_mytexture_ST = -1;
 
-char* texture_filename = (char*) "Earthmap720x360_grid.jpg";
-char* vshader_filename = (char*) "sphere.v.glsl";
-char* fshader_filename = (char*) "sphere.f.glsl";
+struct demo {
+    const char* texture_filename;
+    const char* vshader_filename;
+    const char* fshader_filename;
+};
+struct demo demos[] = {
+    // Textures Spheres
+    { "Earthmap720x360_grid.jpg", "sphere.v.glsl", "sphere.f.glsl" },
+    { "Earthmap720x360_grid.jpg", "sphere.v.glsl", "sphere_ST.f.glsl" },
+    // Lighting Textured Surfaces
+      { "Earthmap720x360_grid.jpg", "sphere-gouraud.v.glsl", "sphere-gouraud.f.glsl" },
+    // Glossy Textures
+    { "Land_shallow_topo_alpha_2048.png", "sphere-gouraud.v.glsl", "sphere-gouraud-glossy.f.glsl" },
+    { "Land_shallow_topo_alpha_2048.png", "sphere-phong.v.glsl", "sphere-phong.f.glsl" },
+    // Transparent Textures
+    { "Land_shallow_topo_alpha_2048.png", "sphere.v.glsl", "sphere_discard.f.glsl" },
+    { "Land_shallow_topo_alpha_2048.png", "sphere.v.glsl", "sphere.f.glsl" },
+    { "Land_shallow_topo_alpha_2048.png", "sphere.v.glsl", "sphere_oceans.f.glsl" },
+    // Layers of Textures
+    { "Earth_lights_lrg.jpg", "sphere-sunlit.v.glsl", "sphere-sunlit.f.glsl" },
+};
+int cur_demo = 0;
 
 int init_resources()
 {
+  printf("init_resources: %s %s %s\n",
+         demos[cur_demo].texture_filename, demos[cur_demo].vshader_filename, demos[cur_demo].fshader_filename);
   mytexture_id = SOIL_load_OGL_texture
     (
-     texture_filename,
+     demos[cur_demo].texture_filename,
      SOIL_LOAD_AUTO,
      SOIL_CREATE_NEW_ID,
      SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS
      );
   if (mytexture_id == 0)
-    cerr << "SOIL loading error: '" << SOIL_last_result() << "' (" << texture_filename << ")" << endl;
+    cerr << "SOIL loading error: '" << SOIL_last_result() << "' (" << demos[cur_demo].texture_filename << ")" << endl;
 
   // Day-time texture:
   mytexture_sunlit_id = SOIL_load_OGL_texture
@@ -59,8 +80,8 @@ int init_resources()
   GLint link_ok = GL_FALSE;
 
   GLuint vs, fs;
-  if ((vs = create_shader(vshader_filename, GL_VERTEX_SHADER))   == 0) return 0;
-  if ((fs = create_shader(fshader_filename, GL_FRAGMENT_SHADER)) == 0) return 0;
+  if ((vs = create_shader(demos[cur_demo].vshader_filename, GL_VERTEX_SHADER))   == 0) return 0;
+  if ((fs = create_shader(demos[cur_demo].fshader_filename, GL_FRAGMENT_SHADER)) == 0) return 0;
 
   program = glCreateProgram();
   glAttachShader(program, vs);
@@ -125,7 +146,7 @@ int init_resources()
   if (uniform_mytexture_sunlit == -1) {
     fprintf(stderr, "Warning: Could not bind uniform %s\n", uniform_name);
   }
-  if (strstr(fshader_filename, "_ST")) {
+  if (strstr(demos[cur_demo].fshader_filename, "_ST")) {
       uniform_name = "mytexture_ST";
       uniform_mytexture_ST = glGetUniformLocation(program, uniform_name);
       if (uniform_mytexture_ST == -1) {
@@ -135,6 +156,13 @@ int init_resources()
   }
 
   return 1;
+}
+
+void free_resources()
+{
+  glDeleteProgram(program);
+  glDeleteTextures(1, &mytexture_id);
+  glDeleteTextures(1, &mytexture_sunlit_id);
 }
 
 void logic() {
@@ -208,27 +236,19 @@ void onReshape(int width, int height) {
   glViewport(0, 0, screen_width, screen_height);
 }
 
-void free_resources()
-{
-  glDeleteProgram(program);
-  glDeleteTextures(1, &mytexture_id);
-  glDeleteTextures(1, &mytexture_sunlit_id);
+void onMouse(int button, int state, int x, int y) {
+  if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+      free_resources();
+      cur_demo = (cur_demo + 1) % (sizeof(demos)/sizeof(struct demo));
+      init_resources();
+  }
 }
-
 
 int main(int argc, char* argv[]) {
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
   glutInitWindowSize(screen_width, screen_height);
   glutCreateWindow("Textured Spheres");
-
-  if (argc != 4) {
-    fprintf(stderr, "Usage: %s texture_image vertex_shader.v.glsl fragment_shader.f.glsl\n", argv[0]);
-  } else {
-    texture_filename = argv[1];
-    vshader_filename = argv[2];
-    fshader_filename = argv[3];
-  }
 
   GLenum glew_status = glewInit();
   if (glew_status != GLEW_OK) {
@@ -250,6 +270,7 @@ int main(int argc, char* argv[]) {
   if (init_resources()) {
     glutDisplayFunc(onDisplay);
     glutReshapeFunc(onReshape);
+    glutMouseFunc(onMouse);
 
     // glEnable(GL_DEPTH_TEST);
 
