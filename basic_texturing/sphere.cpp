@@ -1,7 +1,7 @@
 /**
  * From the OpenGL Programming wikibook: http://en.wikibooks.org/wiki/OpenGL_Programming
  * This file is in the public domain.
- * Contributors: Sylvain Beucler
+ * Contributors: Sylvain Beucler, Guus Sliepen
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +24,7 @@ using namespace std;
 int screen_width=800, screen_height=600;
 GLuint program;
 GLuint mytexture_id, mytexture_sunlit_id;
+GLuint sphere_vbo = -1;
 GLint attribute_v_coord = -1, attribute_v_normal = 1;
 GLint uniform_m = -1, uniform_v = -1, uniform_p = -1,
     uniform_m_3x3_inv_transp = -1, uniform_v_inv = -1,
@@ -51,6 +52,26 @@ struct demo demos[] = {
     { "Earth_lights_lrg.jpg", "sphere-sunlit.v.glsl", "sphere-sunlit.f.glsl" },
 };
 int cur_demo = 0;
+
+GLuint sphere(float radius, int slices, int stacks) {
+  GLuint vbo;
+  int n = 2 * (slices + 1) * stacks;
+  int i = 0;
+  glm::vec3 points[n];
+  
+  for (float theta = -M_PI / 2; theta < M_PI / 2 - 0.0001; theta += M_PI / stacks) {
+    for (float phi = -M_PI; phi <= M_PI + 0.0001; phi += 2 * M_PI / slices) {
+      points[i++] = glm::vec3(cos(theta) * sin(phi), -sin(theta), cos(theta) * cos(phi));
+      points[i++] = glm::vec3(cos(theta + M_PI / stacks) * sin(phi), -sin(theta + M_PI / stacks), cos(theta + M_PI / stacks) * cos(phi));
+    }
+  }
+  
+  glGenBuffers(1, &vbo);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glBufferData(GL_ARRAY_BUFFER, sizeof points, points, GL_STATIC_DRAW);
+  
+  return vbo;
+}
 
 int init_resources()
 {
@@ -155,6 +176,8 @@ int init_resources()
       }
   }
 
+  sphere_vbo = sphere(1, 30, 30);
+
   return 1;
 }
 
@@ -214,14 +237,22 @@ void draw()
   glBindTexture(GL_TEXTURE_2D, mytexture_sunlit_id);
   glUniform1i(uniform_mytexture_sunlit, /*GL_TEXTURE*/1);
 
-  glutSetVertexAttribCoord3(attribute_v_coord);
-  glutSetVertexAttribNormal(attribute_v_normal);
+  // To be used when FreeGLUT 3.0.0 is out :)
+  // glutSetVertexAttribCoord3(attribute_v_coord);
+  // glutSetVertexAttribNormal(attribute_v_normal);
+  // glutSolidSphere(1.0,30,30);
+
+  glEnableVertexAttribArray(attribute_v_coord);
+  glEnableVertexAttribArray(attribute_v_normal);
+  glBindBuffer(GL_ARRAY_BUFFER, sphere_vbo);
+  glVertexAttribPointer(attribute_v_coord, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glVertexAttribPointer(attribute_v_normal, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
   glCullFace(GL_FRONT);
-  glutSolidSphere(1.0,30,30);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 2 * 30 * 30);
 
   glCullFace(GL_BACK);
-  glutSolidSphere(1.0,30,30);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 2 * 30 * 30);
 }
 
 void onDisplay() {
@@ -258,12 +289,6 @@ int main(int argc, char* argv[]) {
 
   if (!GLEW_VERSION_2_0) {
     fprintf(stderr, "Error: your graphic card does not support OpenGL 2.0\n");
-    return EXIT_FAILURE;
-  }
-
-  if (glutGet(GLUT_VERSION) < 30000) {
-    // Well, you probably got a compile-time error already, but here's the explanation :)
-    fprintf(stderr, "You need FreeGLUT 3.0 to run this program (for glutSetVertexAttribCoord3).\n");
     return EXIT_FAILURE;
   }
 
