@@ -249,10 +249,10 @@ void draw()
   glVertexAttribPointer(attribute_v_normal, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
   glCullFace(GL_FRONT);
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, 2 * 30 * 30);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 2 * 31 * 30);
 
   glCullFace(GL_BACK);
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, 2 * 30 * 30);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 2 * 31 * 30);
 }
 
 void onDisplay() {
