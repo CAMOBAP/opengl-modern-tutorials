@@ -77,6 +77,7 @@ int init_resources()
 {
   printf("init_resources: %s %s %s\n",
          demos[cur_demo].texture_filename, demos[cur_demo].vshader_filename, demos[cur_demo].fshader_filename);
+  // TODO: try to optimize on Android by using ETC1 texture format
   mytexture_id = SOIL_load_OGL_texture
     (
      demos[cur_demo].texture_filename,
@@ -192,7 +193,11 @@ void logic() {
   float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 30;  // 30° per second
   glm::mat4 anim = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0, 1, 0));
 
+  // Fix for Blender- or GLUT-style orientation (Z-is-up).
+  // Not necessary since switching to our own sphere code, but require
+  // fixing 'latitudeLongitude' in the shaders.
   glm::mat4 fix_orientation = glm::rotate(glm::mat4(1.0f), -90.f, glm::vec3(1, 0, 0));
+
   glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -2.0));
   glm::mat4 view = glm::lookAt(glm::vec3(0.0, 2.0, 0.0), glm::vec3(0.0, 0.0, -2.0), glm::vec3(0.0, 1.0, 0.0));
   glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 10.0f);
