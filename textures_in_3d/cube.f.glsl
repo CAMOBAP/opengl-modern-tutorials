@@ -9,7 +9,6 @@ uniform sampler2D normalmap;
 varying vec4 position;  // position of the vertex (and fragment) in world space
 varying vec2 texCoords; // the texture coordinates
 varying mat3 localSurface2World; // mapping from local surface coordinates to world coordinates
-varying vec3 varyingNormal;
 
 struct lightSource
 {
@@ -49,7 +48,7 @@ void main()
   vec4 encodedNormal = texture2D(normalmap, texCoords);
   vec3 localCoords = 2.0 * encodedNormal.rgb - vec3(1.0);
   
-  vec3 normalDirection = localSurface2World * localCoords;
+  vec3 normalDirection = normalize(localSurface2World * localCoords);
   vec3 viewDirection = normalize(vec3(v_inv * vec4(0.0, 0.0, 0.0, 1.0) - position));
   vec3 lightDirection;
   float attenuation;
