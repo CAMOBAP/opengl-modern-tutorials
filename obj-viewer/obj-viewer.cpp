@@ -137,9 +137,9 @@ public:
     }
 
     if (this->vbo_normals != 0)
-      glDisableVertexAttribArray(attribute_v_coord);
-    if (this->vbo_vertices != 0)
       glDisableVertexAttribArray(attribute_v_normal);
+    if (this->vbo_vertices != 0)
+      glDisableVertexAttribArray(attribute_v_coord);
   }
 
   /**
