@@ -105,7 +105,7 @@ void onDisplay()
     3,                   // number of elements per vertex, here (x,y,z)
     GL_FLOAT,            // the type of each element
     GL_FALSE,            // take our values as-is
-    sizeof(struct attributes),  // next coord2d appears every 5 floats
+    sizeof(struct attributes),  // next coord3d appears every 5 floats
     0                    // offset of first element
   );
   glVertexAttribPointer(
