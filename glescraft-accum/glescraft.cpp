@@ -806,8 +806,13 @@ static void reshape(int w, int h) {
 	glViewport(0, 0, w, h);
 }
 
+static bool shift;
+
 static void move(float movespeed = 10) {
 	static int pt = 0;
+
+	if(shift)
+		movespeed *= 5;
 
 	now = time(0);
 	int t = glutGet(GLUT_ELAPSED_TIME);
@@ -1054,47 +1059,61 @@ static void display() {
 static void keyboard(unsigned char key, int x, int y) {
 	switch(key) {
 		case 'a':
+		case 'A':
 			keys |= 1;
 			break;
 		case 'd':
+		case 'D':
 			keys |= 2;
 			break;
 		case 'w':
+		case 'W':
 			keys |= 4;
 			break;
 		case 's':
+		case 'S':
 			keys |= 8;
 			break;
 		case ' ':
 			keys |= 16;
 			break;
 		case 'c':
+		case 'C':
 			keys |= 32;
 			break;
 	}
+
+	shift = glutGetModifiers() & GLUT_ACTIVE_SHIFT;
 }
 		
 static void keyboardup(unsigned char key, int x, int y) {
 	switch(key) {
 		case 'a':
+		case 'A':
 			keys &= ~1;
 			break;
 		case 'd':
+		case 'D':
 			keys &= ~2;
 			break;
 		case 'w':
+		case 'W':
 			keys &= ~4;
 			break;
 		case 's':
+		case 'S':
 			keys &= ~8;
 			break;
 		case ' ':
 			keys &= ~16;
 			break;
 		case 'c':
+		case 'C':
 			keys &= ~32;
 			break;
 	}
+
+	shift = glutGetModifiers() & GLUT_ACTIVE_SHIFT;
 }
 		
 
@@ -1143,6 +1162,12 @@ static void special(int key, int x, int y) {
 			fprintf(stderr, "Framerate limit is now approximately %d Hz\n", framerate);
 			break;
 	}
+
+	shift = glutGetModifiers() & GLUT_ACTIVE_SHIFT;
+}
+
+static void specialup(int key, int x, int y) {
+	shift = glutGetModifiers() & GLUT_ACTIVE_SHIFT;
 }
 
 static void motion(int x, int y) {
@@ -1253,6 +1278,7 @@ int main(int argc, char* argv[]) {
 		glutKeyboardFunc(keyboard);
 		glutKeyboardUpFunc(keyboardup);
 		glutSpecialFunc(special);
+		glutSpecialUpFunc(specialup);
 		glutIdleFunc(idle);
 		glutPassiveMotionFunc(motion);
 		glutMotionFunc(motion);
