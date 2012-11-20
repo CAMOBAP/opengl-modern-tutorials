@@ -985,6 +985,16 @@ static void draw_scene(glm::mat4 &mvp, glm::mat4 &view, glm::mat4 &projection) {
 
 static const int maxi = 16;
 
+/* Transparency cutoff values, shuffled so there is no obvious
+   visual interaction with motion blur and depth-of-field. */
+
+static const float cuttoff[16] = {
+	0.5/16, 15.5/16, 4.5/16, 11.5/16,
+	2.5/16, 13.5/16, 6.5/16, 9.5/16,
+	1.5/16, 14.5/16, 5.5/16, 10.5/16,
+	3.5/16, 12.5/16, 7.5/16, 8.5/16
+};
+
 static bool display_frame() {
 	static int i = 0;
 
@@ -1012,7 +1022,7 @@ static bool display_frame() {
 	float alpha = 0.5;
 
 	if(transparency)
-		alpha = (float)i / (float)maxi;
+		alpha = cuttoff[i];
 
 	glUniform1f(uniform_alpha, alpha);
 
