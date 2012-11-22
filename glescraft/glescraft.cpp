@@ -18,12 +18,12 @@ static GLint attribute_coord;
 static GLint uniform_mvp;
 static GLuint texture;
 static GLint uniform_texture;
-static GLuint ground_vbo;
 static GLuint cursor_vbo;
 
 static glm::vec3 position;
 static glm::vec3 forward;
 static glm::vec3 right;
+static glm::vec3 up;
 static glm::vec3 lookat;
 static glm::vec3 angle;
 
@@ -627,7 +627,7 @@ struct superchunk {
 	}
 
 	void render(const glm::mat4 &pv) {
-		float ud;
+		float ud = 1.0 / 0.0;
 		int ux = -1;
 		int uy = -1;
 		int uz = -1;
@@ -706,54 +706,33 @@ static void update_vectors() {
 	lookat.x = sinf(angle.x) * cosf(angle.y);
 	lookat.y = sinf(angle.y);
 	lookat.z = cosf(angle.x) * cosf(angle.y);
+
+	up = glm::cross(right, lookat);
 }
 
 static int init_resources() {
-	int vertex_texture_units;
-	glGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, &vertex_texture_units);
-	if(!vertex_texture_units) {
-		fprintf(stderr, "Your graphics cards does not support texture lookups in the vertex shader!\n");
+	/* Create shaders */
+
+	program = create_program("glescraft.v.glsl", "glescraft.f.glsl");
+
+	if(program == 0)
 		return 0;
-	}
 
-	GLint link_ok = GL_FALSE;
+	attribute_coord = get_attrib(program, "coord");
+	uniform_mvp = get_uniform(program, "mvp");
 
-	GLuint vs, fs;
-	if ((vs = create_shader("glescraft.v.glsl", GL_VERTEX_SHADER))	 == 0) return 0;
-	if ((fs = create_shader("glescraft.f.glsl", GL_FRAGMENT_SHADER)) == 0) return 0;
-
-	program = glCreateProgram();
-	glAttachShader(program, vs);
-	glAttachShader(program, fs);
-	glLinkProgram(program);
-	glGetProgramiv(program, GL_LINK_STATUS, &link_ok);
-	if (!link_ok) {
-		fprintf(stderr, "glLinkProgram:");
+	if(attribute_coord == -1 || uniform_mvp == -1)
 		return 0;
-	}
 
-	const char* attribute_name;
-	attribute_name = "coord";
-	attribute_coord = glGetAttribLocation(program, attribute_name);
-	if (attribute_coord == -1) {
-		fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
-		return 0;
-	}
+	/* Create and upload the texture */
 
-	const char* uniform_name;
-	uniform_name = "mvp";
-	uniform_mvp = glGetUniformLocation(program, uniform_name);
-	if (uniform_mvp == -1) {
-		fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
-		return 0;
-	}
-
-	/* Upload the texture with our datapoints */
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textures.width, textures.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textures.pixel_data);
 	glGenerateMipmap(GL_TEXTURE_2D);
+
+	/* Create the world */
 
 	world = new superchunk;
 
@@ -761,18 +740,23 @@ static int init_resources() {
 	angle = glm::vec3(0, -0.5, 0);
 	update_vectors();
 
-	glGenBuffers(1, &ground_vbo);
-	float ground[4][4] = {
-		{-CX * SCX / 2, 0, -CZ * SCZ / 2, 1 - 128},
-		{-CX * SCX / 2, 0, +CZ * SCZ / 2, 1 - 128},
-		{+CX * SCX / 2, 0, +CZ * SCZ / 2, 1 - 128},
-		{+CX * SCX / 2, 0, -CZ * SCZ / 2, 1 - 128},
-	};
-
-	glBindBuffer(GL_ARRAY_BUFFER, ground_vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof ground, ground, GL_STATIC_DRAW);
+	/* Create a VBO for the cursor */
 
 	glGenBuffers(1, &cursor_vbo);
+
+	/* OpenGL settings that do not change while running this program */
+
+	glUseProgram(program);
+	glUniform1i(uniform_texture, 0);
+	glClearColor(0.6, 0.8, 1.0, 0.0);
+	glEnable(GL_CULL_FACE);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); // Use GL_NEAREST_MIPMAP_LINEAR if you want to use mipmaps
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	glPolygonOffset(1, 1);
+
+	glEnableVertexAttribArray(attribute_coord);
 
 	return 1;
 }
@@ -793,43 +777,16 @@ static float fract(float value) {
 }
 
 static void display() {
-	glUseProgram(program);
-	glUniform1i(uniform_texture, 0);
-
-	glm::mat4 view = glm::lookAt(position, position + lookat, glm::vec3(0.0, 1.0, 0.0));
+	glm::mat4 view = glm::lookAt(position, position + lookat, up);
 	glm::mat4 projection = glm::perspective(45.0f, 1.0f*ww/wh, 0.01f, 1000.0f);
 
 	glm::mat4 mvp = projection * view;
 
 	glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
 
-	glClearColor(0.6, 0.8, 1.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	/* Set texture interpolation mode */
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); // Use GL_NEAREST_MIPMAP_LINEAR if you want to use mipmaps
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-
-	glPolygonOffset(2, 2);
 	glEnable(GL_POLYGON_OFFSET_FILL);
-
-	glEnableVertexAttribArray(attribute_coord);
-
-	/* Enable blending? Only works correctly when rendering in the correct order. */
-
-	//glEnable(GL_BLEND);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	/* Draw the ground if we only have one layer of chunks */
-
-	if(SCY <= 1) {
-		glBindBuffer(GL_ARRAY_BUFFER, ground_vbo);
-		glVertexAttribPointer(attribute_coord, 4, GL_FLOAT, GL_FALSE, 0, 0);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-	}
 
 	/* Then draw chunks */
 
@@ -980,7 +937,6 @@ static void display() {
 	glDisable(GL_DEPTH_TEST);
 	glm::mat4 one(1);
 	glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(one));
-	glBindBuffer(GL_ARRAY_BUFFER, cursor_vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof cross, cross, GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(attribute_coord, 4, GL_FLOAT, GL_FALSE, 0, 0);
 	glDrawArrays(GL_LINES, 0, 36);
@@ -1090,10 +1046,10 @@ static void motion(int x, int y) {
 			angle.x += M_PI * 2;
 		if(angle.x > M_PI)
 			angle.x -= M_PI * 2;
-		if(angle.y < -M_PI * 0.49)
-			angle.y = -M_PI * 0.49;
-		if(angle.y > M_PI * 0.49)
-			angle.y = M_PI * 0.49;
+		if(angle.y < -M_PI / 2)
+			angle.y = -M_PI / 2;
+		if(angle.y > M_PI / 2)
+			angle.y = M_PI / 2;
 
 		update_vectors();
 
