@@ -2,15 +2,17 @@
 #include <cstdlib>
 #include <cmath>
 #include <algorithm>
+
 #include <GL/glew.h>
 #include <GL/glut.h>
-/* Using GLM for our transformation matrix */
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-/* Using FreeType 2 for rendering fonts */
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
+
 #include "../common/shader_utils.h"
 
 GLuint program;
@@ -44,43 +46,43 @@ const char *fontfilename;
  * After the constructor is run, you don't need to use any FreeType functions anymore.
  */
 struct atlas {
-	GLuint tex;    // texture object
+	GLuint tex;		// texture object
 
-	int w; // width of texture in pixels
-	int h; // height of texture in pixels
+	int w;			// width of texture in pixels
+	int h;			// height of texture in pixels
 
 	struct {
-		float ax; // advance.x
-		float ay; // advance.y
+		float ax;	// advance.x
+		float ay;	// advance.y
 
-		float bw; // bitmap.width;
-		float bh; // bitmap.height;
+		float bw;	// bitmap.width;
+		float bh;	// bitmap.height;
 
-		float bl; // bitmap_left;
-		float bt; // bitmap_top;
+		float bl;	// bitmap_left;
+		float bt;	// bitmap_top;
 
-		float tx; // x offset of glyph in texture coordinates
-		float ty; // y offset of glyph in texture coordinates
-	} c[128]; // character information
+		float tx;	// x offset of glyph in texture coordinates
+		float ty;	// y offset of glyph in texture coordinates
+	} c[128];		// character information
 
-	atlas(FT_Face face, int height) {
+	 atlas(FT_Face face, int height) {
 		FT_Set_Pixel_Sizes(face, 0, height);
 		FT_GlyphSlot g = face->glyph;
 
 		int roww = 0;
 		int rowh = 0;
-		w = 0;
-		h = 0;
+		 w = 0;
+		 h = 0;
 
-		memset(c, 0, sizeof c);
+		 memset(c, 0, sizeof c);
 
 		/* Find minimum size for a texture holding all visible ASCII characters */
-		for(int i = 32; i < 128; i++) {
-			if(FT_Load_Char(face, i, FT_LOAD_RENDER)) {
+		for (int i = 32; i < 128; i++) {
+			if (FT_Load_Char(face, i, FT_LOAD_RENDER)) {
 				fprintf(stderr, "Loading character %c failed!\n", i);
 				continue;
 			}
-			if(roww + g->bitmap.width + 1 >= MAXWIDTH) {
+			if (roww + g->bitmap.width + 1 >= MAXWIDTH) {
 				w = std::max(w, roww);
 				h += rowh;
 				roww = 0;
@@ -115,15 +117,16 @@ struct atlas {
 		/* Paste all glyph bitmaps into the texture, remembering the offset */
 		int ox = 0;
 		int oy = 0;
+
 		rowh = 0;
 
-		for(int i = 32; i < 128; i++) {
-			if(FT_Load_Char(face, i, FT_LOAD_RENDER)) {
+		for (int i = 32; i < 128; i++) {
+			if (FT_Load_Char(face, i, FT_LOAD_RENDER)) {
 				fprintf(stderr, "Loading character %c failed!\n", i);
 				continue;
 			}
 
-			if(ox + g->bitmap.width + 1 >= MAXWIDTH) {
+			if (ox + g->bitmap.width + 1 >= MAXWIDTH) {
 				oy += rowh;
 				rowh = 0;
 				ox = 0;
@@ -158,66 +161,34 @@ atlas *a48;
 atlas *a24;
 atlas *a12;
 
-int init_resources()
-{
+int init_resources() {
 	/* Initialize the FreeType2 library */
-	if(FT_Init_FreeType(&ft)) {
+	if (FT_Init_FreeType(&ft)) {
 		fprintf(stderr, "Could not init freetype library\n");
 		return 0;
 	}
 
 	/* Load a font */
-	if(FT_New_Face(ft, fontfilename, 0, &face)) {
+	if (FT_New_Face(ft, fontfilename, 0, &face)) {
 		fprintf(stderr, "Could not open font %s\n", fontfilename);
 		return 0;
 	}
 
-	/* Compile and link the shader program */
-	GLint link_ok = GL_FALSE;
-
-	GLuint vs, fs;
-	if ((vs = create_shader("text.v.glsl", GL_VERTEX_SHADER)) == 0) return 0;
-	if ((fs = create_shader("text.f.glsl", GL_FRAGMENT_SHADER)) == 0) return 0;
-
-	program = glCreateProgram();
-	glAttachShader(program, vs);
-	glAttachShader(program, fs);
-	glLinkProgram(program);
-	glGetProgramiv(program, GL_LINK_STATUS, &link_ok);
-	if (!link_ok) {
-		fprintf(stderr, "glLinkProgram:");
-		print_log(program);
+	program = create_program("text.v.glsl", "text.f.glsl");
+	if(program == 0)
 		return 0;
-	}
 
-	const char* attribute_name;
-	attribute_name = "coord";
-	attribute_coord = glGetAttribLocation(program, attribute_name);
-	if (attribute_coord == -1) {
-		fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
-		return 0;
-	}
+	attribute_coord = get_attrib(program, "coord");
+	uniform_tex = get_uniform(program, "tex");
+	uniform_color = get_uniform(program, "color");
 
-	const char* uniform_name;
-	uniform_name = "tex";
-	uniform_tex = glGetUniformLocation(program, uniform_name);
-	if (uniform_tex == -1) {
-		fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
+	if(attribute_coord == -1 || uniform_tex == -1 || uniform_color == -1)
 		return 0;
-	}
-
-	uniform_name = "color";
-	uniform_color = glGetUniformLocation(program, uniform_name);
-	if (uniform_color == -1) {
-		fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
-		return 0;
-	}
 
 	// Create the vertex buffer object
 	glGenBuffers(1, &vbo);
 
 	/* Create texture atlasses for several font sizes */
-	glUseProgram(program);
 	a48 = new atlas(face, 48);
 	a24 = new atlas(face, 24);
 	a12 = new atlas(face, 12);
@@ -230,7 +201,7 @@ int init_resources()
  * Rendering starts at coordinates (x, y), z is always 0.
  * The pixel coordinates that the FreeType2 library uses are scaled by (sx, sy).
  */
-void render_text(const char *text, atlas *a, float x, float y, float sx, float sy) {
+void render_text(const char *text, atlas * a, float x, float y, float sx, float sy) {
 	const uint8_t *p;
 
 	/* Use the texture containing the atlas */
@@ -246,9 +217,9 @@ void render_text(const char *text, atlas *a, float x, float y, float sx, float s
 	int c = 0;
 
 	/* Loop through all characters */
-	for(p = (const uint8_t *)text; *p; p++) {
+	for (p = (const uint8_t *)text; *p; p++) {
 		/* Calculate the vertex and texture coordinates */
-		float x2 =  x + a->c[*p].bl * sx;
+		float x2 = x + a->c[*p].bl * sx;
 		float y2 = -y - a->c[*p].bt * sy;
 		float w = a->c[*p].bw * sx;
 		float h = a->c[*p].bh * sy;
@@ -258,15 +229,21 @@ void render_text(const char *text, atlas *a, float x, float y, float sx, float s
 		y += a->c[*p].ay * sy;
 
 		/* Skip glyphs that have no pixels */
-		if(!w || !h)
+		if (!w || !h)
 			continue;
 
-		coords[c++] = (point){x2,     -y2    , a->c[*p].tx,                      a->c[*p].ty};
-		coords[c++] = (point){x2 + w, -y2    , a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].ty};
-		coords[c++] = (point){x2,     -y2 - h, a->c[*p].tx,                      a->c[*p].ty + a->c[*p].bh / a->h};
-		coords[c++] = (point){x2 + w, -y2    , a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].ty};
-		coords[c++] = (point){x2,     -y2 - h, a->c[*p].tx,                      a->c[*p].ty + a->c[*p].bh / a->h};
-		coords[c++] = (point){x2 + w, -y2 - h, a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].ty + a->c[*p].bh / a->h};
+		coords[c++] = (point) {
+		x2, -y2, a->c[*p].tx, a->c[*p].ty};
+		coords[c++] = (point) {
+		x2 + w, -y2, a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].ty};
+		coords[c++] = (point) {
+		x2, -y2 - h, a->c[*p].tx, a->c[*p].ty + a->c[*p].bh / a->h};
+		coords[c++] = (point) {
+		x2 + w, -y2, a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].ty};
+		coords[c++] = (point) {
+		x2, -y2 - h, a->c[*p].tx, a->c[*p].ty + a->c[*p].bh / a->h};
+		coords[c++] = (point) {
+		x2 + w, -y2 - h, a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].ty + a->c[*p].bh / a->h};
 	}
 
 	/* Draw all the character on the screen in one go */
@@ -276,8 +253,7 @@ void render_text(const char *text, atlas *a, float x, float y, float sx, float s
 	glDisableVertexAttribArray(attribute_coord);
 }
 
-void display()
-{
+void display() {
 	float sx = 2.0 / glutGet(GLUT_WINDOW_WIDTH);
 	float sy = 2.0 / glutGet(GLUT_WINDOW_HEIGHT);
 
@@ -291,54 +267,54 @@ void display()
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	GLfloat black[4] = {0, 0, 0, 1};
-	GLfloat red[4] = {1, 0, 0, 1};
-	GLfloat transparent_green[4] = {0, 1, 0, 0.5};
+	GLfloat black[4] = { 0, 0, 0, 1 };
+	GLfloat red[4] = { 1, 0, 0, 1 };
+	GLfloat transparent_green[4] = { 0, 1, 0, 0.5 };
 
 	/* Set color to black */
 	glUniform4fv(uniform_color, 1, black);
 
 	/* Effects of alignment */
-	render_text("The Quick Brown Fox Jumps Over The Lazy Dog",          a48, -1 + 8 * sx,   1 - 50 * sy,    sx, sy);
-	render_text("The Misaligned Fox Jumps Over The Lazy Dog",           a48, -1 + 8.5 * sx, 1 - 100.5 * sy, sx, sy);
+	render_text("The Quick Brown Fox Jumps Over The Lazy Dog", a48, -1 + 8 * sx, 1 - 50 * sy, sx, sy);
+	render_text("The Misaligned Fox Jumps Over The Lazy Dog", a48, -1 + 8.5 * sx, 1 - 100.5 * sy, sx, sy);
 
 	/* Scaling the texture versus changing the font size */
-	render_text("The Small Texture Scaled Fox Jumps Over The Lazy Dog", a48, -1 + 8 * sx,   1 - 175 * sy,   sx * 0.5, sy * 0.5);
-	render_text("The Small Font Sized Fox Jumps Over The Lazy Dog",     a24, -1 + 8 * sx,   1 - 200 * sy,   sx, sy);
-	render_text("The Tiny Texture Scaled Fox Jumps Over The Lazy Dog",  a48, -1 + 8 * sx,   1 - 235 * sy,   sx * 0.25, sy * 0.25);
-	render_text("The Tiny Font Sized Fox Jumps Over The Lazy Dog",      a12, -1 + 8 * sx,   1 - 250 * sy,   sx, sy);
+	render_text("The Small Texture Scaled Fox Jumps Over The Lazy Dog", a48, -1 + 8 * sx, 1 - 175 * sy, sx * 0.5, sy * 0.5);
+	render_text("The Small Font Sized Fox Jumps Over The Lazy Dog", a24, -1 + 8 * sx, 1 - 200 * sy, sx, sy);
+	render_text("The Tiny Texture Scaled Fox Jumps Over The Lazy Dog", a48, -1 + 8 * sx, 1 - 235 * sy, sx * 0.25, sy * 0.25);
+	render_text("The Tiny Font Sized Fox Jumps Over The Lazy Dog", a12, -1 + 8 * sx, 1 - 250 * sy, sx, sy);
 
 	/* Colors and transparency */
-	render_text("The Solid Black Fox Jumps Over The Lazy Dog",          a48, -1 + 8 * sx,   1 - 430 * sy,   sx, sy);
+	render_text("The Solid Black Fox Jumps Over The Lazy Dog", a48, -1 + 8 * sx, 1 - 430 * sy, sx, sy);
 
 	glUniform4fv(uniform_color, 1, red);
-	render_text("The Solid Red Fox Jumps Over The Lazy Dog",            a48, -1 + 8 * sx,   1 - 330 * sy,   sx, sy);
-	render_text("The Solid Red Fox Jumps Over The Lazy Dog",            a48, -1 + 28 * sx,  1 - 450 * sy,   sx, sy);
+	render_text("The Solid Red Fox Jumps Over The Lazy Dog", a48, -1 + 8 * sx, 1 - 330 * sy, sx, sy);
+	render_text("The Solid Red Fox Jumps Over The Lazy Dog", a48, -1 + 28 * sx, 1 - 450 * sy, sx, sy);
 
 	glUniform4fv(uniform_color, 1, transparent_green);
-	render_text("The Transparent Green Fox Jumps Over The Lazy Dog",    a48, -1 + 8 * sx,   1 - 380 * sy,   sx, sy);
-	render_text("The Transparent Green Fox Jumps Over The Lazy Dog",    a48, -1 + 18 * sx,  1 - 440 * sy,   sx, sy);
+	render_text("The Transparent Green Fox Jumps Over The Lazy Dog", a48, -1 + 8 * sx, 1 - 380 * sy, sx, sy);
+	render_text("The Transparent Green Fox Jumps Over The Lazy Dog", a48, -1 + 18 * sx, 1 - 440 * sy, sx, sy);
 
 	glutSwapBuffers();
 }
 
-void free_resources()
-{
+void free_resources() {
 	glDeleteProgram(program);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
 	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE);
+	glutInitDisplayMode(GLUT_RGB);
 	glutInitWindowSize(640, 480);
 	glutCreateWindow("Texture atlas text");
 
-	if(argc > 1)
+	if (argc > 1)
 		fontfilename = argv[1];
 	else
 		fontfilename = "FreeSans.ttf";
 
 	GLenum glew_status = glewInit();
+
 	if (GLEW_OK != glew_status) {
 		fprintf(stderr, "Error: %s\n", glewGetErrorString(glew_status));
 		return 1;

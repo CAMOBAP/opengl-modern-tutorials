@@ -1,14 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
+
 #include <GL/glew.h>
 #include <GL/glut.h>
-/* Using GLM for our transformation matrices */
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/noise.hpp>
-#include <time.h>
+
 #include "../common/shader_utils.h"
 
 #include "textures.c"
@@ -555,9 +557,6 @@ struct chunk {
 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBufferData(GL_ARRAY_BUFFER, i * sizeof *vertex, vertex, GL_STATIC_DRAW);
-
-		//fprintf(stderr, "Updated chunk, %i vertices (%i kb)\n", i, (i * 4) / 1024);
-		//fprintf(stderr, "Merged %d faces (%i vertices, %i kb saved)\n", merged, merged * 6, (merged * 24) / 1024);
 	}
 
 	void render() {
@@ -1105,7 +1104,7 @@ static void free_resources() {
 
 int main(int argc, char* argv[]) {
 	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_RGBA|GLUT_DEPTH|GLUT_DOUBLE);
+	glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);
 	glutInitWindowSize(640, 480);
 	glutCreateWindow("GLEScraft");
 

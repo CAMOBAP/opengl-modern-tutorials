@@ -18,7 +18,6 @@ static GLint attribute_coord;
 static GLint uniform_mvp;
 static GLuint texture;
 static GLint uniform_texture;
-static GLuint ground_vbo;
 static GLuint cursor_vbo;
 static GLint uniform_alpha;
 
@@ -561,9 +560,6 @@ struct chunk {
 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBufferData(GL_ARRAY_BUFFER, i * sizeof *vertex, vertex, GL_STATIC_DRAW);
-
-		//fprintf(stderr, "Updated chunk, %i vertices (%i kb)\n", i, (i * 4) / 1024);
-		//fprintf(stderr, "Merged %d faces (%i vertices, %i kb saved)\n", merged, merged * 6, (merged * 24) / 1024);
 	}
 
 	void render() {
@@ -713,62 +709,34 @@ static void update_vectors() {
 	lookat.y = sinf(angle.y);
 	lookat.z = cosf(angle.x) * cosf(angle.y);
 
-	up = glm::normalize(glm::cross(right, lookat));
+	up = glm::cross(right, lookat);
 }
 
 static int init_resources() {
-	int vertex_texture_units;
-	glGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, &vertex_texture_units);
-	if(!vertex_texture_units) {
-		fprintf(stderr, "Your graphics cards does not support texture lookups in the vertex shader!\n");
+	program = create_program("glescraft.v.glsl", "glescraft.f.glsl");
+	if(program == 0)
 		return 0;
-	}
 
-	GLint link_ok = GL_FALSE;
+	attribute_coord = get_attrib(program, "coord");
+	uniform_mvp = get_uniform(program, "mvp");
+	uniform_alpha = get_uniform(program, "alpha");
+	uniform_texture = get_uniform(program, "texture");
 
-	GLuint vs, fs;
-	if ((vs = create_shader("glescraft.v.glsl", GL_VERTEX_SHADER))	 == 0) return 0;
-	if ((fs = create_shader("glescraft.f.glsl", GL_FRAGMENT_SHADER)) == 0) return 0;
-
-	program = glCreateProgram();
-	glAttachShader(program, vs);
-	glAttachShader(program, fs);
-	glLinkProgram(program);
-	glGetProgramiv(program, GL_LINK_STATUS, &link_ok);
-	if (!link_ok) {
-		fprintf(stderr, "glLinkProgram:");
+	if(attribute_coord == -1 || uniform_mvp == -1 || uniform_alpha == -1 || uniform_texture == -1)
 		return 0;
-	}
 
-	const char* attribute_name;
-	attribute_name = "coord";
-	attribute_coord = glGetAttribLocation(program, attribute_name);
-	if (attribute_coord == -1) {
-		fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
-		return 0;
-	}
+	/* Upload the texture */
 
-	const char* uniform_name;
-	uniform_name = "mvp";
-	uniform_mvp = glGetUniformLocation(program, uniform_name);
-	if (uniform_mvp == -1) {
-		fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
-		return 0;
-	}
-
-	uniform_name = "alpha";
-	uniform_alpha = glGetUniformLocation(program, uniform_name);
-	if (uniform_alpha == -1) {
-		fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
-		return 0;
-	}
-
-	/* Upload the texture with our datapoints */
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_2D, texture);
+	glUniform1i(uniform_texture, 0);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textures.width, textures.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textures.pixel_data);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glGenerateMipmap(GL_TEXTURE_2D);
+
+	/* Create the world */
 
 	world = new superchunk;
 
@@ -776,26 +744,13 @@ static int init_resources() {
 	angle = glm::vec3(0, -0.5, 0);
 	update_vectors();
 
-	glGenBuffers(1, &ground_vbo);
-	float ground[4][4] = {
-		{-CX * SCX / 2, 0, -CZ * SCZ / 2, 1 - 128},
-		{-CX * SCX / 2, 0, +CZ * SCZ / 2, 1 - 128},
-		{+CX * SCX / 2, 0, +CZ * SCZ / 2, 1 - 128},
-		{+CX * SCX / 2, 0, -CZ * SCZ / 2, 1 - 128},
-	};
-
-	glBindBuffer(GL_ARRAY_BUFFER, ground_vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof ground, ground, GL_STATIC_DRAW);
-
 	glGenBuffers(1, &cursor_vbo);
 
 	glUseProgram(program);
-	glUniform1i(uniform_texture, 0);
+	glEnableVertexAttribArray(attribute_coord);
+	glPolygonOffset(1, 1);
 
 	glClearColor(0.6, 0.8, 1.0, 0.0);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	return 1;
 }
@@ -844,18 +799,7 @@ static void draw_scene(glm::mat4 &mvp, glm::mat4 &view, glm::mat4 &projection) {
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 
-	glPolygonOffset(2, 2);
 	glEnable(GL_POLYGON_OFFSET_FILL);
-
-	glEnableVertexAttribArray(attribute_coord);
-
-	/* Draw the ground if we only have one layer of chunks */
-
-	if(SCY <= 1) {
-		glBindBuffer(GL_ARRAY_BUFFER, ground_vbo);
-		glVertexAttribPointer(attribute_coord, 4, GL_FLOAT, GL_FALSE, 0, 0);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-	}
 
 	/* Then draw chunks */
 
@@ -1251,7 +1195,7 @@ static void free_resources() {
 
 int main(int argc, char* argv[]) {
 	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_RGBA|GLUT_DEPTH|GLUT_DOUBLE);
+	glutInitDisplayMode(GLUT_RGB|GLUT_DEPTH|GLUT_DOUBLE);
 	glutInitWindowSize(640, 480);
 	glutCreateWindow("GLEScraft");
 

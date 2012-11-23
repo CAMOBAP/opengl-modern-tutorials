@@ -1,15 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+
 #include <GL/glew.h>
 #include <GL/glut.h>
-/* Using GLM for our transformation matrix */
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-/* Using FreeType 2 for rendering fonts */
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
+
 #include "../common/shader_utils.h"
 
 GLuint program;
@@ -31,60 +33,29 @@ FT_Face face;
 
 const char *fontfilename;
 
-int init_resources()
-{
+int init_resources() {
 	/* Initialize the FreeType2 library */
-	if(FT_Init_FreeType(&ft)) {
+	if (FT_Init_FreeType(&ft)) {
 		fprintf(stderr, "Could not init freetype library\n");
 		return 0;
 	}
 
 	/* Load a font */
-	if(FT_New_Face(ft, fontfilename, 0, &face)) {
+	if (FT_New_Face(ft, fontfilename, 0, &face)) {
 		fprintf(stderr, "Could not open font %s\n", fontfilename);
 		return 0;
 	}
 
-	/* Compile and link the shader program */
-	GLint link_ok = GL_FALSE;
-
-	GLuint vs, fs;
-	if ((vs = create_shader("text.v.glsl", GL_VERTEX_SHADER))	 == 0) return 0;
-	if ((fs = create_shader("text.f.glsl", GL_FRAGMENT_SHADER)) == 0) return 0;
-
-	program = glCreateProgram();
-	glAttachShader(program, vs);
-	glAttachShader(program, fs);
-	glLinkProgram(program);
-	glGetProgramiv(program, GL_LINK_STATUS, &link_ok);
-	if (!link_ok) {
-		fprintf(stderr, "glLinkProgram:");
-		print_log(program);
+	program = create_program("text.v.glsl", "text.f.glsl");
+	if(program == 0)
 		return 0;
-	}
 
-	const char* attribute_name;
-	attribute_name = "coord";
-	attribute_coord = glGetAttribLocation(program, attribute_name);
-	if (attribute_coord == -1) {
-		fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
-		return 0;
-	}
+	attribute_coord = get_attrib(program, "coord");
+	uniform_tex = get_uniform(program, "tex");
+	uniform_color = get_uniform(program, "color");
 
-	const char* uniform_name;
-	uniform_name = "tex";
-	uniform_tex = glGetUniformLocation(program, uniform_name);
-	if (uniform_tex == -1) {
-		fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
+	if(attribute_coord == -1 || uniform_tex == -1 || uniform_color == -1)
 		return 0;
-	}
-
-	uniform_name = "color";
-	uniform_color = glGetUniformLocation(program, uniform_name);
-	if (uniform_color == -1) {
-		fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
-		return 0;
-	}
 
 	// Create the vertex buffer object
 	glGenBuffers(1, &vbo);
@@ -103,6 +74,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 
 	/* Create a texture that will be used to hold one "glyph" */
 	GLuint tex;
+
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);
@@ -125,9 +97,9 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 	glVertexAttribPointer(attribute_coord, 4, GL_FLOAT, GL_FALSE, 0, 0);
 
 	/* Loop through all characters */
-	for(p = text; *p; p++) {
+	for (p = text; *p; p++) {
 		/* Try to load and render the character */
-		if(FT_Load_Char(face, *p, FT_LOAD_RENDER))
+		if (FT_Load_Char(face, *p, FT_LOAD_RENDER))
 			continue;
 
 		/* Upload the "bitmap", which contains an 8-bit grayscale image, as an alpha texture */
@@ -140,9 +112,9 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 		float h = g->bitmap.rows * sy;
 
 		point box[4] = {
-			{x2,	 -y2	, 0, 0},
-			{x2 + w, -y2	, 1, 0},
-			{x2,	 -y2 - h, 0, 1},
+			{x2, -y2, 0, 0},
+			{x2 + w, -y2, 1, 0},
+			{x2, -y2 - h, 0, 1},
 			{x2 + w, -y2 - h, 1, 1},
 		};
 
@@ -159,8 +131,7 @@ void render_text(const char *text, float x, float y, float sx, float sy) {
 	glDeleteTextures(1, &tex);
 }
 
-void display()
-{
+void display() {
 	float sx = 2.0 / glutGet(GLUT_WINDOW_WIDTH);
 	float sy = 2.0 / glutGet(GLUT_WINDOW_HEIGHT);
 
@@ -174,59 +145,59 @@ void display()
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	GLfloat black[4] = {0, 0, 0, 1};
-	GLfloat red[4] = {1, 0, 0, 1};
-	GLfloat transparent_green[4] = {0, 1, 0, 0.5};
+	GLfloat black[4] = { 0, 0, 0, 1 };
+	GLfloat red[4] = { 1, 0, 0, 1 };
+	GLfloat transparent_green[4] = { 0, 1, 0, 0.5 };
 
 	/* Set font size to 48 pixels, color to black */
 	FT_Set_Pixel_Sizes(face, 0, 48);
 	glUniform4fv(uniform_color, 1, black);
 
 	/* Effects of alignment */
-	render_text("The Quick Brown Fox Jumps Over The Lazy Dog",          -1 + 8 * sx,   1 - 50 * sy,    sx, sy);
-	render_text("The Misaligned Fox Jumps Over The Lazy Dog",           -1 + 8.5 * sx, 1 - 100.5 * sy, sx, sy);
+	render_text("The Quick Brown Fox Jumps Over The Lazy Dog", -1 + 8 * sx, 1 - 50 * sy, sx, sy);
+	render_text("The Misaligned Fox Jumps Over The Lazy Dog", -1 + 8.5 * sx, 1 - 100.5 * sy, sx, sy);
 
 	/* Scaling the texture versus changing the font size */
-	render_text("The Small Texture Scaled Fox Jumps Over The Lazy Dog", -1 + 8 * sx,   1 - 175 * sy,   sx * 0.5, sy * 0.5);
+	render_text("The Small Texture Scaled Fox Jumps Over The Lazy Dog", -1 + 8 * sx, 1 - 175 * sy, sx * 0.5, sy * 0.5);
 	FT_Set_Pixel_Sizes(face, 0, 24);
-	render_text("The Small Font Sized Fox Jumps Over The Lazy Dog",     -1 + 8 * sx,   1 - 200 * sy,   sx, sy);
+	render_text("The Small Font Sized Fox Jumps Over The Lazy Dog", -1 + 8 * sx, 1 - 200 * sy, sx, sy);
 	FT_Set_Pixel_Sizes(face, 0, 48);
-	render_text("The Tiny Texture Scaled Fox Jumps Over The Lazy Dog",  -1 + 8 * sx,   1 - 235 * sy,   sx * 0.25, sy * 0.25);
+	render_text("The Tiny Texture Scaled Fox Jumps Over The Lazy Dog", -1 + 8 * sx, 1 - 235 * sy, sx * 0.25, sy * 0.25);
 	FT_Set_Pixel_Sizes(face, 0, 12);
-	render_text("The Tiny Font Sized Fox Jumps Over The Lazy Dog",      -1 + 8 * sx,   1 - 250 * sy,   sx, sy);
+	render_text("The Tiny Font Sized Fox Jumps Over The Lazy Dog", -1 + 8 * sx, 1 - 250 * sy, sx, sy);
 	FT_Set_Pixel_Sizes(face, 0, 48);
 
 	/* Colors and transparency */
-	render_text("The Solid Black Fox Jumps Over The Lazy Dog",          -1 + 8 * sx,   1 - 430 * sy,   sx, sy);
+	render_text("The Solid Black Fox Jumps Over The Lazy Dog", -1 + 8 * sx, 1 - 430 * sy, sx, sy);
 
 	glUniform4fv(uniform_color, 1, red);
-	render_text("The Solid Red Fox Jumps Over The Lazy Dog",            -1 + 8 * sx,   1 - 330 * sy,   sx, sy);
-	render_text("The Solid Red Fox Jumps Over The Lazy Dog",            -1 + 28 * sx,  1 - 450 * sy,   sx, sy);
+	render_text("The Solid Red Fox Jumps Over The Lazy Dog", -1 + 8 * sx, 1 - 330 * sy, sx, sy);
+	render_text("The Solid Red Fox Jumps Over The Lazy Dog", -1 + 28 * sx, 1 - 450 * sy, sx, sy);
 
 	glUniform4fv(uniform_color, 1, transparent_green);
-	render_text("The Transparent Green Fox Jumps Over The Lazy Dog",    -1 + 8 * sx,   1 - 380 * sy,   sx, sy);
-	render_text("The Transparent Green Fox Jumps Over The Lazy Dog",    -1 + 18 * sx,  1 - 440 * sy,   sx, sy);
+	render_text("The Transparent Green Fox Jumps Over The Lazy Dog", -1 + 8 * sx, 1 - 380 * sy, sx, sy);
+	render_text("The Transparent Green Fox Jumps Over The Lazy Dog", -1 + 18 * sx, 1 - 440 * sy, sx, sy);
 
 	glutSwapBuffers();
 }
 
-void free_resources()
-{
+void free_resources() {
 	glDeleteProgram(program);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
 	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE);
+	glutInitDisplayMode(GLUT_RGB);
 	glutInitWindowSize(640, 480);
 	glutCreateWindow("Basic Text");
 
-	if(argc > 1)
+	if (argc > 1)
 		fontfilename = argv[1];
 	else
 		fontfilename = "FreeSans.ttf";
 
 	GLenum glew_status = glewInit();
+
 	if (GLEW_OK != glew_status) {
 		fprintf(stderr, "Error: %s\n", glewGetErrorString(glew_status));
 		return 1;

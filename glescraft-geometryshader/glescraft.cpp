@@ -1,14 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
+
 #include <GL/glew.h>
 #include <GL/glut.h>
-/* Using GLM for our transformation matrices */
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/noise.hpp>
-#include <time.h>
+
+#include "../common/shader_utils.h"
 
 #include "textures.c"
 
@@ -17,12 +20,12 @@ static GLint attribute_coord;
 static GLint uniform_mvp;
 static GLuint texture;
 static GLint uniform_texture;
-static GLuint ground_vbo;
 static GLuint cursor_vbo;
 
 static glm::vec3 position;
 static glm::vec3 forward;
 static glm::vec3 right;
+static glm::vec3 up;
 static glm::vec3 lookat;
 static glm::vec3 angle;
 
@@ -529,9 +532,6 @@ struct chunk {
 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBufferData(GL_ARRAY_BUFFER, i * sizeof *vertex, vertex, GL_STATIC_DRAW);
-
-		//fprintf(stderr, "Updated chunk, %i vertices (%i kb)\n", i, (i * 4) / 1024);
-		//fprintf(stderr, "Merged %d faces (%i vertices, %i kb saved)\n", merged, merged * 6, (merged * 24) / 1024);
 	}
 
 	void render() {
@@ -601,7 +601,7 @@ struct superchunk {
 	}
 
 	void render(const glm::mat4 &pv) {
-		float ud;
+		float ud = 1.0 / 0.0;
 		int ux = -1;
 		int uy = -1;
 		int uz = -1;
@@ -667,87 +667,6 @@ struct superchunk {
 
 static superchunk *world;
 
-/**
- * Store all the file's contents in memory, useful to pass shaders
- * source code to OpenGL
- */
-static char* file_read(const char* filename) {
-	FILE* in = fopen(filename, "rb");
-	if (in == NULL) return NULL;
-
-	int res_size = BUFSIZ;
-	char* res = (char*)malloc(res_size);
-	int nb_read_total = 0;
-
-	while (!feof(in) && !ferror(in)) {
-		if (nb_read_total + BUFSIZ > res_size) {
-			if (res_size > 10*1024*1024) break;
-			res_size = res_size * 2;
-			res = (char*)realloc(res, res_size);
-			if(!res)
-				abort();
-		}
-		char* p_res = res + nb_read_total;
-		nb_read_total += fread(p_res, 1, BUFSIZ, in);
-	}
-	
-	fclose(in);
-	res = (char*)realloc(res, nb_read_total + 1);
-	res[nb_read_total] = '\0';
-	return res;
-}
-
-/**
- * Display compilation errors from the OpenGL shader compiler
- */
-static void print_log(GLuint object) {
-	GLint log_length = 0;
-	if (glIsShader(object))
-		glGetShaderiv(object, GL_INFO_LOG_LENGTH, &log_length);
-	else if (glIsProgram(object))
-		glGetProgramiv(object, GL_INFO_LOG_LENGTH, &log_length);
-	else {
-		fprintf(stderr, "printlog: Not a shader or a program\n");
-		return;
-	}
-
-	char* log = (char*)malloc(log_length);
-
-	if (glIsShader(object))
-		glGetShaderInfoLog(object, log_length, NULL, log);
-	else if (glIsProgram(object))
-		glGetProgramInfoLog(object, log_length, NULL, log);
-
-	fprintf(stderr, "%s", log);
-	free(log);
-}
-
-/**
- * Compile the shader from file 'filename', with error handling
- */
-static GLuint create_shader(const char* filename, GLenum type) {
-	const GLchar* source = file_read(filename);
-	if (source == NULL) {
-		fprintf(stderr, "Error opening %s: ", filename); perror("");
-		return 0;
-	}
-	GLuint res = glCreateShader(type);
-	glShaderSource(res, 1, &source, NULL);
-	free((void*)source);
-
-	glCompileShader(res);
-	GLint compile_ok = GL_FALSE;
-	glGetShaderiv(res, GL_COMPILE_STATUS, &compile_ok);
-	if (compile_ok == GL_FALSE) {
-		fprintf(stderr, "%s:", filename);
-		print_log(res);
-		glDeleteShader(res);
-		return 0;
-	}
-
-	return res;
-}
-
 // Calculate the forward, right and lookat vectors from the angle vector
 static void update_vectors() {
 	forward.x = sinf(angle.x);
@@ -761,6 +680,8 @@ static void update_vectors() {
 	lookat.x = sinf(angle.x) * cosf(angle.y);
 	lookat.y = sinf(angle.y);
 	lookat.z = cosf(angle.x) * cosf(angle.y);
+
+	up = glm::cross(right, lookat);
 }
 
 static int init_resources() {
@@ -779,6 +700,7 @@ static int init_resources() {
 	if ((fs = create_shader("glescraft.f.glsl", GL_FRAGMENT_SHADER)) == 0) return 0;
 
 	program = glCreateProgram();
+
 	glAttachShader(program, vs);
 	glAttachShader(program, fs);
 	glAttachShader(program, gs);
@@ -790,8 +712,6 @@ static int init_resources() {
 	printf("Max geometry output: %d\n", temp);
 	glProgramParameteriEXT(program, GL_GEOMETRY_VERTICES_OUT_EXT, 36);
 
-
-
 	glLinkProgram(program);
 	glGetProgramiv(program, GL_LINK_STATUS, &link_ok);
 	if (!link_ok) {
@@ -799,28 +719,17 @@ static int init_resources() {
 		return 0;
 	}
 
-	const char* attribute_name;
-	attribute_name = "coord";
-	attribute_coord = glGetAttribLocation(program, attribute_name);
-	if (attribute_coord == -1) {
-		fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
-		return 0;
-	}
+	attribute_coord = get_attrib(program, "coord");
+	uniform_mvp = get_uniform(program, "mvp");
+	uniform_texture = get_uniform(program, "texture");
 
-	const char* uniform_name;
-	uniform_name = "mvp";
-	uniform_mvp = glGetUniformLocation(program, uniform_name);
-	if (uniform_mvp == -1) {
-		fprintf(stderr, "Could not bind uniform %s\n", uniform_name);
-		return 0;
-	}
+	if(attribute_coord == -1 || uniform_mvp == -1 || uniform_texture == -1)
+		return -1;
 
-	/* Upload the texture with our datapoints */
+	/* Create an empty 3D texture */
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_3D, texture);
-
-	/* Create an empty 3D texture */
 	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA, 16, 16, 16, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 
 	/* Paste in parts of the texture in the right order */
@@ -828,26 +737,27 @@ static int init_resources() {
 		for(int y = 0; y < 16; y++)
 			glTexSubImage3D(GL_TEXTURE_3D, 0, 0, y, z, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, textures.pixel_data + y * 256 * 4 + z * 16 * 4);
 
-	//glGenerateMipmap(GL_TEXTURE_3D);
-
 	world = new superchunk;
 
 	position = glm::vec3(0, CY + 1, 0);
 	angle = glm::vec3(0, -0.5, 0);
 	update_vectors();
 
-	glGenBuffers(1, &ground_vbo);
-	float ground[4][4] = {
-		{-CX * SCX / 2, 0, -CZ * SCZ / 2, 1 - 128},
-		{-CX * SCX / 2, 0, +CZ * SCZ / 2, 1 - 128},
-		{+CX * SCX / 2, 0, +CZ * SCZ / 2, 1 - 128},
-		{+CX * SCX / 2, 0, -CZ * SCZ / 2, 1 - 128},
-	};
-
-	glBindBuffer(GL_ARRAY_BUFFER, ground_vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof ground, ground, GL_STATIC_DRAW);
-
 	glGenBuffers(1, &cursor_vbo);
+
+	/* OpenGL settings that do not change while running this program */
+
+	glUseProgram(program);
+	glUniform1i(uniform_texture, 0);
+	glClearColor(0.6, 0.8, 1.0, 0.0);
+	glEnable(GL_CULL_FACE);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); // Use GL_NEAREST_MIPMAP_LINEAR if you want to use mipmaps
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	glPolygonOffset(1, 1);
+
+	glEnableVertexAttribArray(attribute_coord);
 
 	return 1;
 }
@@ -871,7 +781,7 @@ static void display() {
 	glUseProgram(program);
 	glUniform1i(uniform_texture, 0);
 
-	glm::mat4 view = glm::lookAt(position, position + lookat, glm::vec3(0.0, 1.0, 0.0));
+	glm::mat4 view = glm::lookAt(position, position + lookat, up);
 	glm::mat4 projection = glm::perspective(45.0f, 1.0f*ww/wh, 0.01f, 1000.0f);
 
 	glm::mat4 mvp = projection * view;
@@ -892,19 +802,6 @@ static void display() {
 	glEnable(GL_POLYGON_OFFSET_FILL);
 
 	glEnableVertexAttribArray(attribute_coord);
-
-	/* Enable blending? Only works correctly when rendering in the correct order. */
-
-	//glEnable(GL_BLEND);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	/* Draw the ground if we only have one layer of chunks */
-
-	if(SCY <= 1) {
-		glBindBuffer(GL_ARRAY_BUFFER, ground_vbo);
-		glVertexAttribPointer(attribute_coord, 4, GL_FLOAT, GL_FALSE, 0, 0);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-	}
 
 	/* Then draw chunks */
 
@@ -1044,7 +941,7 @@ static void special(int key, int x, int y) {
 			break;
 		case GLUT_KEY_END:
 			position = glm::vec3(0, CX * SCX, 0);
-			angle = glm::vec3(0, -M_PI * 0.49, 0);
+			angle = glm::vec3(0, -M_PI / 2, 0);
 			update_vectors();
 			break;
 	}
@@ -1110,10 +1007,10 @@ static void motion(int x, int y) {
 			angle.x += M_PI * 2;
 		if(angle.x > M_PI)
 			angle.x -= M_PI * 2;
-		if(angle.y < -M_PI * 0.49)
-			angle.y = -M_PI * 0.49;
-		if(angle.y > M_PI * 0.49)
-			angle.y = M_PI * 0.49;
+		if(angle.y < -M_PI / 2)
+			angle.y = -M_PI / 2;
+		if(angle.y > M_PI / 2)
+			angle.y = M_PI / 2;
 
 		update_vectors();
 
@@ -1169,7 +1066,7 @@ static void free_resources() {
 
 int main(int argc, char* argv[]) {
 	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_RGBA|GLUT_DEPTH|GLUT_DOUBLE);
+	glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);
 	glutInitWindowSize(640, 480);
 	glutCreateWindow("GLEScraft");
 

@@ -1,5 +1,3 @@
-#version 120
-
 varying vec4 texcoord;
 varying vec3 normal;
 varying float intensity;
