@@ -685,39 +685,10 @@ static void update_vectors() {
 }
 
 static int init_resources() {
-	int vertex_texture_units;
-	glGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, &vertex_texture_units);
-	if(!vertex_texture_units) {
-		fprintf(stderr, "Your graphics cards does not support texture lookups in the vertex shader!\n");
+	program = create_gs_program("glescraft.v.glsl", "glescraft.g.glsl", "glescraft.f.glsl", GL_LINES, GL_TRIANGLE_STRIP, 36);
+
+	if(program == 0)
 		return 0;
-	}
-
-	GLint link_ok = GL_FALSE;
-
-	GLuint vs, fs, gs;
-	if ((vs = create_shader("glescraft.v.glsl", GL_VERTEX_SHADER))	 == 0) return 0;
-	if ((gs = create_shader("glescraft.g.glsl", GL_GEOMETRY_SHADER_EXT)) == 0) return 0;
-	if ((fs = create_shader("glescraft.f.glsl", GL_FRAGMENT_SHADER)) == 0) return 0;
-
-	program = glCreateProgram();
-
-	glAttachShader(program, vs);
-	glAttachShader(program, fs);
-	glAttachShader(program, gs);
-
-	glProgramParameteriEXT(program,GL_GEOMETRY_INPUT_TYPE_EXT,GL_LINES);
-	glProgramParameteriEXT(program,GL_GEOMETRY_OUTPUT_TYPE_EXT,GL_TRIANGLE_STRIP);
-	int temp;
-	glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES_EXT,&temp);
-	printf("Max geometry output: %d\n", temp);
-	glProgramParameteriEXT(program, GL_GEOMETRY_VERTICES_OUT_EXT, 36);
-
-	glLinkProgram(program);
-	glGetProgramiv(program, GL_LINK_STATUS, &link_ok);
-	if (!link_ok) {
-		fprintf(stderr, "glLinkProgram:");
-		return 0;
-	}
 
 	attribute_coord = get_attrib(program, "coord");
 	uniform_mvp = get_uniform(program, "mvp");
