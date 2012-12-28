@@ -6,8 +6,6 @@ How to use the wrapper:
 
     export PATH="$PATH:/usr/src/android-sdk-linux/tools:/usr/src/android-sdk-linux/platform-tools:/usr/src/android-ndk-r7"
 
-- Inside the 'jni/' directory, make 'tut.cpp' a symlink to the GLUT code you need to compile (e.g. '../../tut02_clean/triangle.cpp')
-
 - Make 'assets' a symlink to the tutorial you're compiling (e.g. '../tut02_clean')
 
 - Now you can type:
