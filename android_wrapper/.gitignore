@@ -2,6 +2,7 @@ build.xml
 local.properties
 project.properties
 proguard.cfg
+proguard-project.txt
 bin/
 gen/
 libs/

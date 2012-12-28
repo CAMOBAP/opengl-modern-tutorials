@@ -11,4 +11,4 @@ install:
 clean:
 	ndk-build clean NDK_MODULE_PATH=$$NDK_MODULE_PATH:.
 	ant clean
-	rm -rf obj/ libs/ build.xml proguard.cfg project.properties local.properties
+	rm -rf obj/ libs/ build.xml proguard.cfg proguard-project.txt project.properties local.properties
