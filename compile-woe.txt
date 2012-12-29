@@ -1,0 +1,22 @@
+Rough notes for cross-compiling to ms woe:
+
+HOST=i586-mingw32msvc
+PREFIX=/usr/local/$HOST
+BUILD=i686-pc-linux-gnu
+
+cd /usr/src/glew-1.7.0/
+make SYSTEM=linux-mingw32
+make install SYSTEM=linux-mingw32 GLEW_DEST=/home/beuclsyl/workdirb/i586-mingw32msvc STRIP=i586-mingw32msvc-strip
+
+mkdir build/ && cd build/
+../configure --build=$BUILD --host=$HOST --prefix=$PREFIX --without-x --disable-shared --without-progs --debug
+make EXPORT_FLAGS='-DFREEGLUT_STATIC'
+# ignore errors?
+cd src/
+make install -k EXPORT_FLAGS='-DFREEGLUT_STATIC'
+
+i586-mingw32msvc-g++ -I /home/beuclsyl/workdirb/i586-mingw32msvc/include -L /home/beuclsyl/workdirb/i586-mingw32msvc/lib mini-portal.cpp -lglut -lglew32 -lopengl32 -lm -mwindows -DFREEGLUT_STATIC -lwinmm \
+  -Dsleep=Sleep -o mini-portal.exe
+
+
+See also: http://mxe.cc/
