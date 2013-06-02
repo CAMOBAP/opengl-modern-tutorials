@@ -856,6 +856,8 @@ void draw_portal_stencil(vector<glm::mat4> view_stack, Mesh* portal) {
   glDepthMask(GL_FALSE);
   glStencilFunc(GL_NEVER, 0, 0xFF);
   glStencilOp(GL_INCR, GL_KEEP, GL_KEEP);  // draw 1s on test fail (always)
+  // Note: in Mesa 8's software renderer, nothing is drawn on the
+  // stencil buffer, looks like a bug; doesn't happen in stencil/cube.cpp.
   // draw stencil pattern
   glClear(GL_STENCIL_BUFFER_BIT);  // needs mask=0xFF
   glUniformMatrix4fv(uniform_v, 1, GL_FALSE, glm::value_ptr(view_stack[0]));
