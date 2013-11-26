@@ -922,7 +922,7 @@ static void display() {
 	glBindBuffer(GL_ARRAY_BUFFER, cursor_vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof box, box, GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(attribute_coord, 4, GL_FLOAT, GL_FALSE, 0, 0);
-	glDrawArrays(GL_LINES, 0, 36);
+	glDrawArrays(GL_LINES, 0, 24);
 
 	/* Draw a cross in the center of the screen */
 
@@ -938,7 +938,7 @@ static void display() {
 	glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(one));
 	glBufferData(GL_ARRAY_BUFFER, sizeof cross, cross, GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(attribute_coord, 4, GL_FLOAT, GL_FALSE, 0, 0);
-	glDrawArrays(GL_LINES, 0, 36);
+	glDrawArrays(GL_LINES, 0, 4);
 
 	/* And we are done */
 
