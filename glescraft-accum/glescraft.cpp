@@ -1,14 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
+
 #include <GL/glew.h>
 #include <GL/glut.h>
+
+#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/noise.hpp>
 #include <glm/gtc/random.hpp>
-#include <time.h>
+
 #include "../common/shader_utils.h"
 
 #include "textures.c"
@@ -63,7 +67,7 @@ static const char *blocknames[16] = {
 	"water", "glass", "brick", "ore", "woodrings", "white", "black", "x-y"
 };
 
-typedef glm::detail::tvec4<GLbyte> byte4;
+typedef glm::detail::tvec4<GLbyte, glm::mediump> byte4;
 
 static struct chunk *chunk_slot[CHUNKSLOTS] = {0};
 

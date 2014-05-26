@@ -11,6 +11,7 @@
 #include <GL/glut.h>
 /* GLM */
 // #define GLM_MESSAGES
+#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -83,7 +84,7 @@ void onIdle() {
   float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 45;  // 45° per second
   glm::vec3 axis_z(0, 0, 1);
   glm::mat4 m_transform = glm::translate(glm::mat4(1.0f), glm::vec3(move, 0.0, 0.0))
-    * glm::rotate(glm::mat4(1.0f), angle, axis_z);
+    * glm::rotate(glm::mat4(1.0f), glm::radians(angle), axis_z);
 
   glUseProgram(program);
   glUniformMatrix4fv(uniform_m_transform, 1, GL_FALSE, glm::value_ptr(m_transform));

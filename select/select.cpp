@@ -11,6 +11,7 @@
 #include <GL/glew.h>
 #include <GL/glut.h>
 
+#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -143,7 +144,7 @@ int init_resources() {
 }
 
 void onIdle() {
-	angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 15;	// base 15° per second
+	angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * glm::radians(15.0);	// base 15° per second
 	glutPostRedisplay();
 }
 
@@ -211,10 +212,10 @@ void onReshape(int width, int height) {
 void onSpecial(int key, int x, int y) {
 	switch(key) {
 		case GLUT_KEY_LEFT:
-			camera_angle -= 5;
+			camera_angle -= glm::radians(5.0);
 			break;
 		case GLUT_KEY_RIGHT:
-			camera_angle += 5;
+			camera_angle += glm::radians(5.0);
 			break;
 	}
 

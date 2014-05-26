@@ -18,6 +18,7 @@
 #include <GL/glut.h>
 /* GLM */
 // #define GLM_MESSAGES
+#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -362,7 +363,7 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
 
   // 90° angle + slightly higher
   portals[0].object2world = glm::translate(glm::mat4(1), glm::vec3(0, 1, -2));
-  portals[1].object2world = glm::rotate(glm::mat4(1), -90.0f, glm::vec3(0, 1, 0))
+  portals[1].object2world = glm::rotate(glm::mat4(1), glm::radians(-90.0f), glm::vec3(0, 1, 0))
     * glm::translate(glm::mat4(1), glm::vec3(0, 1.2, -2));
 
   main_object.upload();
@@ -449,7 +450,7 @@ int init_resources(char* model_filename, char* vshader_filename, char* fshader_f
 
 void init_view() {
   main_object.object2world = glm::translate(glm::mat4(1), glm::vec3(-2, 1, 0))
-    * glm::rotate(glm::mat4(1), 90.0f, glm::vec3(0, 1, 0));
+    * glm::rotate(glm::mat4(1), glm::radians(90.0f), glm::vec3(0, 1, 0));
   transforms[MODE_CAMERA] = glm::lookAt(
     glm::vec3(0.0,  1.0, 6.0),   // eye
     glm::vec3(0.0,  1.0, 0.0),   // direction
@@ -588,7 +589,7 @@ glm::mat4 portal_view(glm::mat4 orig_view, Mesh* src, Mesh* dst) {
     //    first portal's ModelView matrix:
     mv
     // 2. object is front-facing, the camera is facing the other way:
-    * glm::rotate(glm::mat4(1.0), 180.0f, glm::vec3(0.0,1.0,0.0))
+    * glm::rotate(glm::mat4(1.0), glm::radians(180.0f), glm::vec3(0.0,1.0,0.0))
     // 1. go the destination portal; using inverse, because camera
     //    transformations are reversed compared to object
     //    transformations:
@@ -626,8 +627,8 @@ void logic() {
   }
 
   if (view_mode == MODE_OBJECT) {
-    main_object.object2world = glm::rotate(main_object.object2world, delta_rotY, glm::vec3(0.0, 1.0, 0.0));
-    main_object.object2world = glm::rotate(main_object.object2world, delta_rotX, glm::vec3(1.0, 0.0, 0.0));
+    main_object.object2world = glm::rotate(main_object.object2world, glm::radians(delta_rotY), glm::vec3(0.0, 1.0, 0.0));
+    main_object.object2world = glm::rotate(main_object.object2world, glm::radians(delta_rotX), glm::vec3(1.0, 0.0, 0.0));
     main_object.object2world = glm::translate(main_object.object2world, glm::vec3(0.0, 0.0, delta_transZ));
   } else if (view_mode == MODE_CAMERA) {
     // Camera is reverse-facing, so reverse Z translation and X rotation.
@@ -638,7 +639,7 @@ void logic() {
       transforms[MODE_CAMERA] = glm::translate(glm::mat4(1.0), glm::vec3(delta_transX, 0.0, 0.0)) * transforms[MODE_CAMERA];
     } else {
       glm::vec3 y_axis_world = glm::mat3(transforms[MODE_CAMERA]) * glm::vec3(0.0, 1.0, 0.0);
-      transforms[MODE_CAMERA] = glm::rotate(glm::mat4(1.0), -delta_rotY, y_axis_world) * transforms[MODE_CAMERA];
+      transforms[MODE_CAMERA] = glm::rotate(glm::mat4(1.0), glm::radians(-delta_rotY), y_axis_world) * transforms[MODE_CAMERA];
     }
 
     if (strife)
@@ -646,7 +647,7 @@ void logic() {
     else
       transforms[MODE_CAMERA] = glm::translate(glm::mat4(1.0), glm::vec3(0.0, 0.0, delta_transZ)) * transforms[MODE_CAMERA];
 
-    transforms[MODE_CAMERA] = glm::rotate(glm::mat4(1.0), delta_rotX, glm::vec3(1.0, 0.0, 0.0)) * transforms[MODE_CAMERA];
+    transforms[MODE_CAMERA] = glm::rotate(glm::mat4(1.0), glm::radians(delta_rotX), glm::vec3(1.0, 0.0, 0.0)) * transforms[MODE_CAMERA];
   }
 
   /* Handle portals */
@@ -666,7 +667,7 @@ void logic() {
     glm::vec3 axis_in_camera_coord = glm::cross(va, vb);
     glm::mat3 camera2object = glm::inverse(glm::mat3(transforms[MODE_CAMERA]) * glm::mat3(main_object.object2world));
     glm::vec3 axis_in_object_coord = camera2object * axis_in_camera_coord;
-    main_object.object2world = glm::rotate(main_object.object2world, glm::degrees(angle), axis_in_object_coord);
+    main_object.object2world = glm::rotate(main_object.object2world, angle, axis_in_object_coord);
     last_mx = cur_mx;
     last_my = cur_my;
   }
@@ -736,8 +737,7 @@ void draw_portal_bbox(Mesh* portal) {
   /* Apply object's transformation matrix */
   portal_bbox.object2world = portal->object2world;
   portal_bbox.draw();
-  portal_bbox.object2world = portal->object2world * 
-    glm::rotate(glm::mat4(1), 180.0f, glm::vec3(0, 1, 0));
+  portal_bbox.object2world = portal->object2world * glm::rotate(glm::mat4(1), glm::radians(180.0f), glm::vec3(0, 1, 0));
   portal_bbox.draw();
 }
 

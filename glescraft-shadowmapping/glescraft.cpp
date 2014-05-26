@@ -4,6 +4,7 @@
 #include <GL/glew.h>
 #include <GL/glut.h>
 /* Using GLM for our transformation matrices */
+#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -77,7 +78,7 @@ static const char *blocknames[16] = {
 	"water", "glass", "brick", "ore", "woodrings", "white", "black", "x-y"
 };
 
-typedef glm::detail::tvec4<GLbyte> byte4;
+typedef glm::detail::tvec4<GLbyte, glm::mediump> byte4;
 
 static struct chunk *chunk_slot[CHUNKSLOTS] = {0};
 

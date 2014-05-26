@@ -4,7 +4,7 @@ void draw_sphere(float radius, int slices, int stacks) {
   Mesh sphere;
   //sphere.object2world = glm::mat4(1);
   float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 45;  // 45° per second
-  sphere.object2world = glm::rotate(glm::mat4(1), angle, glm::vec3(0,1,0))
+  sphere.object2world = glm::rotate(glm::mat4(1), glm::radians(angle), glm::vec3(0,1,0))
     //* glm::translate(glm::mat4(1), glm::vec3(1,1,1))
     ;
 

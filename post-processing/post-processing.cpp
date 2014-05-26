@@ -16,6 +16,7 @@
 #include <GL/glut.h>
 /* GLM */
 // #define GLM_MESSAGES
+#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -591,8 +592,8 @@ void logic() {
   }
   
   if (view_mode == MODE_OBJECT) {
-    main_object.object2world = glm::rotate(main_object.object2world, delta_rotY, glm::vec3(0.0, 1.0, 0.0));
-    main_object.object2world = glm::rotate(main_object.object2world, delta_rotX, glm::vec3(1.0, 0.0, 0.0));
+    main_object.object2world = glm::rotate(main_object.object2world, glm::radians(delta_rotY), glm::vec3(0.0, 1.0, 0.0));
+    main_object.object2world = glm::rotate(main_object.object2world, glm::radians(delta_rotX), glm::vec3(1.0, 0.0, 0.0));
     main_object.object2world = glm::translate(main_object.object2world, glm::vec3(0.0, 0.0, delta_transZ));
   } else if (view_mode == MODE_CAMERA) {
     // Camera is reverse-facing, so reverse Z translation and X rotation.
@@ -603,7 +604,7 @@ void logic() {
       transforms[MODE_CAMERA] = glm::translate(glm::mat4(1.0), glm::vec3(delta_transX, 0.0, 0.0)) * transforms[MODE_CAMERA];
     } else {
       glm::vec3 y_axis_world = glm::mat3(transforms[MODE_CAMERA]) * glm::vec3(0.0, 1.0, 0.0);
-      transforms[MODE_CAMERA] = glm::rotate(glm::mat4(1.0), -delta_rotY, y_axis_world) * transforms[MODE_CAMERA];
+      transforms[MODE_CAMERA] = glm::rotate(glm::mat4(1.0), glm::radians(-delta_rotY), y_axis_world) * transforms[MODE_CAMERA];
     }
 
     if (strife)
@@ -611,7 +612,7 @@ void logic() {
     else
       transforms[MODE_CAMERA] = glm::translate(glm::mat4(1.0), glm::vec3(0.0, 0.0, delta_transZ)) * transforms[MODE_CAMERA];
 
-     transforms[MODE_CAMERA] = glm::rotate(glm::mat4(1.0), delta_rotX, glm::vec3(1.0, 0.0, 0.0)) * transforms[MODE_CAMERA];
+     transforms[MODE_CAMERA] = glm::rotate(glm::mat4(1.0), glm::radians(delta_rotX), glm::vec3(1.0, 0.0, 0.0)) * transforms[MODE_CAMERA];
   }
 
   /* Handle arcball */
@@ -622,7 +623,7 @@ void logic() {
     glm::vec3 axis_in_camera_coord = glm::cross(va, vb);
     glm::mat3 camera2object = glm::inverse(glm::mat3(transforms[MODE_CAMERA]) * glm::mat3(main_object.object2world));
     glm::vec3 axis_in_object_coord = camera2object * axis_in_camera_coord;
-    main_object.object2world = glm::rotate(main_object.object2world, glm::degrees(angle), axis_in_object_coord);
+    main_object.object2world = glm::rotate(main_object.object2world, angle, axis_in_object_coord);
     last_mx = cur_mx;
     last_my = cur_my;
   }

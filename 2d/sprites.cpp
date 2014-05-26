@@ -12,6 +12,7 @@
 #include <GL/glut.h>
 /* GLM */
 // #define GLM_MESSAGES
+#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -156,7 +157,7 @@ void onIdle() {
   float angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0 * 45;  // 45° per second
   glm::vec3 axis_z(0, 0, 1);
   glm::mat4 m_transform = glm::translate(glm::mat4(1.0f), glm::vec3(move, move, 0.0))
-    * glm::rotate(glm::mat4(1.0f), angle, axis_z)
+    * glm::rotate(glm::mat4(1.0f), glm::radians(angle), axis_z)
     * glm::translate(glm::mat4(1.0f), glm::vec3(-256/2, -256/2, 0.0));
 
   glm::mat4 mvp = projection * m_transform; // * view * model * anim;

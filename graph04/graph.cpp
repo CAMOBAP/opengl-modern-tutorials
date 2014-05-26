@@ -5,6 +5,7 @@
 #include <GL/glew.h>
 #include <GL/glut.h>
 
+#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -110,7 +111,7 @@ void display() {
 	glm::mat4 model;
 
 	if (rotate)
-		model = glm::rotate(glm::mat4(1.0f), float (glutGet(GLUT_ELAPSED_TIME) / 100.0), glm::vec3(0.0f, 0.0f, 1.0f));
+		model = glm::rotate(glm::mat4(1.0f), glm::radians(glutGet(GLUT_ELAPSED_TIME) / 100.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 
 	else
 		model = glm::mat4(1.0f);
