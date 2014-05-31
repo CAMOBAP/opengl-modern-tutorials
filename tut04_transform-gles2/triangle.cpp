@@ -9,6 +9,7 @@
 #include <GLES2/gl2.h>
 /* Using the GLUT library for the base windowing setup */
 #include <GL/glut.h>
+#include <GL/freeglut_ext.h>
 /* GLM */
 // #define GLM_MESSAGES
 #define GLM_FORCE_RADIANS
@@ -135,6 +136,7 @@ void free_resources()
 
 int main(int argc, char* argv[]) {
   glutInit(&argc, argv);
+  glutInitContextVersion(2, 0);
   glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
   glutInitWindowSize(640, 480);
   glutCreateWindow("My Transformed Triangle");
