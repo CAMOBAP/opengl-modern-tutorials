@@ -1,3 +1,6 @@
+Submitted to upstream maintainer May 2012
+No answer as of May 2014
+
 diff -Nru -x build -x '*.a' -x '*.exe' SOIL/projects/Android/Android.mk SOIL.android/projects/Android/Android.mk
 --- SOIL/projects/Android/Android.mk	1970-01-01 01:00:00.000000000 +0100
 +++ SOIL.android/projects/Android/Android.mk	2012-05-19 15:32:03.000000000 +0200
