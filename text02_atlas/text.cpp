@@ -306,7 +306,7 @@ void free_resources() {
 int main(int argc, char *argv[]) {
 	glutInit(&argc, argv);
 	glutInitContextVersion(2,0);
-	glutInitDisplayMode(GLUT_RGB|GLUT_DOUBLE);
+	glutInitDisplayMode(GLUT_RGB);
 	glutInitWindowSize(640, 480);
 	glutCreateWindow("Texture atlas text");
 
