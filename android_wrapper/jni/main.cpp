@@ -673,6 +673,10 @@ void glutInit( int* pargc, char** argv ) {
     miniglutStartTimeMillis = tv.tv_sec * 1000 + tv.tv_usec/1000;
 }
 
+void glutInitContextVersion(int majorVersion, int minorVersion) {
+    LOGI("glutInitContextVersion");
+}
+
 void glutInitDisplayMode( unsigned int displayMode ) {
     LOGI("glutInitDisplayMode");
     miniglutDisplayMode = displayMode;

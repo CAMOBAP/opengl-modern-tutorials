@@ -43,6 +43,7 @@
 #        define FGAPIENTRY
 
 FGAPI void    FGAPIENTRY glutInit( int* pargc, char** argv );
+FGAPI void    FGAPIENTRY glutInitContextVersion( int majorVersion, int minorVersion );
 FGAPI void    FGAPIENTRY glutInitDisplayMode( unsigned int displayMode );
 FGAPI void    FGAPIENTRY glutInitWindowSize( int width, int height );
 
