@@ -1,4 +1,4 @@
-CPPFLAGS=-DFREEGLUT_GLES -I/tmp/freeglut-native-gles2/include
+CPPFLAGS=-DFREEGLUT_GLES -I/tmp/freeglut-native-gles/include
 LDLIBS=-L/tmp/freeglut-native-gles/lib -lfreeglut-gles -lGLESv2 -lGLESv1_CM -lm
 all: triangle
 clean:
