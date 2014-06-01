@@ -4,7 +4,7 @@
 #include <algorithm>
 
 #include <GL/glew.h>
-#include <GL/glut.h>
+#include <GL/freeglut.h>
 
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
@@ -305,7 +305,8 @@ void free_resources() {
 
 int main(int argc, char *argv[]) {
 	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_RGB);
+	glutInitContextVersion(2,0);
+	glutInitDisplayMode(GLUT_RGB|GLUT_DOUBLE);
 	glutInitWindowSize(640, 480);
 	glutCreateWindow("Texture atlas text");
 

@@ -465,6 +465,7 @@ void onMouse(int button, int state, int x, int y) {
 
 int main(int argc, char* argv[]) {
   glutInit(&argc, argv);
+  glutInitContextVersion(2,0);
   glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
   glutInitWindowSize(screen_width, screen_height);
   glutCreateWindow("Textures in 3D");
