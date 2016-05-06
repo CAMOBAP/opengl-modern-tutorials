@@ -78,7 +78,7 @@ static const char *blocknames[16] = {
 	"water", "glass", "brick", "ore", "woodrings", "white", "black", "x-y"
 };
 
-typedef glm::detail::tvec4<GLbyte, glm::mediump> byte4;
+typedef glm::tvec4<GLbyte, glm::mediump> byte4;
 
 static struct chunk *chunk_slot[CHUNKSLOTS] = {0};
 
