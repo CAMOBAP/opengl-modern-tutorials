@@ -1,5 +1,4 @@
-CXXFLAGS=-ggdb
-LDLIBS=-lglut -lGLEW -lGL -lm
+CXXFLAGS+=-ggdb
 all: mini-portal
 clean:
 	rm -f *.o mini-portal

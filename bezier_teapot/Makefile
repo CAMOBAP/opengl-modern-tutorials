@@ -1,5 +1,4 @@
-CXXFLAGS=-ggdb
-LDLIBS=-lglut -lGLEW -lGL -lm
+CXXFLAGS+=-ggdb
 all: teapot
 clean:
 	rm -f *.o teapot

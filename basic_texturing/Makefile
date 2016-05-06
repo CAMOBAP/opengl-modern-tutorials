@@ -1,4 +1,4 @@
-LDLIBS=-lglut -lSOIL -lGLEW -lGL -lm
+LDLIBS+=-lSOIL
 all: sphere
 clean:
 	rm -f *.o sphere

@@ -1,4 +1,4 @@
-LDLIBS=-lm -lglut -lGLEW -lGL -lfreetype
+LDLIBS+=-lfreetype
 CXXFLAGS=-I/usr/include/freetype2
 all: text
 clean:

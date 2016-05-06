@@ -1,5 +1,4 @@
-CXXFLAGS=-ggdb
-LDLIBS=-lglut -lGLEW -lGL -lm
+CXXFLAGS+=-ggdb
 all: post-processing
 post-processing: ../common/shader_utils.o
 clean:

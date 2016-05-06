@@ -1,4 +1,3 @@
-LDLIBS=-lglut -lGLEW -lGL -lm
 all: triangle
 clean:
 	rm -f *.o triangle

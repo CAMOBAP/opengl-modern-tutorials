@@ -1,4 +1,4 @@
-LDLIBS=-lglut -lGLEW -lGL -lm -O0
+CXXFLAGS+=-O0
 all: cube
 clean:
 	rm -f *.o cube

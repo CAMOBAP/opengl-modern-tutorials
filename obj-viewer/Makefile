@@ -1,5 +1,4 @@
-CXXFLAGS=-ggdb
-LDLIBS=-lglut -lGLEW -lGL -lm
+CXXFLAGS+=-ggdb
 all: obj-viewer
 obj-viewer: ../common/shader_utils.o
 clean:

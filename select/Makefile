@@ -1,4 +1,3 @@
-LDLIBS=-lglut -lGLEW -lGL -lm
 all: select
 clean:
 	rm -f *.o select

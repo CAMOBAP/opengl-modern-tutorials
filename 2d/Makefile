@@ -1,4 +1,3 @@
-LDLIBS=-lglut -lGLEW -lGL -lm
 all: sprites
 clean:
 	rm -f *.o sprites

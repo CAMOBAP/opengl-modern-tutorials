@@ -1,3 +1,9 @@
 OpenGL source examples from the OpenGL Programming wikibook:
 
   http://en.wikibooks.org/wiki/OpenGL_Programming
+
+OSX 10.11
+
+  brew install glm
+  brew install glew
+  brew install homebrew/x11/freeglut

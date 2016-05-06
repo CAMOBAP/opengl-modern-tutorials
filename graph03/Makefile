@@ -1,4 +1,3 @@
-LDLIBS=-lm -lglut -lGLEW -lGL
 all: graph
 clean:
 	rm -f *.o graph

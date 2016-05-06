@@ -1,5 +1,4 @@
-LDLIBS=-lm -lglut -lGL -lGLEW -std=c++0x
-CXXFLAGS=-march=native -O6 -ffast-math -Wall
+CXXFLAGS+=-march=native -O6 -ffast-math -Wall  -std=c++0x
 all: glescraft
 clean:
 	rm -f *.o glescraft
